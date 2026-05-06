@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -70,14 +71,22 @@ void main() {
               onboardingCompletedValue: true,
             ),
           ),
+          apiClientProvider.overrideWithValue(_createAppDio()),
         ],
         child: const KisouApp(),
       ),
     );
-    await tester.pump();
+    await tester.pumpAndSettle();
 
-    expect(find.text(AppStrings.home), findsOneWidget);
-    expect(find.text(AppStrings.logout), findsOneWidget);
+    expect(find.text('たろうさん、${AppStrings.todayClothing}'), findsOneWidget);
+    expect(find.text('📍 東京'), findsOneWidget);
+    expect(find.text(AppStrings.bestRecommendation), findsWidgets);
+    await tester.drag(find.byType(ListView), const Offset(0, -500));
+    await tester.pumpAndSettle();
+    expect(find.text(AppStrings.today), findsOneWidget);
+    expect(find.text(AppStrings.yesterday), findsOneWidget);
+    expect(find.text(AppStrings.twoDaysAgo), findsOneWidget);
+    expect(find.text('昨日より3°高い'), findsOneWidget);
   });
 
   testWidgets('onboarding nickname step blocks empty input and advances', (
@@ -104,6 +113,92 @@ void main() {
     expect(find.text('2/5'), findsOneWidget);
     expect(find.text(AppStrings.genderPrompt), findsOneWidget);
   });
+}
+
+Dio _createAppDio() {
+  final dio = Dio();
+  dio.interceptors.add(
+    InterceptorsWrapper(
+      onRequest: (options, handler) {
+        switch (options.path) {
+          case '/users/me':
+            handler.resolve(
+              Response<Map<String, dynamic>>(
+                requestOptions: options,
+                data: {
+                  'id': '00000000-0000-0000-0000-000000000001',
+                  'nickname': 'たろう',
+                  'gender': 'unspecified',
+                  'cold_sensitivity': 'normal',
+                  'heat_sensitivity': 'normal',
+                  'offset_value': 0,
+                  'departure_time': '09:00:00',
+                  'return_time': '18:00:00',
+                  'latitude': 35.6812,
+                  'longitude': 139.7671,
+                  'region_name': '東京',
+                  'created_at': '2026-05-06T00:00:00Z',
+                  'updated_at': '2026-05-06T00:00:00Z',
+                },
+              ),
+            );
+          case '/home':
+            handler.resolve(
+              Response<Map<String, dynamic>>(
+                requestOptions: options,
+                data: {
+                  'date': '2026-05-06',
+                  'recommendations': [
+                    {
+                      'rank': 1,
+                      'top': 'SHORT_SLEEVE',
+                      'bottom': 'LONG_PANTS',
+                      'outer': 'LIGHT_OUTER',
+                    },
+                    {
+                      'rank': 2,
+                      'top': 'LONG_SLEEVE',
+                      'bottom': 'LONG_PANTS',
+                      'outer': null,
+                    },
+                    {
+                      'rank': 3,
+                      'top': 'THIN_LONG',
+                      'bottom': 'SKIRT',
+                      'outer': 'CARDIGAN',
+                    },
+                  ],
+                  'weather_comparison': {
+                    'today': _weather(tempHigh: 22, tempLow: 14),
+                    'yesterday': _weather(tempHigh: 19, tempLow: 12),
+                    'two_days_ago': _weather(tempHigh: 24, tempLow: 16),
+                  },
+                },
+              ),
+            );
+          default:
+            handler.reject(DioException(requestOptions: options));
+        }
+      },
+    ),
+  );
+  return dio;
+}
+
+Map<String, dynamic> _weather({
+  required double tempHigh,
+  required double tempLow,
+}) {
+  return {
+    'temp_high': tempHigh,
+    'temp_low': tempLow,
+    'feels_like_high': tempHigh,
+    'feels_like_low': tempLow,
+    'humidity_avg': 55,
+    'wind_speed_avg': 2.0,
+    'precipitation_chance_max': null,
+    'wbgt_max': null,
+  };
 }
 
 class _FakeAuthService extends AuthService {

@@ -70,7 +70,9 @@ class AuthController extends AsyncNotifier<AuthState> {
 
   Future<void> logout() async {
     state = const AsyncLoading<AuthState>();
-    await ref.read(authServiceProvider).deleteToken();
+    final authService = ref.read(authServiceProvider);
+    await authService.deleteToken();
+    await authService.clearOnboardingCompleted();
     state = const AsyncData(AuthState.unauthenticated());
   }
 

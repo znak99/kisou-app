@@ -71,6 +71,11 @@ class AuthService {
     await preferences.setBool(_onboardingCompletedKey, isCompleted);
   }
 
+  Future<void> clearOnboardingCompleted() async {
+    final preferences = await _preferencesFactory();
+    await preferences.remove(_onboardingCompletedKey);
+  }
+
   Future<String> signInWithApple() async {
     final credential = await SignInWithApple.getAppleIDCredential(
       scopes: [

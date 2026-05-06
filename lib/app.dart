@@ -6,6 +6,7 @@ import 'config/theme.dart';
 import 'constants/app_strings.dart';
 import 'providers/api_provider.dart';
 import 'providers/auth_provider.dart';
+import 'screens/home/home_screen.dart';
 import 'screens/onboarding/login_screen.dart';
 import 'screens/onboarding/onboarding_screen.dart';
 
@@ -71,7 +72,7 @@ class _AuthGate extends ConsumerWidget {
         if (state.isNewUser) {
           return const OnboardingScreen();
         }
-        return const _TemporaryHomeScreen();
+        return const HomeScreen();
       },
       error: (_, _) => const LoginScreen(),
       loading: () => const _LoadingScreen(),
@@ -85,36 +86,5 @@ class _LoadingScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const Scaffold(body: Center(child: CircularProgressIndicator()));
-  }
-}
-
-class _TemporaryHomeScreen extends ConsumerWidget {
-  const _TemporaryHomeScreen();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Scaffold(
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                AppStrings.home,
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.headlineSmall,
-              ),
-              const SizedBox(height: 24),
-              OutlinedButton(
-                onPressed: () => ref.read(authProvider.notifier).logout(),
-                child: const Text(AppStrings.logout),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 }
