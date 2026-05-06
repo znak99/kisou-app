@@ -55,4 +55,18 @@ class AppStrings {
   static const setTime = '設定する';
   static const skip = 'スキップ';
   static const changeLater = 'あとで設定から変更できます';
+  static const feedbackPrompt = '今日はどうでしたか？';
+  static const feedbackButton = 'フィードバックする';
+  static const feedbackDone = 'フィードバック済み ✓';
+  static const feedbackChange = '変更する';
+  static const feedbackClothingTitle = '今日の服装は？';
+  static const feedbackFeelingTitle = '今日の体感は？';
+  static const feedbackTops = 'トップス';
+  static const feedbackBottoms = 'ボトムス';
+  static const feedbackOuter = 'アウター';
+  static const feedbackCold = '寒かった';
+  static const feedbackPerfect = 'ちょうどよかった';
+  static const feedbackHot = '暑かった';
+  static const feedbackApplied = '反映しました！';
+  static const feedbackSubmitFailed = '送信に失敗しました。もう一度お試しください。';
 }

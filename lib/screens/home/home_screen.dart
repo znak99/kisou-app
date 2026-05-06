@@ -4,10 +4,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../config/theme.dart';
 import '../../constants/app_strings.dart';
+import '../../models/feedback.dart';
 import '../../models/home.dart';
 import '../../models/user.dart';
+import '../../providers/feedback_provider.dart';
 import '../../providers/home_provider.dart';
 import '../../providers/user_provider.dart';
+import '../../widgets/feedback_sheet.dart';
 import '../../widgets/recommendation_card.dart';
 import '../../widgets/weather_comparison.dart';
 import '../settings/settings_screen.dart';
@@ -35,6 +38,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final homeState = ref.watch(homeProvider);
+    final feedbackState = ref.watch(feedbackProvider);
+    debugPrint('Feedback state: ${_describeFeedbackState(feedbackState)}');
     final user = ref
         .watch(userProvider)
         .when(
@@ -56,11 +61,25 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ),
         ],
       ),
+      bottomNavigationBar: homeState.maybeWhen(
+        data: (_) =>
+            _FeedbackBottomBar(user: user, feedbackState: feedbackState),
+        orElse: () => null,
+      ),
       body: homeState.when(
         data: (home) => _HomeContent(home: home, user: user),
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => _HomeError(error: error),
       ),
+    );
+  }
+
+  String _describeFeedbackState(AsyncValue<FeedbackTodayResponse> state) {
+    return state.when(
+      data: (value) =>
+          'data(exists=${value.exists}, hasFeedback=${value.feedback != null})',
+      error: (error, _) => 'error($error)',
+      loading: () => 'loading',
     );
   }
 }
@@ -79,7 +98,12 @@ class _HomeContent extends ConsumerWidget {
     final secondary = recommendations.skip(1).take(2).toList(growable: false);
 
     return RefreshIndicator(
-      onRefresh: () => ref.read(homeProvider.notifier).refresh(),
+      onRefresh: () async {
+        await Future.wait([
+          ref.read(homeProvider.notifier).refresh(),
+          ref.read(feedbackProvider.notifier).refresh(),
+        ]);
+      },
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(20, 4, 20, 32),
@@ -105,6 +129,118 @@ class _HomeContent extends ConsumerWidget {
         ],
       ),
     );
+  }
+}
+
+class _FeedbackBottomBar extends ConsumerWidget {
+  const _FeedbackBottomBar({required this.user, required this.feedbackState});
+
+  final User? user;
+  final AsyncValue<FeedbackTodayResponse> feedbackState;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+        child: Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: feedbackState.when(
+              data: (status) {
+                final feedback = status.feedback;
+                if (status.exists && feedback != null) {
+                  return Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          AppStrings.feedbackDone,
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () => _openFeedbackSheet(
+                          context: context,
+                          ref: ref,
+                          user: user,
+                          initialFeedback: feedback,
+                        ),
+                        child: const Text(AppStrings.feedbackChange),
+                      ),
+                    ],
+                  );
+                }
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      AppStrings.feedbackPrompt,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 12),
+                    FilledButton(
+                      onPressed: () => _openFeedbackSheet(
+                        context: context,
+                        ref: ref,
+                        user: user,
+                        initialFeedback: null,
+                      ),
+                      child: const Text(AppStrings.feedbackButton),
+                    ),
+                  ],
+                );
+              },
+              error: (_, _) => Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    AppStrings.dataFetchFailed,
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                  const SizedBox(height: 12),
+                  OutlinedButton(
+                    onPressed: () =>
+                        ref.read(feedbackProvider.notifier).refresh(),
+                    child: const Text(AppStrings.retry),
+                  ),
+                ],
+              ),
+              loading: () => const SizedBox(
+                height: 48,
+                child: Center(child: CircularProgressIndicator()),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openFeedbackSheet({
+    required BuildContext context,
+    required WidgetRef ref,
+    required User? user,
+    required FeedbackResponse? initialFeedback,
+  }) async {
+    final submitted = await showFeedbackSheet(
+      context: context,
+      gender: user?.gender,
+      initialFeedback: initialFeedback,
+    );
+    if (submitted == true) {
+      await Future.wait([
+        ref.read(homeProvider.notifier).refresh(),
+        ref.read(userProvider.notifier).getMe(),
+      ]);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text(AppStrings.feedbackApplied)),
+        );
+      }
+    }
   }
 }
 

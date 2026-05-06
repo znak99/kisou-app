@@ -87,6 +87,13 @@ void main() {
     expect(find.text(AppStrings.yesterday), findsOneWidget);
     expect(find.text(AppStrings.twoDaysAgo), findsOneWidget);
     expect(find.text('昨日より3°高い'), findsOneWidget);
+    expect(find.text(AppStrings.feedbackPrompt), findsOneWidget);
+    expect(find.text(AppStrings.feedbackButton), findsOneWidget);
+
+    await tester.tap(find.text(AppStrings.feedbackButton));
+    await tester.pumpAndSettle();
+
+    expect(find.text(AppStrings.feedbackClothingTitle), findsOneWidget);
   });
 
   testWidgets('onboarding nickname step blocks empty input and advances', (
@@ -174,6 +181,13 @@ Dio _createAppDio() {
                     'two_days_ago': _weather(tempHigh: 24, tempLow: 16),
                   },
                 },
+              ),
+            );
+          case '/feedback/today':
+            handler.resolve(
+              Response<Map<String, dynamic>>(
+                requestOptions: options,
+                data: {'exists': false, 'feedback': null},
               ),
             );
           default:
