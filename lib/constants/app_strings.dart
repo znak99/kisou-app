@@ -1,0 +1,46 @@
+class AppStrings {
+  const AppStrings._();
+
+  static const appName = 'キソウ';
+  static const loginDescription = '今日、どのくらいの厚さで着ればいい？\nキソウが教えます';
+  static const appleLogin = 'Appleでログイン';
+  static const googleLogin = 'Googleでログイン';
+  static const developmentExistingLogin = '開発ログイン（既存）';
+  static const developmentNewLogin = '開発ログイン（新規）';
+  static const loginFailed = 'ログインに失敗しました。もう一度お試しください。';
+  static const onboarding = 'オンボーディング';
+  static const home = 'キソウ ホーム';
+  static const logout = 'ログアウト';
+  static const next = '次へ';
+  static const back = '戻る';
+  static const saveFailed = '設定の保存に失敗しました。もう一度お試しください。';
+  static const onboardingComplete = '設定完了！今日のおすすめを確認しましょう';
+  static const ok = 'OK';
+  static const nicknamePrompt = 'キソウで使う名前を教えてください';
+  static const nicknameHint = '10文字以内';
+  static const genderPrompt = '性別を選んでください';
+  static const male = '男性';
+  static const female = '女性';
+  static const unspecified = '選択しない';
+  static const sensitivityPrompt = '体感に合わせて教えてください';
+  static const coldQuestion = '寒がりですか？';
+  static const heatQuestion = '暑がりですか？';
+  static const coldHigh = '寒がり';
+  static const normal = '普通';
+  static const coldLow = '寒くない';
+  static const heatHigh = '暑がり';
+  static const heatLow = '暑くない';
+  static const locationPrompt = '正確な天気情報のために位置情報を使用します';
+  static const allowLocation = '位置情報を許可する';
+  static const manualLocation = '手動で地域を選ぶ';
+  static const selectRegion = '地域を選んでください';
+  static const locationDenied = '位置情報を取得できませんでした。地域を選んでください。';
+  static const locationDisabled = '位置情報サービスがオフです。地域を選んでください。';
+  static const currentLocation = '現在地';
+  static const timePrompt = '外出・帰宅時間を設定してください';
+  static const departureTime = '外出時間';
+  static const returnTime = '帰宅時間';
+  static const setTime = '設定する';
+  static const skip = 'スキップ';
+  static const changeLater = 'あとで設定から変更できます';
+}
