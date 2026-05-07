@@ -1,0 +1,100 @@
+import 'package:dio/dio.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../services/auth_service.dart';
+import 'api_provider.dart';
+
+enum AuthStatus { unauthenticated, authenticated }
+
+class AuthState {
+  const AuthState._({required this.status, required this.isNewUser});
+
+  const AuthState.unauthenticated()
+    : this._(status: AuthStatus.unauthenticated, isNewUser: false);
+
+  const AuthState.authenticated({required bool isNewUser})
+    : this._(status: AuthStatus.authenticated, isNewUser: isNewUser);
+
+  final AuthStatus status;
+  final bool isNewUser;
+
+  bool get isAuthenticated => status == AuthStatus.authenticated;
+}
+
+final authProvider = AsyncNotifierProvider<AuthController, AuthState>(
+  AuthController.new,
+);
+
+class AuthController extends AsyncNotifier<AuthState> {
+  @override
+  Future<AuthState> build() async {
+    final authService = ref.read(authServiceProvider);
+    await authService.clearKeychainOnFirstLaunch();
+    final hasToken = await authService.hasToken();
+    if (hasToken) {
+      final onboardingCompleted = await authService.isOnboardingCompleted();
+      final isNewUser = !onboardingCompleted;
+      return AuthState.authenticated(isNewUser: isNewUser);
+    }
+    return const AuthState.unauthenticated();
+  }
+
+  Future<void> loginWithApple() {
+    return _login((authService, dio) {
+      return authService.loginWithApple(dio: dio);
+    });
+  }
+
+  Future<void> loginWithGoogle() {
+    return _login((authService, dio) {
+      return authService.loginWithGoogle(dio: dio);
+    });
+  }
+
+  Future<void> loginWithDevelopmentExistingUser() {
+    return _login((authService, dio) {
+      return authService.loginWithDevelopmentExistingUser(dio: dio);
+    });
+  }
+
+  Future<void> loginWithDevelopmentNewUser() {
+    return _login((authService, dio) {
+      return authService.loginWithDevelopmentNewUser(dio: dio);
+    });
+  }
+
+  Future<void> logout() async {
+    state = const AsyncLoading<AuthState>();
+    final authService = ref.read(authServiceProvider);
+    await authService.deleteToken();
+    await authService.clearOnboardingCompleted();
+    state = const AsyncData(AuthState.unauthenticated());
+  }
+
+  Future<void> expireSession() async {
+    final authService = ref.read(authServiceProvider);
+    await authService.deleteToken();
+    await authService.clearOnboardingCompleted();
+    state = const AsyncData(AuthState.unauthenticated());
+  }
+
+  Future<void> completeOnboarding() async {
+    await ref.read(authServiceProvider).setOnboardingCompleted(true);
+    state = const AsyncData(AuthState.authenticated(isNewUser: false));
+  }
+
+  Future<void> _login(
+    Future<bool> Function(AuthService authService, Dio dio) login,
+  ) async {
+    state = const AsyncLoading<AuthState>();
+    state = await AsyncValue.guard(() async {
+      final isNewUser = await login(
+        ref.read(authServiceProvider),
+        ref.read(apiClientProvider),
+      );
+      await ref.read(authServiceProvider).setOnboardingCompleted(!isNewUser);
+      ref.read(authRequiredProvider.notifier).clear();
+      return AuthState.authenticated(isNewUser: isNewUser);
+    });
+  }
+}
