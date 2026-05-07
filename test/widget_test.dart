@@ -16,7 +16,6 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          apiHealthCheckEnabledProvider.overrideWithValue(false),
           authServiceProvider.overrideWithValue(
             _FakeAuthService(hasTokenValue: false),
           ),
@@ -40,7 +39,6 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            apiHealthCheckEnabledProvider.overrideWithValue(false),
             authServiceProvider.overrideWithValue(
               _FakeAuthService(
                 hasTokenValue: true,
@@ -64,7 +62,6 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          apiHealthCheckEnabledProvider.overrideWithValue(false),
           authServiceProvider.overrideWithValue(
             _FakeAuthService(
               hasTokenValue: true,
@@ -94,6 +91,112 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text(AppStrings.feedbackClothingTitle), findsOneWidget);
+  });
+
+  testWidgets('shows complete settings list from home', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authServiceProvider.overrideWithValue(
+            _FakeAuthService(
+              hasTokenValue: true,
+              onboardingCompletedValue: true,
+            ),
+          ),
+          apiClientProvider.overrideWithValue(_createAppDio()),
+        ],
+        child: const KisouApp(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip(AppStrings.settings));
+    await tester.pumpAndSettle();
+
+    expect(find.text(AppStrings.nicknameSetting), findsOneWidget);
+    expect(find.text(AppStrings.genderSetting), findsOneWidget);
+    expect(find.text(AppStrings.sensitivitySetting), findsOneWidget);
+    expect(find.text(AppStrings.timeSetting), findsOneWidget);
+    expect(find.text(AppStrings.locationSetting), findsOneWidget);
+    expect(find.text(AppStrings.privacyPolicy), findsOneWidget);
+    expect(find.text(AppStrings.logout), findsOneWidget);
+    expect(find.text(AppStrings.accountDelete), findsOneWidget);
+  });
+
+  testWidgets('shows timeout error on home load failure', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authServiceProvider.overrideWithValue(
+            _FakeAuthService(
+              hasTokenValue: true,
+              onboardingCompletedValue: true,
+            ),
+          ),
+          apiClientProvider.overrideWithValue(
+            _createHomeErrorDio(DioExceptionType.connectionTimeout),
+          ),
+        ],
+        child: const KisouApp(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text(AppStrings.timeoutError), findsOneWidget);
+    expect(find.text(AppStrings.retry), findsOneWidget);
+  });
+
+  testWidgets('shows location settings action when location is missing', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authServiceProvider.overrideWithValue(
+            _FakeAuthService(
+              hasTokenValue: true,
+              onboardingCompletedValue: true,
+            ),
+          ),
+          apiClientProvider.overrideWithValue(_createLocationMissingDio()),
+        ],
+        child: const KisouApp(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text(AppStrings.locationMissing), findsOneWidget);
+    expect(find.text(AppStrings.openSettings), findsOneWidget);
+  });
+
+  testWidgets('session expiration returns to login', (
+    WidgetTester tester,
+  ) async {
+    final container = ProviderContainer(
+      overrides: [
+        authServiceProvider.overrideWithValue(
+          _FakeAuthService(hasTokenValue: true, onboardingCompletedValue: true),
+        ),
+        apiClientProvider.overrideWithValue(_createAppDio()),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(container: container, child: const KisouApp()),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('たろうさん、${AppStrings.todayClothing}'), findsOneWidget);
+
+    container.read(authRequiredProvider.notifier).requireAuth();
+    await tester.pumpAndSettle();
+
+    expect(find.text(AppStrings.loginDescription), findsOneWidget);
+    expect(find.text(AppStrings.sessionExpired), findsOneWidget);
   });
 
   testWidgets('onboarding nickname step blocks empty input and advances', (
@@ -199,6 +302,73 @@ Dio _createAppDio() {
   return dio;
 }
 
+Dio _createHomeErrorDio(DioExceptionType type) {
+  final dio = Dio();
+  dio.interceptors.add(
+    InterceptorsWrapper(
+      onRequest: (options, handler) {
+        switch (options.path) {
+          case '/users/me':
+          case '/feedback/today':
+            handler.resolve(
+              Response<Map<String, dynamic>>(
+                requestOptions: options,
+                data: options.path == '/users/me'
+                    ? _userJson()
+                    : {'exists': false, 'feedback': null},
+              ),
+            );
+          case '/home':
+            handler.reject(DioException(requestOptions: options, type: type));
+          default:
+            handler.reject(DioException(requestOptions: options));
+        }
+      },
+    ),
+  );
+  return dio;
+}
+
+Dio _createLocationMissingDio() {
+  final dio = Dio();
+  dio.interceptors.add(
+    InterceptorsWrapper(
+      onRequest: (options, handler) {
+        switch (options.path) {
+          case '/users/me':
+          case '/feedback/today':
+            handler.resolve(
+              Response<Map<String, dynamic>>(
+                requestOptions: options,
+                data: options.path == '/users/me'
+                    ? _userJson(
+                        latitude: null,
+                        longitude: null,
+                        regionName: null,
+                      )
+                    : {'exists': false, 'feedback': null},
+              ),
+            );
+          case '/home':
+            handler.reject(
+              DioException(
+                requestOptions: options,
+                response: Response<Map<String, dynamic>>(
+                  requestOptions: options,
+                  statusCode: 400,
+                  data: {'detail': 'location is not configured'},
+                ),
+              ),
+            );
+          default:
+            handler.reject(DioException(requestOptions: options));
+        }
+      },
+    ),
+  );
+  return dio;
+}
+
 Map<String, dynamic> _weather({
   required double tempHigh,
   required double tempLow,
@@ -212,6 +382,28 @@ Map<String, dynamic> _weather({
     'wind_speed_avg': 2.0,
     'precipitation_chance_max': null,
     'wbgt_max': null,
+  };
+}
+
+Map<String, dynamic> _userJson({
+  double? latitude = 35.6812,
+  double? longitude = 139.7671,
+  String? regionName = '東京',
+}) {
+  return {
+    'id': '00000000-0000-0000-0000-000000000001',
+    'nickname': 'たろう',
+    'gender': 'unspecified',
+    'cold_sensitivity': 'normal',
+    'heat_sensitivity': 'normal',
+    'offset_value': 0,
+    'departure_time': '09:00:00',
+    'return_time': '18:00:00',
+    'latitude': latitude,
+    'longitude': longitude,
+    'region_name': regionName,
+    'created_at': '2026-05-06T00:00:00Z',
+    'updated_at': '2026-05-06T00:00:00Z',
   };
 }
 
@@ -236,4 +428,10 @@ class _FakeAuthService extends AuthService {
   Future<bool> isOnboardingCompleted() async {
     return onboardingCompletedValue;
   }
+
+  @override
+  Future<void> deleteToken() async {}
+
+  @override
+  Future<void> clearOnboardingCompleted() async {}
 }

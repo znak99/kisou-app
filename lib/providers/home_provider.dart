@@ -20,8 +20,9 @@ class HomeController extends AsyncNotifier<HomeResponse> {
   }
 
   Future<void> refresh() async {
-    final home = await ref.read(homeServiceProvider).getHome();
-    state = AsyncData(home);
+    state = await AsyncValue.guard(() {
+      return ref.read(homeServiceProvider).getHome();
+    });
   }
 
   Future<void> retry() async {

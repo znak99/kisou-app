@@ -1,78 +1,122 @@
 # kisou-app
 
-Flutter mobile app for **キソウ** — a weather-based personalized clothing recommendation app for Japan.
+Flutter mobile app for **キソウ**, a weather-based personalized clothing recommendation app for Japan.
 
-## What is キソウ?
+キソウ is not a fashion coordination app. It does not recommend colors, brands, or styles. It answers one practical question: how thick should the user dress today?
 
-キソウ predicts whether a user will feel cold or hot based on weather data and personal comfort preferences, then recommends clothing tag combinations with intuitive icons (e.g., shirt icon + long pants icon + light outer icon). It is **not** a fashion coordination app — it does not recommend colors, brands, or styles. The goal is to answer: **"How thick should I dress today?"**
+## Current Features
+
+- Apple / Google login flow, plus development login buttons for local testing
+- First-launch keychain cleanup for iOS reinstall behavior
+- New-user onboarding: nickname, gender, cold/heat sensitivity, location, and departure/return time
+- Home screen with three API-provided recommendation combinations
+- Weather comparison for today, yesterday, and two days ago
+- Feedback bottom sheet for actual clothing and comfort feedback
+- Feedback submitted/edit state for today
+- Settings screen for nickname, gender, sensitivity, time, location, privacy policy, logout, and account deletion
+- JWT storage with `flutter_secure_storage`
+- 401 session-expiration handling back to the login screen
+- Network, timeout, and missing-location error messages with retry or settings actions
 
 ## Tech Stack
 
-| Component | Technology |
-|-----------|-----------|
+| Area | Technology |
+| --- | --- |
 | Framework | Flutter 3.x |
 | Language | Dart |
-| State Management | Riverpod |
-| HTTP Client | dio |
+| State management | Riverpod |
+| HTTP client | dio |
 | Auth | Apple Sign-In / Google Sign-In |
-| UI Language | Japanese only (MVP) |
+| Token storage | flutter_secure_storage |
+| Local flags | shared_preferences |
+| Location | geolocator |
+| External URL | url_launcher |
+| UI language | Japanese |
 
-## Project Structure
+## API Server
 
-```
-kisou-app/
-├── lib/
-│   ├── main.dart
-│   ├── app.dart
-│   ├── config/               # Environment config, API base URL
-│   ├── models/               # Data classes
-│   ├── providers/            # Riverpod providers
-│   ├── services/             # API client, auth service
-│   ├── screens/              # Full-page screens
-│   │   ├── onboarding/
-│   │   ├── home/
-│   │   └── settings/
-│   ├── widgets/              # Reusable UI components
-│   │   ├── clothing_icon.dart
-│   │   ├── feedback_sheet.dart
-│   │   └── weather_comparison.dart
-│   ├── constants/            # Clothing tag codes, mappings
-│   │   └── clothing_tags.dart
-│   └── utils/                # Helpers, formatters
-├── assets/
-│   ├── icons/                # 16 clothing line-art icons
-│   └── images/
-├── docs/
-│   ├── DESIGN.md             # Full detailed design document
-│   ├── CONVENTIONS.md        # Code conventions
-│   └── TASK_ORDER.md         # Development task order
-├── pubspec.yaml
-└── CLAUDE.md                 # Context file for AI agents
+The app expects `kisou-api` to be running separately. Business logic, recommendation calculation, weather fetching, offset updates, and account deletion are handled by the API.
+
+Default development URL:
+
+```text
+http://127.0.0.1:8000
 ```
 
-## Getting Started
+Override it at run time:
 
-### Prerequisites
+```bash
+flutter run --dart-define=API_BASE_URL=http://YOUR_SERVER_IP:8000
+```
 
-- Flutter SDK 3.x installed
-- iOS Simulator or Android Emulator
-- kisou-api running (for API integration)
+Development login buttons are shown by default in development builds. To hide them:
 
-### Run
+```bash
+flutter run --dart-define=SHOW_DEV_LOGIN=false
+```
+
+## Build And Run
+
+Install dependencies:
 
 ```bash
 flutter pub get
+```
+
+Run on the selected simulator or device:
+
+```bash
 flutter run
 ```
 
-### Environment Configuration
+Run with an explicit API server:
 
-Set the API base URL in config:
-- Development: `http://<your-server-ip>:8000`
-- Production: `https://api.kisou.app` (TBD)
+```bash
+flutter run --dart-define=API_BASE_URL=http://127.0.0.1:8000
+```
 
-## Documentation
+## Verification
 
-- [Detailed Design](docs/DESIGN.md) — Full app design specification
-- [Code Conventions](docs/CONVENTIONS.md) — Coding standards and patterns
-- [Task Order](docs/TASK_ORDER.md) — Step-by-step development plan
+Static analysis:
+
+```bash
+flutter analyze
+```
+
+Tests:
+
+```bash
+flutter test
+```
+
+Common manual checks:
+
+- Stop `kisou-api`, open the app, and confirm an error message plus retry button.
+- Start `kisou-api`, tap retry, and confirm home data loads.
+- Submit feedback and confirm the home screen changes to `フィードバック済み ✓`.
+- Change settings, return home, and confirm user/home data refreshes.
+
+## Project Structure
+
+```text
+lib/
+  app.dart
+  main.dart
+  config/
+  constants/
+  models/
+  providers/
+  screens/
+    home/
+    onboarding/
+    settings/
+  services/
+  utils/
+  widgets/
+```
+
+Key docs:
+
+- [docs/DESIGN.md](docs/DESIGN.md)
+- [docs/CONVENTIONS.md](docs/CONVENTIONS.md)
+- [docs/TASK_ORDER.md](docs/TASK_ORDER.md)

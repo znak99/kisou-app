@@ -21,8 +21,9 @@ class FeedbackController extends AsyncNotifier<FeedbackTodayResponse> {
   }
 
   Future<void> refresh() async {
-    final status = await ref.read(feedbackServiceProvider).getTodayFeedback();
-    state = AsyncData(status);
+    state = await AsyncValue.guard(() {
+      return ref.read(feedbackServiceProvider).getTodayFeedback();
+    });
   }
 
   Future<FeedbackResponse> submit(FeedbackRequest request) async {

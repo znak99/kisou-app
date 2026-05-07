@@ -27,6 +27,10 @@ class UserService {
     }
     return User.fromJson(data);
   }
+
+  Future<void> deleteMe() async {
+    await _dio.delete<void>('/users/me');
+  }
 }
 
 class UserServiceException implements Exception {

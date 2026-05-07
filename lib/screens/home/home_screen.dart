@@ -1,4 +1,3 @@
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -7,9 +6,12 @@ import '../../constants/app_strings.dart';
 import '../../models/feedback.dart';
 import '../../models/home.dart';
 import '../../models/user.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/feedback_provider.dart';
 import '../../providers/home_provider.dart';
 import '../../providers/user_provider.dart';
+import '../../utils/api_error.dart';
+import '../../widgets/error_state.dart';
 import '../../widgets/feedback_sheet.dart';
 import '../../widgets/recommendation_card.dart';
 import '../../widgets/weather_comparison.dart';
@@ -39,7 +41,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Widget build(BuildContext context) {
     final homeState = ref.watch(homeProvider);
     final feedbackState = ref.watch(feedbackProvider);
-    debugPrint('Feedback state: ${_describeFeedbackState(feedbackState)}');
     final user = ref
         .watch(userProvider)
         .when(
@@ -52,10 +53,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         actions: [
           IconButton(
             tooltip: AppStrings.settings,
-            onPressed: () {
-              Navigator.of(context).push(
+            onPressed: () async {
+              await Navigator.of(context).push(
                 MaterialPageRoute<void>(builder: (_) => const SettingsScreen()),
               );
+              final authState = ref
+                  .read(authProvider)
+                  .maybeWhen(data: (value) => value, orElse: () => null);
+              if (context.mounted && authState?.isAuthenticated == true) {
+                await Future.wait([
+                  ref.read(userProvider.notifier).getMe(),
+                  ref.read(homeProvider.notifier).refresh(),
+                  ref.read(feedbackProvider.notifier).refresh(),
+                ]);
+              }
             },
             icon: const Icon(Icons.settings),
           ),
@@ -71,15 +82,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => _HomeError(error: error),
       ),
-    );
-  }
-
-  String _describeFeedbackState(AsyncValue<FeedbackTodayResponse> state) {
-    return state.when(
-      data: (value) =>
-          'data(exists=${value.exists}, hasFeedback=${value.feedback != null})',
-      error: (error, _) => 'error($error)',
-      loading: () => 'loading',
     );
   }
 }
@@ -192,12 +194,12 @@ class _FeedbackBottomBar extends ConsumerWidget {
                   ],
                 );
               },
-              error: (_, _) => Column(
+              error: (error, _) => Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Text(
-                    AppStrings.dataFetchFailed,
+                    apiErrorMessage(error),
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                   const SizedBox(height: 12),
@@ -283,9 +285,9 @@ class _HomeError extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final message = _isLocationMissingError(error)
-        ? AppStrings.locationNotConfigured
-        : AppStrings.dataFetchFailed;
+    final errorKind = classifyApiError(error);
+    final isLocationMissing = errorKind == ApiErrorKind.locationMissing;
+    final message = apiErrorMessage(error);
     return RefreshIndicator(
       onRefresh: () => ref.read(homeProvider.notifier).refresh(),
       child: ListView(
@@ -293,37 +295,33 @@ class _HomeError extends ConsumerWidget {
         padding: const EdgeInsets.all(24),
         children: [
           SizedBox(height: MediaQuery.sizeOf(context).height * 0.22),
-          Icon(
-            Icons.cloud_off,
-            size: 44,
-            color: Theme.of(context).colorScheme.error,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            message,
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodyMedium,
-          ),
-          const SizedBox(height: 16),
-          FilledButton(
-            onPressed: () => ref.read(homeProvider.notifier).retry(),
-            child: const Text(AppStrings.retry),
+          ErrorState(
+            message: message,
+            actionLabel: isLocationMissing
+                ? AppStrings.openSettings
+                : AppStrings.retry,
+            onAction: isLocationMissing
+                ? () => _openSettings(context, ref)
+                : () => ref.read(homeProvider.notifier).retry(),
           ),
         ],
       ),
     );
   }
 
-  bool _isLocationMissingError(Object error) {
-    if (error is! DioException) {
-      return false;
+  Future<void> _openSettings(BuildContext context, WidgetRef ref) async {
+    await Navigator.of(
+      context,
+    ).push(MaterialPageRoute<void>(builder: (_) => const SettingsScreen()));
+    final authState = ref
+        .read(authProvider)
+        .maybeWhen(data: (value) => value, orElse: () => null);
+    if (context.mounted && authState?.isAuthenticated == true) {
+      await Future.wait([
+        ref.read(userProvider.notifier).getMe(),
+        ref.read(homeProvider.notifier).retry(),
+        ref.read(feedbackProvider.notifier).refresh(),
+      ]);
     }
-    final statusCode = error.response?.statusCode;
-    final data = error.response?.data;
-    final text = data.toString().toLowerCase();
-    return statusCode == 400 ||
-        text.contains('location') ||
-        text.contains('latitude') ||
-        text.contains('longitude');
   }
 }

@@ -12,10 +12,6 @@ final authRequiredProvider = NotifierProvider<AuthRequiredNotifier, bool>(
   AuthRequiredNotifier.new,
 );
 
-final apiHealthCheckEnabledProvider = Provider<bool>((ref) {
-  return true;
-});
-
 class AuthRequiredNotifier extends Notifier<bool> {
   @override
   bool build() {

@@ -19,27 +19,6 @@ class KisouApp extends ConsumerStatefulWidget {
 
 class _KisouAppState extends ConsumerState<KisouApp> {
   @override
-  void initState() {
-    super.initState();
-    Future.microtask(() {
-      if (ref.read(apiHealthCheckEnabledProvider)) {
-        _checkApiHealth();
-      }
-    });
-  }
-
-  Future<void> _checkApiHealth() async {
-    try {
-      final response = await ref
-          .read(apiClientProvider)
-          .get<Object?>('/health');
-      debugPrint('API connected: ${response.data}');
-    } catch (error) {
-      debugPrint('API connection failed: $error');
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: AppStrings.appName,
@@ -63,6 +42,21 @@ class _AuthGate extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authProvider);
+    ref.listen(authRequiredProvider, (previous, next) {
+      if (next != true) {
+        return;
+      }
+      Future.microtask(() async {
+        await ref.read(authProvider.notifier).expireSession();
+        ref.read(authRequiredProvider.notifier).clear();
+        if (!context.mounted) {
+          return;
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text(AppStrings.sessionExpired)),
+        );
+      });
+    });
 
     return authState.when(
       data: (state) {

@@ -1,5 +1,4 @@
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../services/auth_service.dart';
@@ -35,12 +34,8 @@ class AuthController extends AsyncNotifier<AuthState> {
     if (hasToken) {
       final onboardingCompleted = await authService.isOnboardingCompleted();
       final isNewUser = !onboardingCompleted;
-      debugPrint(
-        'Auth startup: hasToken=true, onboardingCompleted=$onboardingCompleted',
-      );
       return AuthState.authenticated(isNewUser: isNewUser);
     }
-    debugPrint('Auth startup: hasToken=false');
     return const AuthState.unauthenticated();
   }
 
@@ -76,6 +71,13 @@ class AuthController extends AsyncNotifier<AuthState> {
     state = const AsyncData(AuthState.unauthenticated());
   }
 
+  Future<void> expireSession() async {
+    final authService = ref.read(authServiceProvider);
+    await authService.deleteToken();
+    await authService.clearOnboardingCompleted();
+    state = const AsyncData(AuthState.unauthenticated());
+  }
+
   Future<void> completeOnboarding() async {
     await ref.read(authServiceProvider).setOnboardingCompleted(true);
     state = const AsyncData(AuthState.authenticated(isNewUser: false));
@@ -91,7 +93,6 @@ class AuthController extends AsyncNotifier<AuthState> {
         ref.read(apiClientProvider),
       );
       await ref.read(authServiceProvider).setOnboardingCompleted(!isNewUser);
-      debugPrint('Auth login: isNewUser=$isNewUser');
       ref.read(authRequiredProvider.notifier).clear();
       return AuthState.authenticated(isNewUser: isNewUser);
     });

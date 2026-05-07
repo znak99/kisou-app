@@ -25,6 +25,7 @@ class ApiClient {
         onError: (error, handler) async {
           if (error.response?.statusCode == 401) {
             await authService.deleteToken();
+            await authService.clearOnboardingCompleted();
             onUnauthorized?.call();
           }
           handler.next(error);

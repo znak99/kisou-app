@@ -6,6 +6,7 @@ import '../constants/app_strings.dart';
 import '../constants/clothing_tags.dart';
 import '../models/feedback.dart';
 import '../providers/feedback_provider.dart';
+import '../utils/api_error.dart';
 import 'clothing_icon.dart';
 
 Future<bool?> showFeedbackSheet({
@@ -85,9 +86,13 @@ class _FeedbackSheetState extends ConsumerState<FeedbackSheet> {
       if (mounted) {
         Navigator.of(context).pop(true);
       }
-    } catch (_) {
+    } catch (error) {
       if (mounted) {
-        setState(() => _errorMessage = AppStrings.feedbackSubmitFailed);
+        setState(() {
+          _errorMessage = classifyApiError(error) == ApiErrorKind.unknown
+              ? AppStrings.feedbackSubmitFailed
+              : apiErrorMessage(error);
+        });
       }
     } finally {
       if (mounted) {
@@ -240,10 +245,6 @@ class _FeedbackSheetState extends ConsumerState<FeedbackSheet> {
           isSubmitting: _isSubmitting,
           onTap: _submit,
         ),
-        if (_isSubmitting) ...[
-          const SizedBox(height: 20),
-          const Center(child: CircularProgressIndicator()),
-        ],
         if (_errorMessage != null) ...[
           const SizedBox(height: 16),
           Text(
@@ -349,6 +350,7 @@ class _FeelingButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final showSpinner = isSubmitting && selected;
     return OutlinedButton(
       onPressed: isSubmitting ? null : () => onTap(value),
       style: OutlinedButton.styleFrom(
@@ -362,7 +364,17 @@ class _FeelingButton extends StatelessWidget {
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
-        children: [Icon(icon), const SizedBox(width: 10), Text(label)],
+        children: [
+          if (showSpinner)
+            const SizedBox.square(
+              dimension: 18,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          else
+            Icon(icon),
+          const SizedBox(width: 10),
+          Text(label),
+        ],
       ),
     );
   }
