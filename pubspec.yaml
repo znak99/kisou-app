@@ -102,13 +102,17 @@ flutter:
   # see https://flutter.dev/to/font-from-package
 
 flutter_launcher_icons:
-  image_path: "assets/brand/app_icon_1024.png"
+  image_path: "assets/brand/app_icon_v2.png"
   android: true
   ios: true
   remove_alpha_ios: true
-  background_color_ios: "#FBF7F0"
-  adaptive_icon_background: "#FBF7F0"
-  adaptive_icon_foreground: "assets/brand/app_icon_foreground.png"
+  background_color_ios: "#FF9A5A"
+  image_path_ios: "assets/brand/app_icon_v2.png"
+  image_path_ios_dark_transparent: "assets/brand/app_icon_v2_glyph.png"
+  image_path_ios_tinted_grayscale: "assets/brand/app_icon_v2_glyph.png"
+  adaptive_icon_background: "assets/brand/app_icon_v2_bg.png"
+  adaptive_icon_foreground: "assets/brand/app_icon_v2_glyph.png"
+  adaptive_icon_monochrome: "assets/brand/app_icon_v2_glyph.png"
 
 flutter_native_splash:
   color: "#FBF7F0"

@@ -6,8 +6,9 @@ Post-MVP tasks in recommended priority order.
 
 ## High Priority
 
-### High-Quality App Icon (예정)
-- [ ] 추후 고품질 앱 아이콘 생성 및 교체 (현재 임시 클레이 심볼 사용 중, 리뉴얼 v2에서 아이콘 변경은 보류)
+### High-Quality App Icon
+- [x] 모던·미니멀 앱 아이콘 제작 (해+티셔츠 플랫 실루엣, 라이트/다크/틴티드 + Android 모노크롬 대응, flutter_launcher_icons)
+- [ ] (선택) 스플래시 로고도 신규 아이콘 톤에 맞춰 교체 검토
 
 ### UI Design Renewal
 - [ ] Design new visual identity (color palette, typography, spacing)
