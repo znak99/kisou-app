@@ -20,7 +20,7 @@ class RecommendationCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isLarge = size == RecommendationCardSize.large;
-    final iconSize = isLarge ? 84.0 : 60.0;
+    final iconSize = isLarge ? 84.0 : 40.0;
     return ClayCard(
       padding: EdgeInsets.all(isLarge ? KisouTheme.gapL : KisouTheme.gapM),
       child: Column(
@@ -70,7 +70,7 @@ class _RankBadge extends StatelessWidget {
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: KisouTheme.deepSky,
+          color: KisouTheme.accent,
           borderRadius: BorderRadius.circular(100),
         ),
         child: Row(
@@ -89,27 +89,27 @@ class _RankBadge extends StatelessWidget {
         ),
       );
     }
+    // Ranks 2 & 3: no number — just the "warmer / lighter" label.
+    final isWarmer = rank == 2;
     return Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Container(
-          width: 28,
-          height: 28,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: context.kisou.surfaceAlt,
-            shape: BoxShape.circle,
-          ),
-          child: Text(
-            '$rank',
-            style: Theme.of(context).textTheme.labelLarge?.copyWith(
-              color: context.kisou.softInk,
-            ),
-          ),
+        Icon(
+          isWarmer ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded,
+          size: 15,
+          color: isWarmer ? KisouTheme.warm : KisouTheme.cool,
         ),
-        const SizedBox(width: KisouTheme.gapS),
-        Text(
-          rank == 2 ? AppStrings.warmerOption : AppStrings.lighterOption,
-          style: Theme.of(context).textTheme.bodySmall,
+        const SizedBox(width: 4),
+        Flexible(
+          child: Text(
+            isWarmer ? AppStrings.warmerOption : AppStrings.lighterOption,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              fontWeight: FontWeight.w700,
+              color: context.kisou.ink,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
         ),
       ],
     );

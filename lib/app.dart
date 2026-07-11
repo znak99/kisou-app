@@ -6,6 +6,7 @@ import 'config/theme.dart';
 import 'constants/app_strings.dart';
 import 'providers/api_provider.dart';
 import 'providers/auth_provider.dart';
+import 'providers/theme_provider.dart';
 import 'screens/onboarding/login_screen.dart';
 import 'screens/onboarding/onboarding_screen.dart';
 import 'screens/root_shell.dart';
@@ -32,7 +33,7 @@ class _KisouAppState extends ConsumerState<KisouApp> {
       ],
       theme: KisouTheme.light(),
       darkTheme: KisouTheme.dark(),
-      themeMode: ThemeMode.system,
+      themeMode: ref.watch(themeModeProvider),
       home: const _AuthGate(),
     );
   }

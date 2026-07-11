@@ -104,7 +104,13 @@ class _HomeContent extends ConsumerWidget {
           const SizedBox(height: KisouTheme.gapL),
           _Greeting(user: user),
           const SizedBox(height: KisouTheme.gapL),
-          // Clothing recommendations are the first content section.
+          // 1. Today's weather
+          TodayWeatherDetail(today: home.weatherComparison.today),
+          const SizedBox(height: KisouTheme.gapM),
+          // 2. Predicted feeling
+          FeelingHeadline(feeling: home.feeling, nickname: user?.nickname),
+          const SizedBox(height: KisouTheme.gapL),
+          // 3. Clothing recommendations
           Text(
             AppStrings.recommendationSection,
             style: Theme.of(context).textTheme.titleMedium,
@@ -115,15 +121,29 @@ class _HomeContent extends ConsumerWidget {
               recommendation: primary,
               size: RecommendationCardSize.large,
             ),
-          for (final item in secondary) ...[
+          if (secondary.length >= 2) ...[
             const SizedBox(height: KisouTheme.gapM),
-            RecommendationCard(recommendation: item),
-          ],
+            IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(
+                    child: RecommendationCard(recommendation: secondary[0]),
+                  ),
+                  const SizedBox(width: KisouTheme.gapM),
+                  Expanded(
+                    child: RecommendationCard(recommendation: secondary[1]),
+                  ),
+                ],
+              ),
+            ),
+          ] else
+            for (final item in secondary) ...[
+              const SizedBox(height: KisouTheme.gapM),
+              RecommendationCard(recommendation: item),
+            ],
           const SizedBox(height: KisouTheme.gapL),
-          FeelingHeadline(feeling: home.feeling),
-          const SizedBox(height: KisouTheme.gapM),
-          TodayWeatherDetail(today: home.weatherComparison.today),
-          const SizedBox(height: KisouTheme.gapM),
+          // 4. Weather comparison
           WeatherComparison(comparison: home.weatherComparison),
         ],
       ),

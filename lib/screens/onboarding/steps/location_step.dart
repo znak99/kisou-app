@@ -5,6 +5,7 @@ import '../../../config/theme.dart';
 import '../../../constants/app_strings.dart';
 import '../../../constants/major_cities.dart';
 import '../../../models/location.dart';
+import '../../../utils/geocode.dart';
 
 class LocationStep extends StatefulWidget {
   const LocationStep({
@@ -50,11 +51,15 @@ class _LocationStepState extends State<LocationStep> {
       }
 
       final position = await Geolocator.getCurrentPosition();
+      final region = await reverseGeocodeRegion(
+        position.latitude,
+        position.longitude,
+      );
       widget.onLocationSelected(
         LocationValue(
           latitude: position.latitude,
           longitude: position.longitude,
-          regionName: AppStrings.currentLocation,
+          regionName: region ?? AppStrings.currentLocation,
         ),
       );
     } catch (_) {

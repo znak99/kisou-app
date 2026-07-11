@@ -11,8 +11,10 @@ import '../../constants/major_cities.dart';
 import '../../models/location.dart';
 import '../../models/user.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/theme_provider.dart';
 import '../../providers/user_provider.dart';
 import '../../utils/api_error.dart';
+import '../../utils/geocode.dart';
 import '../../widgets/brand_logo.dart';
 import '../../widgets/error_state.dart';
 
@@ -163,7 +165,59 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             ),
           ],
         ),
+        const SizedBox(height: KisouTheme.gapL),
+        // --- 表示設定 ---
+        const _SectionLabel(title: AppStrings.profileCategoryDisplay),
+        const SizedBox(height: KisouTheme.gapS),
+        _buildThemeSelector(),
       ],
+    );
+  }
+
+  Widget _buildThemeSelector() {
+    final mode = ref.watch(themeModeProvider);
+    return ClayCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.brightness_6_outlined,
+                size: 20,
+                color: context.kisou.softInk,
+              ),
+              const SizedBox(width: KisouTheme.gapS),
+              Text(
+                AppStrings.themeSetting,
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+            ],
+          ),
+          const SizedBox(height: KisouTheme.gapM),
+          SegmentedButton<ThemeMode>(
+            segments: const [
+              ButtonSegment(
+                value: ThemeMode.system,
+                label: Text(AppStrings.themeSystem),
+              ),
+              ButtonSegment(
+                value: ThemeMode.light,
+                label: Text(AppStrings.themeLight),
+              ),
+              ButtonSegment(
+                value: ThemeMode.dark,
+                label: Text(AppStrings.themeDark),
+              ),
+            ],
+            selected: {mode},
+            showSelectedIcon: false,
+            onSelectionChanged: (selection) => ref
+                .read(themeModeProvider.notifier)
+                .setMode(selection.first),
+          ),
+        ],
+      ),
     );
   }
 
@@ -575,10 +629,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       }
 
       final position = await Geolocator.getCurrentPosition();
+      final region = await reverseGeocodeRegion(
+        position.latitude,
+        position.longitude,
+      );
       return LocationValue(
         latitude: position.latitude,
         longitude: position.longitude,
-        regionName: AppStrings.currentLocation,
+        regionName: region ?? AppStrings.currentLocation,
       );
     } catch (_) {
       _showMessage(AppStrings.useCurrentLocationFailed);

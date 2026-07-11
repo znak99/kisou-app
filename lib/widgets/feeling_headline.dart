@@ -4,11 +4,12 @@ import '../config/theme.dart';
 import '../constants/app_strings.dart';
 
 /// Hero card on the home screen: a 7-step comfort prediction phrase colored by
-/// the feeling level, e.g. "今日のあなたは / とても暑く感じるでしょう".
+/// the feeling level, e.g. "今日の◯◯さんは / とても暑く感じるでしょう".
 class FeelingHeadline extends StatelessWidget {
-  const FeelingHeadline({super.key, required this.feeling});
+  const FeelingHeadline({super.key, required this.feeling, this.nickname});
 
   final String feeling;
+  final String? nickname;
 
   static const _phrases = {
     'VERY_HOT': AppStrings.feelingVeryHot,
@@ -35,24 +36,35 @@ class FeelingHeadline extends StatelessWidget {
     final color = KisouTheme.feelingColor(feeling);
     final phrase = _phrases[feeling] ?? AppStrings.feelingPerfect;
     final icon = _icons[feeling] ?? Icons.sentiment_satisfied_rounded;
+    final name = nickname?.trim() ?? '';
+    final lead = name.isEmpty
+        ? AppStrings.feelingLead
+        : '今日の$nameさんは';
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
+        // Same-hue gradient: a lighter tint → base → a slightly deeper shade.
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [color, color.withValues(alpha: 0.82)],
+          colors: [
+            Color.lerp(color, Colors.white, 0.20)!,
+            color,
+            Color.lerp(color, Colors.black, 0.16)!,
+          ],
+          stops: const [0.0, 0.55, 1.0],
         ),
         borderRadius: BorderRadius.circular(KisouTheme.rLg),
         boxShadow: [
           BoxShadow(
-            color: color.withValues(alpha: 0.32),
-            blurRadius: 28,
-            offset: const Offset(0, 12),
+            color: color.withValues(alpha: 0.30),
+            blurRadius: 24,
+            offset: const Offset(0, 10),
           ),
         ],
       ),
-      padding: const EdgeInsets.all(KisouTheme.gapL),
+      // ~15% more compact than before.
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
       child: Row(
         children: [
           Expanded(
@@ -60,25 +72,26 @@ class FeelingHeadline extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  AppStrings.feelingLead,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Colors.white.withValues(alpha: 0.9),
+                  lead,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Colors.white.withValues(alpha: 0.92),
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                const SizedBox(height: KisouTheme.gapXs),
+                const SizedBox(height: 2),
                 Text(
                   phrase,
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                     color: Colors.white,
-                    height: 1.3,
+                    fontSize: 19,
+                    height: 1.25,
                   ),
                 ),
               ],
             ),
           ),
           const SizedBox(width: KisouTheme.gapM),
-          Icon(icon, color: Colors.white, size: 40),
+          Icon(icon, color: Colors.white, size: 34),
         ],
       ),
     );

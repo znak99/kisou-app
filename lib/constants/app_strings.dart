@@ -1,7 +1,14 @@
 class AppStrings {
   const AppStrings._();
 
-  static const appName = 'キソウ';
+  static const appName = 'KISOU';
+
+  // Display / theme
+  static const profileCategoryDisplay = '表示設定';
+  static const themeSetting = 'テーマ';
+  static const themeSystem = 'システム';
+  static const themeLight = 'ライト';
+  static const themeDark = 'ダーク';
 
   // Bottom navigation
   static const tabHome = 'ホーム';
@@ -76,14 +83,14 @@ class AppStrings {
   static const linkFailed = 'アカウント連携に失敗しました。';
   static const skipForNow = 'あとで';
 
-  static const loginDescription = '今日、どのくらいの厚さで着ればいい？\nキソウが教えます';
+  static const loginDescription = '今日、どのくらいの厚さで着ればいい？\nKISOUが教えます';
   static const appleLogin = 'Appleでログイン';
   static const googleLogin = 'Googleでログイン';
   static const developmentExistingLogin = '開発ログイン（既存）';
   static const developmentNewLogin = '開発ログイン（新規）';
   static const loginFailed = 'ログインに失敗しました。もう一度お試しください。';
   static const onboarding = 'オンボーディング';
-  static const home = 'キソウ ホーム';
+  static const home = 'KISOU ホーム';
   static const settings = '設定';
   static const logout = 'ログアウト';
   static const retry = '再試行';
@@ -109,7 +116,7 @@ class AppStrings {
   static const saveFailed = '設定の保存に失敗しました。もう一度お試しください。';
   static const onboardingComplete = '設定完了！今日のおすすめを確認しましょう';
   static const ok = 'OK';
-  static const nicknamePrompt = 'キソウで使う名前を教えてください';
+  static const nicknamePrompt = 'KISOUで使う名前を教えてください';
   static const nicknameHint = '10文字以内';
   static const genderPrompt = '性別を選んでください';
   static const male = '男性';

@@ -10,6 +10,11 @@ Post-MVP tasks in recommended priority order.
 - [x] 모던·미니멀 앱 아이콘 제작 (해+티셔츠 플랫 실루엣, 라이트/다크/틴티드 + Android 모노크롬 대응, flutter_launcher_icons)
 - [ ] (선택) 스플래시 로고도 신규 아이콘 톤에 맞춰 교체 검토
 
+### 리뷰 후속 (v2.1)
+- [ ] 앱 아이콘 바꾸기 (현재 임시 심볼 → 최종 고품질 아이콘으로 교체)
+- [ ] 텍스트 로고 만들기 (KISOU 워드마크 전용 로고 디자인)
+- [ ] 외출/귀가 시간 설정 항목 삭제 (온보딩 및 프로필에서 제거 검토)
+
 ### UI Design Renewal
 - [ ] Design new visual identity (color palette, typography, spacing)
 - [ ] Redesign all screens (login, onboarding, home, feedback, settings)
