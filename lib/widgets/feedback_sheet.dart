@@ -306,24 +306,21 @@ class _SelectableClothingOption extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
     return InkWell(
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(20),
       onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 160),
-        padding: const EdgeInsets.all(6),
-        decoration: BoxDecoration(
-          color: selected
-              ? colorScheme.primary.withValues(alpha: 0.08)
-              : Colors.transparent,
-          border: Border.all(
-            color: selected ? colorScheme.primary : KisouTheme.mistGray,
-            width: selected ? 1.5 : 1,
+      child: Padding(
+        padding: const EdgeInsets.all(4),
+        child: AnimatedScale(
+          duration: const Duration(milliseconds: 160),
+          scale: selected ? 1.04 : 1.0,
+          child: ClothingIcon(
+            code: code,
+            type: type,
+            size: 64,
+            selected: selected,
           ),
-          borderRadius: BorderRadius.circular(8),
         ),
-        child: ClothingIcon(code: code, type: type, size: 64),
       ),
     );
   }
@@ -355,12 +352,15 @@ class _FeelingButton extends StatelessWidget {
       onPressed: isSubmitting ? null : () => onTap(value),
       style: OutlinedButton.styleFrom(
         backgroundColor: selected
-            ? color.withValues(alpha: 0.08)
+            ? color.withValues(alpha: 0.12)
             : Colors.white,
         foregroundColor: color,
-        minimumSize: const Size.fromHeight(60),
-        side: BorderSide(color: selected ? color : KisouTheme.mistGray),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        minimumSize: const Size.fromHeight(64),
+        side: BorderSide(
+          color: selected ? color : KisouTheme.hairline,
+          width: selected ? 2 : 1,
+        ),
+        shape: const StadiumBorder(),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,

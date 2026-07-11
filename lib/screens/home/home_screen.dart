@@ -145,11 +145,10 @@ class _FeedbackBottomBar extends ConsumerWidget {
     return SafeArea(
       top: false,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-        child: Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: feedbackState.when(
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 14),
+        child: ClayCard(
+          padding: const EdgeInsets.all(16),
+          child: feedbackState.when(
               data: (status) {
                 final feedback = status.feedback;
                 if (status.exists && feedback != null) {
@@ -217,8 +216,7 @@ class _FeedbackBottomBar extends ConsumerWidget {
             ),
           ),
         ),
-      ),
-    );
+      );
   }
 
   Future<void> _openFeedbackSheet({
@@ -265,12 +263,32 @@ class _Greeting extends StatelessWidget {
           style: Theme.of(context).textTheme.headlineSmall,
         ),
         if (regionName != null && regionName.isNotEmpty) ...[
-          const SizedBox(height: 8),
-          Text(
-            '📍 $regionName',
-            style: Theme.of(
-              context,
-            ).textTheme.bodyMedium?.copyWith(color: KisouTheme.softInk),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+            decoration: BoxDecoration(
+              color: KisouTheme.surface,
+              borderRadius: BorderRadius.circular(100),
+              boxShadow: KisouTheme.tileShadow,
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.place_rounded,
+                  size: 16,
+                  color: KisouTheme.deepSky,
+                ),
+                const SizedBox(width: 5),
+                Text(
+                  regionName,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: KisouTheme.ink,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ],

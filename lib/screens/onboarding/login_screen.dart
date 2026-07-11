@@ -40,8 +40,8 @@ class LoginScreen extends ConsumerWidget {
               const Spacer(flex: 3),
               SignInWithAppleButton(
                 text: AppStrings.appleLogin,
-                height: 48,
-                borderRadius: BorderRadius.circular(8),
+                height: 54,
+                borderRadius: BorderRadius.circular(27),
                 onPressed: isLoading
                     ? null
                     : () => ref.read(authProvider.notifier).loginWithApple(),
@@ -108,9 +108,9 @@ class _GoogleSignInButton extends StatelessWidget {
       style: OutlinedButton.styleFrom(
         backgroundColor: Colors.white,
         foregroundColor: KisouTheme.ink,
-        minimumSize: const Size.fromHeight(48),
-        side: const BorderSide(color: KisouTheme.mistGray),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        minimumSize: const Size.fromHeight(54),
+        side: const BorderSide(color: KisouTheme.hairline),
+        shape: const StadiumBorder(),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,

@@ -24,6 +24,8 @@ class AppStrings {
   static const recommendationSection = 'おすすめ';
   static const weatherComparisonSection = '天気の比較';
   static const bestRecommendation = 'おすすめ';
+  static const warmerOption = '少し暖かめ';
+  static const lighterOption = '少し軽め';
   static const today = '今日';
   static const yesterday = '昨日';
   static const twoDaysAgo = '一昨日';
