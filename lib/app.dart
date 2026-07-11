@@ -6,9 +6,9 @@ import 'config/theme.dart';
 import 'constants/app_strings.dart';
 import 'providers/api_provider.dart';
 import 'providers/auth_provider.dart';
-import 'screens/home/home_screen.dart';
 import 'screens/onboarding/login_screen.dart';
 import 'screens/onboarding/onboarding_screen.dart';
+import 'screens/root_shell.dart';
 
 class KisouApp extends ConsumerStatefulWidget {
   const KisouApp({super.key});
@@ -66,7 +66,7 @@ class _AuthGate extends ConsumerWidget {
         if (state.isNewUser) {
           return const OnboardingScreen();
         }
-        return const HomeScreen();
+        return const RootShell();
       },
       error: (_, _) => const LoginScreen(),
       loading: () => const _LoadingScreen(),

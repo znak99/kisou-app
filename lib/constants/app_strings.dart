@@ -2,6 +2,49 @@ class AppStrings {
   const AppStrings._();
 
   static const appName = 'キソウ';
+
+  // Bottom navigation
+  static const tabHome = 'ホーム';
+  static const tabAnalysis = '分析';
+  static const tabProfile = 'プロフィール';
+
+  // Ad slot
+  static const adLabel = '広告';
+
+  // Feeling headline (7 levels)
+  static const feelingLead = '今日のあなたは';
+  static const feelingVeryHot = 'とても暑く感じるでしょう';
+  static const feelingHot = '暑く感じるでしょう';
+  static const feelingWarm = '暖かく感じるでしょう';
+  static const feelingPerfect = 'ちょうど良く感じるでしょう';
+  static const feelingCool = '涼しく感じるでしょう';
+  static const feelingCold = '寒く感じるでしょう';
+  static const feelingVeryCold = 'とても寒く感じるでしょう';
+
+  // Today weather detail
+  static const todayWeatherTitle = '今日の天気';
+  static const weatherFeelsLike = '体感';
+  static const weatherHumidity = '湿度';
+  static const weatherWind = '風速';
+  static const weatherPrecipitation = '降水確率';
+  static const weatherWbgt = '暑さ指数';
+
+  // Analysis screen
+  static const analysisTitle = '分析';
+  static const analysisTendencyTitle = 'あなたの体感タイプ';
+  static const tendencyColdSensitive = '寒がりタイプ';
+  static const tendencyNeutral = 'バランスタイプ';
+  static const tendencyHeatSensitive = '暑がりタイプ';
+  static const tendencyColdSensitiveDesc = '同じ気温でも寒く感じやすい傾向です';
+  static const tendencyNeutralDesc = '気温に対してバランスよく感じる傾向です';
+  static const tendencyHeatSensitiveDesc = '同じ気温でも暑く感じやすい傾向です';
+  static const analysisDistributionTitle = '体感の記録';
+  static const analysisHistoryTitle = '寒いと感じた日';
+  static const analysisEmpty = 'まだ記録がありません。\nフィードバックすると分析が表示されます。';
+  static const feedbackCountCold = '寒かった';
+  static const feedbackCountPerfect = 'ちょうど良い';
+  static const feedbackCountHot = '暑かった';
+  static const analysisTimelineTitle = '体感の推移';
   static const loginDescription = '今日、どのくらいの厚さで着ればいい？\nキソウが教えます';
   static const appleLogin = 'Appleでログイン';
   static const googleLogin = 'Googleでログイン';

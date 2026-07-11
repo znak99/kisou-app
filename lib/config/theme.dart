@@ -46,6 +46,20 @@ class KisouTheme {
     BoxShadow(color: Color(0x12A8895A), blurRadius: 14, offset: Offset(0, 6)),
   ];
 
+  /// Colors for the 7-step comfort feeling headline (hot → cold).
+  static const Map<String, Color> feelingColors = {
+    'VERY_HOT': Color(0xFFE8623A),
+    'HOT': Color(0xFFF0894C),
+    'WARM': Color(0xFFF2B45C),
+    'PERFECT': Color(0xFF6FBF73),
+    'COOL': Color(0xFF5FB0D9),
+    'COLD': Color(0xFF3E8FCB),
+    'VERY_COLD': Color(0xFF2E6FB0),
+  };
+
+  static Color feelingColor(String code) =>
+      feelingColors[code] ?? deepSky;
+
   static ThemeData light() {
     const textTheme = TextTheme(
       displaySmall: TextStyle(

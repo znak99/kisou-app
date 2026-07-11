@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../config/theme.dart';
 import '../../constants/app_strings.dart';
 import '../../constants/major_cities.dart';
 import '../../models/location.dart';
@@ -11,16 +12,17 @@ import '../../models/user.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/user_provider.dart';
 import '../../utils/api_error.dart';
+import '../../widgets/brand_logo.dart';
 import '../../widgets/error_state.dart';
 
-class SettingsScreen extends ConsumerStatefulWidget {
-  const SettingsScreen({super.key});
+class ProfileScreen extends ConsumerStatefulWidget {
+  const ProfileScreen({super.key});
 
   @override
-  ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
+  ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
 }
 
-class _SettingsScreenState extends ConsumerState<SettingsScreen> {
+class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   static final _privacyPolicyUri = Uri.parse('https://example.com/privacy');
 
   var _isSaving = false;
@@ -41,14 +43,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final userState = ref.watch(userProvider);
-    return Scaffold(
-      appBar: AppBar(title: const Text(AppStrings.settings)),
-      body: userState.when(
+    return SafeArea(
+      bottom: false,
+      child: userState.when(
         data: (user) {
           if (user == null) {
             return const Center(child: CircularProgressIndicator());
           }
-          return _buildSettingsList(user);
+          return _buildProfile(user);
         },
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => _SettingsError(error: error, onRetry: _loadUser),
@@ -56,70 +58,75 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
-  Widget _buildSettingsList(User user) {
-    return SafeArea(
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-        children: [
-          if (_isSaving) const LinearProgressIndicator(),
-          _SettingsTile(
-            icon: Icons.person_outline,
-            title: AppStrings.nicknameSetting,
-            value: _displayValue(user.nickname),
-            onTap: _isSaving ? null : () => _editNickname(user),
-          ),
-          _SettingsTile(
-            icon: Icons.wc_outlined,
-            title: AppStrings.genderSetting,
-            value: _genderLabel(user.gender),
-            onTap: _isSaving ? null : () => _editGender(user),
-          ),
-          _SettingsTile(
-            icon: Icons.thermostat_outlined,
-            title: AppStrings.sensitivitySetting,
-            value:
-                '${_coldSensitivityLabel(user.coldSensitivity)}'
-                '${AppStrings.sensitivitySeparator}'
-                '${_heatSensitivityLabel(user.heatSensitivity)}',
-            onTap: _isSaving ? null : () => _editSensitivity(user),
-          ),
-          _SettingsTile(
-            icon: Icons.schedule_outlined,
-            title: AppStrings.timeSetting,
-            value:
-                '${_displayTime(user.departureTime)}'
-                '${AppStrings.timeRangeSeparator}'
-                '${_displayTime(user.returnTime)}',
-            onTap: _isSaving ? null : () => _editTime(user),
-          ),
-          _SettingsTile(
-            icon: Icons.location_on_outlined,
-            title: AppStrings.locationSetting,
-            value: _displayValue(user.regionName),
-            onTap: _isSaving ? null : () => _editLocation(),
-          ),
-          const Divider(height: 28),
-          _SettingsTile(
-            icon: Icons.privacy_tip_outlined,
-            title: AppStrings.privacyPolicy,
-            value: null,
-            onTap: _isSaving ? null : _openPrivacyPolicy,
-          ),
-          _SettingsTile(
-            icon: Icons.logout,
-            title: AppStrings.logout,
-            value: null,
-            onTap: _isSaving ? null : _confirmLogout,
-          ),
-          _SettingsTile(
-            icon: Icons.delete_outline,
-            title: AppStrings.accountDelete,
-            value: null,
-            destructive: true,
-            onTap: _isSaving ? null : _confirmDeleteAccount,
-          ),
-        ],
-      ),
+  Widget _buildProfile(User user) {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
+      children: [
+        Text(
+          AppStrings.tabProfile,
+          style: Theme.of(context).textTheme.headlineSmall,
+        ),
+        const SizedBox(height: 16),
+        _ProfileHeader(user: user),
+        const SizedBox(height: 20),
+        if (_isSaving) const LinearProgressIndicator(),
+        _SettingsTile(
+          icon: Icons.person_outline,
+          title: AppStrings.nicknameSetting,
+          value: _displayValue(user.nickname),
+          onTap: _isSaving ? null : () => _editNickname(user),
+        ),
+        _SettingsTile(
+          icon: Icons.wc_outlined,
+          title: AppStrings.genderSetting,
+          value: _genderLabel(user.gender),
+          onTap: _isSaving ? null : () => _editGender(user),
+        ),
+        _SettingsTile(
+          icon: Icons.thermostat_outlined,
+          title: AppStrings.sensitivitySetting,
+          value:
+              '${_coldSensitivityLabel(user.coldSensitivity)}'
+              '${AppStrings.sensitivitySeparator}'
+              '${_heatSensitivityLabel(user.heatSensitivity)}',
+          onTap: _isSaving ? null : () => _editSensitivity(user),
+        ),
+        _SettingsTile(
+          icon: Icons.schedule_outlined,
+          title: AppStrings.timeSetting,
+          value:
+              '${_displayTime(user.departureTime)}'
+              '${AppStrings.timeRangeSeparator}'
+              '${_displayTime(user.returnTime)}',
+          onTap: _isSaving ? null : () => _editTime(user),
+        ),
+        _SettingsTile(
+          icon: Icons.location_on_outlined,
+          title: AppStrings.locationSetting,
+          value: _displayValue(user.regionName),
+          onTap: _isSaving ? null : () => _editLocation(),
+        ),
+        const Divider(height: 28),
+        _SettingsTile(
+          icon: Icons.privacy_tip_outlined,
+          title: AppStrings.privacyPolicy,
+          value: null,
+          onTap: _isSaving ? null : _openPrivacyPolicy,
+        ),
+        _SettingsTile(
+          icon: Icons.logout,
+          title: AppStrings.logout,
+          value: null,
+          onTap: _isSaving ? null : _confirmLogout,
+        ),
+        _SettingsTile(
+          icon: Icons.delete_outline,
+          title: AppStrings.accountDelete,
+          value: null,
+          destructive: true,
+          onTap: _isSaving ? null : _confirmDeleteAccount,
+        ),
+      ],
     );
   }
 
@@ -460,9 +467,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       return;
     }
     await ref.read(authProvider.notifier).logout();
-    if (mounted) {
-      Navigator.of(context).popUntil((route) => route.isFirst);
-    }
   }
 
   Future<void> _confirmDeleteAccount() async {
@@ -479,9 +483,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     try {
       await ref.read(userProvider.notifier).deleteMe();
       await ref.read(authProvider.notifier).logout();
-      if (mounted) {
-        Navigator.of(context).popUntil((route) => route.isFirst);
-      }
     } catch (error) {
       _showMessage(
         classifyApiError(error) == ApiErrorKind.unknown
@@ -634,6 +635,63 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final hour = time.hour.toString().padLeft(2, '0');
     final minute = time.minute.toString().padLeft(2, '0');
     return '$hour:$minute';
+  }
+}
+
+class _ProfileHeader extends StatelessWidget {
+  const _ProfileHeader({required this.user});
+
+  final User user;
+
+  @override
+  Widget build(BuildContext context) {
+    final nickname = user.nickname.trim();
+    final region = user.regionName?.trim() ?? '';
+    return ClayCard(
+      child: Row(
+        children: [
+          Container(
+            width: 60,
+            height: 60,
+            decoration: BoxDecoration(
+              color: KisouTheme.deepSky.withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(18),
+            ),
+            alignment: Alignment.center,
+            child: const BrandLogo(variant: BrandLogoVariant.mark, size: 40),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  nickname.isEmpty ? AppStrings.appName : nickname,
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                if (region.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.place_rounded,
+                        size: 15,
+                        color: KisouTheme.softInk,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        region,
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

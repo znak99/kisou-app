@@ -1,0 +1,134 @@
+import 'package:flutter/material.dart';
+
+import '../config/theme.dart';
+import '../constants/app_strings.dart';
+import '../models/weather.dart' as weather_model;
+
+/// Detailed weather card for today: high/low with feels-like, plus humidity,
+/// wind, precipitation chance, and (in summer) the heat index.
+class TodayWeatherDetail extends StatelessWidget {
+  const TodayWeatherDetail({super.key, required this.today});
+
+  final weather_model.WeatherSummary today;
+
+  @override
+  Widget build(BuildContext context) {
+    final metrics = <(IconData, String, String)>[
+      (
+        Icons.water_drop_rounded,
+        AppStrings.weatherHumidity,
+        '${today.humidityAvg}%',
+      ),
+      (
+        Icons.air_rounded,
+        AppStrings.weatherWind,
+        '${today.windSpeedAvg.round()} km/h',
+      ),
+      (
+        Icons.umbrella_rounded,
+        AppStrings.weatherPrecipitation,
+        today.precipitationChanceMax == null
+            ? '—'
+            : '${today.precipitationChanceMax}%',
+      ),
+      if (today.wbgtMax != null)
+        (
+          Icons.thermostat_rounded,
+          AppStrings.weatherWbgt,
+          '${today.wbgtMax!.round()}',
+        ),
+    ];
+    return ClayCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            AppStrings.todayWeatherTitle,
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 16),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Text(
+                '${today.tempHigh.round()}°',
+                style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                  color: KisouTheme.warm,
+                ),
+              ),
+              const SizedBox(width: 6),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Text(
+                  '/ ${today.tempLow.round()}°',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: KisouTheme.cool,
+                  ),
+                ),
+              ),
+              const Spacer(),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    AppStrings.weatherFeelsLike,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                  Text(
+                    '${today.feelsLikeHigh.round()}° / ${today.feelsLikeLow.round()}°',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          const Divider(height: 1),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              for (final metric in metrics)
+                Expanded(
+                  child: _Metric(
+                    icon: metric.$1,
+                    label: metric.$2,
+                    value: metric.$3,
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Metric extends StatelessWidget {
+  const _Metric({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Icon(icon, size: 20, color: KisouTheme.deepSky),
+        const SizedBox(height: 6),
+        Text(
+          value,
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            fontSize: 16,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(label, style: Theme.of(context).textTheme.bodySmall),
+      ],
+    );
+  }
+}

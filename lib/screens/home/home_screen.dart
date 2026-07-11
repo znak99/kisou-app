@@ -6,16 +6,18 @@ import '../../constants/app_strings.dart';
 import '../../models/feedback.dart';
 import '../../models/home.dart';
 import '../../models/user.dart';
-import '../../providers/auth_provider.dart';
 import '../../providers/feedback_provider.dart';
 import '../../providers/home_provider.dart';
+import '../../providers/shell_provider.dart';
 import '../../providers/user_provider.dart';
 import '../../utils/api_error.dart';
+import '../../widgets/brand_logo.dart';
 import '../../widgets/error_state.dart';
+import '../../widgets/feeling_headline.dart';
 import '../../widgets/feedback_sheet.dart';
 import '../../widgets/recommendation_card.dart';
+import '../../widgets/today_weather_detail.dart';
 import '../../widgets/weather_comparison.dart';
-import '../settings/settings_screen.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -48,37 +50,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           error: (_, _) => null,
           loading: () => null,
         );
-    return Scaffold(
-      appBar: AppBar(
-        actions: [
-          IconButton(
-            tooltip: AppStrings.settings,
-            onPressed: () async {
-              await Navigator.of(context).push(
-                MaterialPageRoute<void>(builder: (_) => const SettingsScreen()),
-              );
-              final authState = ref
-                  .read(authProvider)
-                  .maybeWhen(data: (value) => value, orElse: () => null);
-              if (context.mounted && authState?.isAuthenticated == true) {
-                await Future.wait([
-                  ref.read(userProvider.notifier).getMe(),
-                  ref.read(homeProvider.notifier).refresh(),
-                  ref.read(feedbackProvider.notifier).refresh(),
-                ]);
-              }
-            },
-            icon: const Icon(Icons.settings),
-          ),
-        ],
-      ),
-      bottomNavigationBar: homeState.maybeWhen(
-        data: (_) =>
-            _FeedbackBottomBar(user: user, feedbackState: feedbackState),
-        orElse: () => null,
-      ),
-      body: homeState.when(
-        data: (home) => _HomeContent(home: home, user: user),
+    return SafeArea(
+      bottom: false,
+      child: homeState.when(
+        data: (home) => _HomeContent(
+          home: home,
+          user: user,
+          feedbackState: feedbackState,
+        ),
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => _HomeError(error: error),
       ),
@@ -87,10 +66,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 }
 
 class _HomeContent extends ConsumerWidget {
-  const _HomeContent({required this.home, required this.user});
+  const _HomeContent({
+    required this.home,
+    required this.user,
+    required this.feedbackState,
+  });
 
   final HomeResponse home;
   final User? user;
+  final AsyncValue<FeedbackTodayResponse> feedbackState;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -108,10 +92,16 @@ class _HomeContent extends ConsumerWidget {
       },
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(20, 4, 20, 32),
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
         children: [
+          const BrandLogo(variant: BrandLogoVariant.lockup, size: 30),
+          const SizedBox(height: 18),
           _Greeting(user: user),
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
+          FeelingHeadline(feeling: home.feeling),
+          const SizedBox(height: 16),
+          TodayWeatherDetail(today: home.weatherComparison.today),
+          const SizedBox(height: 24),
           Text(
             AppStrings.recommendationSection,
             style: Theme.of(context).textTheme.titleMedium,
@@ -128,95 +118,90 @@ class _HomeContent extends ConsumerWidget {
           ],
           const SizedBox(height: 20),
           WeatherComparison(comparison: home.weatherComparison),
+          const SizedBox(height: 20),
+          _FeedbackCard(user: user, feedbackState: feedbackState),
         ],
       ),
     );
   }
 }
 
-class _FeedbackBottomBar extends ConsumerWidget {
-  const _FeedbackBottomBar({required this.user, required this.feedbackState});
+class _FeedbackCard extends ConsumerWidget {
+  const _FeedbackCard({required this.user, required this.feedbackState});
 
   final User? user;
   final AsyncValue<FeedbackTodayResponse> feedbackState;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return SafeArea(
-      top: false,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 14),
-        child: ClayCard(
-          padding: const EdgeInsets.all(16),
-          child: feedbackState.when(
-              data: (status) {
-                final feedback = status.feedback;
-                if (status.exists && feedback != null) {
-                  return Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          AppStrings.feedbackDone,
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                      ),
-                      TextButton(
-                        onPressed: () => _openFeedbackSheet(
-                          context: context,
-                          ref: ref,
-                          user: user,
-                          initialFeedback: feedback,
-                        ),
-                        child: const Text(AppStrings.feedbackChange),
-                      ),
-                    ],
-                  );
-                }
-                return Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text(
-                      AppStrings.feedbackPrompt,
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 12),
-                    FilledButton(
-                      onPressed: () => _openFeedbackSheet(
-                        context: context,
-                        ref: ref,
-                        user: user,
-                        initialFeedback: null,
-                      ),
-                      child: const Text(AppStrings.feedbackButton),
-                    ),
-                  ],
-                );
-              },
-              error: (error, _) => Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    apiErrorMessage(error),
-                    style: Theme.of(context).textTheme.bodyMedium,
+    return ClayCard(
+      padding: const EdgeInsets.all(18),
+      child: feedbackState.when(
+        data: (status) {
+          final feedback = status.feedback;
+          if (status.exists && feedback != null) {
+            return Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    AppStrings.feedbackDone,
+                    style: Theme.of(context).textTheme.titleMedium,
                   ),
-                  const SizedBox(height: 12),
-                  OutlinedButton(
-                    onPressed: () =>
-                        ref.read(feedbackProvider.notifier).refresh(),
-                    child: const Text(AppStrings.retry),
+                ),
+                TextButton(
+                  onPressed: () => _openFeedbackSheet(
+                    context: context,
+                    ref: ref,
+                    user: user,
+                    initialFeedback: feedback,
                   ),
-                ],
+                  child: const Text(AppStrings.feedbackChange),
+                ),
+              ],
+            );
+          }
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                AppStrings.feedbackPrompt,
+                style: Theme.of(context).textTheme.titleMedium,
               ),
-              loading: () => const SizedBox(
-                height: 48,
-                child: Center(child: CircularProgressIndicator()),
+              const SizedBox(height: 12),
+              FilledButton(
+                onPressed: () => _openFeedbackSheet(
+                  context: context,
+                  ref: ref,
+                  user: user,
+                  initialFeedback: null,
+                ),
+                child: const Text(AppStrings.feedbackButton),
               ),
+            ],
+          );
+        },
+        error: (error, _) => Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              apiErrorMessage(error),
+              style: Theme.of(context).textTheme.bodyMedium,
             ),
-          ),
+            const SizedBox(height: 12),
+            OutlinedButton(
+              onPressed: () => ref.read(feedbackProvider.notifier).refresh(),
+              child: const Text(AppStrings.retry),
+            ),
+          ],
         ),
-      );
+        loading: () => const SizedBox(
+          height: 48,
+          child: Center(child: CircularProgressIndicator()),
+        ),
+      ),
+    );
   }
 
   Future<void> _openFeedbackSheet({
@@ -319,27 +304,13 @@ class _HomeError extends ConsumerWidget {
                 ? AppStrings.openSettings
                 : AppStrings.retry,
             onAction: isLocationMissing
-                ? () => _openSettings(context, ref)
+                ? () => ref
+                      .read(shellTabProvider.notifier)
+                      .setTab(ShellTab.profile)
                 : () => ref.read(homeProvider.notifier).retry(),
           ),
         ],
       ),
     );
-  }
-
-  Future<void> _openSettings(BuildContext context, WidgetRef ref) async {
-    await Navigator.of(
-      context,
-    ).push(MaterialPageRoute<void>(builder: (_) => const SettingsScreen()));
-    final authState = ref
-        .read(authProvider)
-        .maybeWhen(data: (value) => value, orElse: () => null);
-    if (context.mounted && authState?.isAuthenticated == true) {
-      await Future.wait([
-        ref.read(userProvider.notifier).getMe(),
-        ref.read(homeProvider.notifier).retry(),
-        ref.read(feedbackProvider.notifier).refresh(),
-      ]);
-    }
   }
 }
