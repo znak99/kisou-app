@@ -46,7 +46,7 @@ class TodayWeatherDetail extends StatelessWidget {
             AppStrings.todayWeatherTitle,
             style: Theme.of(context).textTheme.titleMedium,
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: KisouTheme.gapM),
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
@@ -82,9 +82,9 @@ class TodayWeatherDetail extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: KisouTheme.gapL),
           const Divider(height: 1),
-          const SizedBox(height: 16),
+          const SizedBox(height: KisouTheme.gapM),
           Row(
             children: [
               for (final metric in metrics)

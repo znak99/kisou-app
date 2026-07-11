@@ -120,7 +120,7 @@ class _FeedbackSheetState extends ConsumerState<FeedbackSheet> {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: KisouTheme.mistGray,
+                  color: context.kisou.hairline,
                   borderRadius: BorderRadius.circular(999),
                 ),
               ),
@@ -353,11 +353,11 @@ class _FeelingButton extends StatelessWidget {
       style: OutlinedButton.styleFrom(
         backgroundColor: selected
             ? color.withValues(alpha: 0.12)
-            : Colors.white,
+            : context.kisou.surface,
         foregroundColor: color,
         minimumSize: const Size.fromHeight(64),
         side: BorderSide(
-          color: selected ? color : KisouTheme.hairline,
+          color: selected ? color : context.kisou.hairline,
           width: selected ? 2 : 1,
         ),
         shape: const StadiumBorder(),

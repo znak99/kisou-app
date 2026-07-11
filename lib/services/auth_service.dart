@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -26,6 +28,7 @@ class AuthService {
   static const String _tokenKey = 'jwt_token';
   static const String _hasLaunchedBeforeKey = 'has_launched_before';
   static const String _onboardingCompletedKey = 'onboarding_completed';
+  static const String _deviceIdKey = 'device_id';
 
   final FlutterSecureStorage _storage;
   final Future<SharedPreferences> Function() _preferencesFactory;
@@ -118,6 +121,76 @@ class AuthService {
     final loginResponse = LoginResponse.fromJson(data);
     await saveToken(loginResponse.accessToken);
     return loginResponse.isNewUser;
+  }
+
+  /// Ensures a stable per-device id, generating and persisting one on first use.
+  Future<String> getOrCreateDeviceId() async {
+    final preferences = await _preferencesFactory();
+    final existing = preferences.getString(_deviceIdKey);
+    if (existing != null && existing.length >= 8) {
+      return existing;
+    }
+    final random = Random.secure();
+    final deviceId = List<int>.generate(16, (_) => random.nextInt(256))
+        .map((byte) => byte.toRadixString(16).padLeft(2, '0'))
+        .join();
+    await preferences.setString(_deviceIdKey, deviceId);
+    return deviceId;
+  }
+
+  /// Issues (or reuses) an anonymous account for this device. No sign-in needed.
+  Future<bool> loginAnonymous({required Dio dio}) async {
+    final deviceId = await getOrCreateDeviceId();
+    final response = await dio.post<Map<String, dynamic>>(
+      '/auth/anonymous',
+      data: {'device_id': deviceId},
+    );
+    final data = response.data;
+    if (data == null) {
+      throw const AuthException('Anonymous login response is empty.');
+    }
+    final loginResponse = LoginResponse.fromJson(data);
+    await saveToken(loginResponse.accessToken);
+    return loginResponse.isNewUser;
+  }
+
+  /// Links the current (anonymous) account to a verified social identity.
+  Future<void> linkAccount({
+    required Dio dio,
+    required AuthLoginProvider provider,
+    required String token,
+  }) async {
+    await dio.post<Map<String, dynamic>>(
+      '/auth/link',
+      data: {'provider': provider.apiValue, 'token': token},
+    );
+  }
+
+  Future<void> linkWithApple({required Dio dio}) async {
+    final token = await signInWithApple();
+    await linkAccount(
+      dio: dio,
+      provider: AuthLoginProvider.apple,
+      token: token,
+    );
+  }
+
+  Future<void> linkWithGoogle({required Dio dio}) async {
+    final token = await signInWithGoogle();
+    await linkAccount(
+      dio: dio,
+      provider: AuthLoginProvider.google,
+      token: token,
+    );
+  }
+
+  Future<void> linkWithDevelopment({required Dio dio}) {
+    final timestamp = DateTime.now().microsecondsSinceEpoch;
+    return linkAccount(
+      dio: dio,
+      provider: AuthLoginProvider.google,
+      token: 'dev-link-$timestamp',
+    );
   }
 
   Future<bool> loginWithApple({required Dio dio}) async {

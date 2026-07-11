@@ -31,6 +31,8 @@ class _KisouAppState extends ConsumerState<KisouApp> {
         GlobalWidgetsLocalizations.delegate,
       ],
       theme: KisouTheme.light(),
+      darkTheme: KisouTheme.dark(),
+      themeMode: ThemeMode.system,
       home: const _AuthGate(),
     );
   }

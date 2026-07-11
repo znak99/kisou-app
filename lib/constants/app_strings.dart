@@ -45,6 +45,37 @@ class AppStrings {
   static const feedbackCountPerfect = 'ちょうど良い';
   static const feedbackCountHot = '暑かった';
   static const analysisTimelineTitle = '体感の推移';
+  // Analysis v2
+  static const analysisColdDaysTitle = '寒いと感じた日';
+  static const analysisHotDaysTitle = '暑いと感じた日';
+  static const analysisTempHigh = '最高';
+  static const analysisTempLow = '最低';
+  static const analysisLockedMessage = 'フィードバックが5回たまると、くわしい分析が表示されます';
+  static const analysisRemainingSuffix = '回';
+  static const analysisRemainingPrefix = 'あと';
+
+  // Onboarding v2
+  static const nicknameMinLength = 'ニックネームは2文字以上で入力してください';
+  static const timeApproximateNote = 'おおよその時間で大丈夫です';
+
+  // Profile v2 (category tree + account linking)
+  static const profileCategoryPersonal = '個人情報設定';
+  static const profileCategoryAccount = 'アカウント設定';
+  static const profileCategoryComfort = '体感設定';
+  static const dataReset = 'データを初期化';
+  static const dataResetConfirm = '体感データを初期化しますか？補正値とフィードバック記録がリセットされます。';
+  static const dataResetDone = 'データを初期化しました';
+  static const dataResetFailed = 'データの初期化に失敗しました。';
+  static const accountLinkTitle = 'アカウント連携';
+  static const linkWithApple = 'Appleと連携';
+  static const linkWithGoogle = 'Googleと連携';
+  static const linkedWithApple = 'Apple連携済み';
+  static const linkedWithGoogle = 'Google連携済み';
+  static const anonymousAccount = 'ゲスト（未連携）';
+  static const linkPrompt = 'アカウントを連携すると、機種変更時もデータを引き継げます';
+  static const linkFailed = 'アカウント連携に失敗しました。';
+  static const skipForNow = 'あとで';
+
   static const loginDescription = '今日、どのくらいの厚さで着ればいい？\nキソウが教えます';
   static const appleLogin = 'Appleでログイン';
   static const googleLogin = 'Googleでログイン';

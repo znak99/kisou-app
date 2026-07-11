@@ -29,7 +29,7 @@ class WeatherComparison extends StatelessWidget {
               _DiffPill(diff: highDiff),
             ],
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: KisouTheme.gapL),
           IntrinsicHeight(
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -75,7 +75,7 @@ class _DiffPill extends StatelessWidget {
         ? KisouTheme.warm
         : diff < 0
         ? KisouTheme.cool
-        : KisouTheme.softInk;
+        : context.kisou.softInk;
     final icon = diff > 0
         ? Icons.arrow_upward_rounded
         : diff < 0
@@ -129,9 +129,9 @@ class _WeatherColumn extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
       decoration: BoxDecoration(
-        color: emphasized ? KisouTheme.sand : Colors.transparent,
+        color: emphasized ? context.kisou.surfaceAlt : Colors.transparent,
         borderRadius: BorderRadius.circular(KisouTheme.rSm),
       ),
       child: Column(
@@ -140,10 +140,10 @@ class _WeatherColumn extends StatelessWidget {
             label,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               fontWeight: emphasized ? FontWeight.w700 : FontWeight.w400,
-              color: emphasized ? KisouTheme.ink : KisouTheme.softInk,
+              color: emphasized ? context.kisou.ink : context.kisou.softInk,
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: KisouTheme.gapS),
           Text(
             '${summary.tempHigh.round()}°',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(

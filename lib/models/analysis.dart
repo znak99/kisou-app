@@ -58,6 +58,7 @@ class AnalysisHistoryItem {
     required this.feedbackValue,
     required this.tempHigh,
     required this.tempLow,
+    required this.humidity,
     required this.offsetAtTime,
   });
 
@@ -67,6 +68,7 @@ class AnalysisHistoryItem {
       feedbackValue: json['feedback_value'] as String,
       tempHigh: (json['temp_high'] as num?)?.toDouble(),
       tempLow: (json['temp_low'] as num?)?.toDouble(),
+      humidity: json['humidity'] as int?,
       offsetAtTime: (json['offset_at_time'] as num?)?.toDouble() ?? 0,
     );
   }
@@ -75,5 +77,6 @@ class AnalysisHistoryItem {
   final String feedbackValue;
   final double? tempHigh;
   final double? tempLow;
+  final int? humidity;
   final double offsetAtTime;
 }

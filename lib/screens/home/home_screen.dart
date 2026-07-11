@@ -92,113 +92,123 @@ class _HomeContent extends ConsumerWidget {
       },
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
         children: [
-          const BrandLogo(variant: BrandLogoVariant.lockup, size: 30),
-          const SizedBox(height: 18),
+          Row(
+            children: [
+              const BrandLogo(variant: BrandLogoVariant.lockup, size: 28),
+              const Spacer(),
+              _FeedbackButton(user: user, feedbackState: feedbackState),
+            ],
+          ),
+          const SizedBox(height: KisouTheme.gapL),
           _Greeting(user: user),
-          const SizedBox(height: 16),
-          FeelingHeadline(feeling: home.feeling),
-          const SizedBox(height: 16),
-          TodayWeatherDetail(today: home.weatherComparison.today),
-          const SizedBox(height: 24),
+          const SizedBox(height: KisouTheme.gapL),
+          // Clothing recommendations are the first content section.
           Text(
             AppStrings.recommendationSection,
             style: Theme.of(context).textTheme.titleMedium,
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: KisouTheme.gapM),
           if (primary != null)
             RecommendationCard(
               recommendation: primary,
               size: RecommendationCardSize.large,
             ),
           for (final item in secondary) ...[
-            const SizedBox(height: 12),
+            const SizedBox(height: KisouTheme.gapM),
             RecommendationCard(recommendation: item),
           ],
-          const SizedBox(height: 20),
+          const SizedBox(height: KisouTheme.gapL),
+          FeelingHeadline(feeling: home.feeling),
+          const SizedBox(height: KisouTheme.gapM),
+          TodayWeatherDetail(today: home.weatherComparison.today),
+          const SizedBox(height: KisouTheme.gapM),
           WeatherComparison(comparison: home.weatherComparison),
-          const SizedBox(height: 20),
-          _FeedbackCard(user: user, feedbackState: feedbackState),
         ],
       ),
     );
   }
 }
 
-class _FeedbackCard extends ConsumerWidget {
-  const _FeedbackCard({required this.user, required this.feedbackState});
+/// Compact feedback action pinned to the top-right of the home header.
+/// Reflects the submitted state (opening the sheet in edit mode) and otherwise
+/// prompts for new feedback. Both open the sheet via [showFeedbackSheet].
+class _FeedbackButton extends ConsumerWidget {
+  const _FeedbackButton({required this.user, required this.feedbackState});
 
   final User? user;
   final AsyncValue<FeedbackTodayResponse> feedbackState;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return ClayCard(
-      padding: const EdgeInsets.all(18),
-      child: feedbackState.when(
-        data: (status) {
-          final feedback = status.feedback;
-          if (status.exists && feedback != null) {
-            return Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    AppStrings.feedbackDone,
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                ),
-                TextButton(
-                  onPressed: () => _openFeedbackSheet(
-                    context: context,
-                    ref: ref,
-                    user: user,
-                    initialFeedback: feedback,
-                  ),
-                  child: const Text(AppStrings.feedbackChange),
-                ),
-              ],
-            );
-          }
-          return Column(
+    return feedbackState.when(
+      data: (status) {
+        final feedback = status.feedback;
+        final submitted = status.exists && feedback != null;
+        return _pill(
+          context: context,
+          icon: submitted
+              ? Icons.check_circle_rounded
+              : Icons.rate_review_outlined,
+          label: submitted
+              ? AppStrings.feedbackChange
+              : AppStrings.feedbackButton,
+          onTap: () => _openFeedbackSheet(
+            context: context,
+            ref: ref,
+            user: user,
+            initialFeedback: feedback,
+          ),
+        );
+      },
+      error: (error, _) => _pill(
+        context: context,
+        icon: Icons.refresh_rounded,
+        label: AppStrings.retry,
+        onTap: () => ref.read(feedbackProvider.notifier).refresh(),
+      ),
+      loading: () => const SizedBox(
+        width: 20,
+        height: 20,
+        child: CircularProgressIndicator(strokeWidth: 2),
+      ),
+    );
+  }
+
+  Widget _pill({
+    required BuildContext context,
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    final c = context.kisou;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(100),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+          decoration: BoxDecoration(
+            color: c.surface,
+            borderRadius: BorderRadius.circular(100),
+            border: Border.all(color: c.hairline),
+          ),
+          child: Row(
             mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              Icon(icon, size: 16, color: KisouTheme.accent),
+              const SizedBox(width: KisouTheme.gapXs),
               Text(
-                AppStrings.feedbackPrompt,
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              const SizedBox(height: 12),
-              FilledButton(
-                onPressed: () => _openFeedbackSheet(
-                  context: context,
-                  ref: ref,
-                  user: user,
-                  initialFeedback: null,
+                label,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: c.ink,
                 ),
-                child: const Text(AppStrings.feedbackButton),
               ),
             ],
-          );
-        },
-        error: (error, _) => Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              apiErrorMessage(error),
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-            const SizedBox(height: 12),
-            OutlinedButton(
-              onPressed: () => ref.read(feedbackProvider.notifier).refresh(),
-              child: const Text(AppStrings.retry),
-            ),
-          ],
-        ),
-        loading: () => const SizedBox(
-          height: 48,
-          child: Center(child: CircularProgressIndicator()),
+          ),
         ),
       ),
     );
@@ -248,13 +258,13 @@ class _Greeting extends StatelessWidget {
           style: Theme.of(context).textTheme.headlineSmall,
         ),
         if (regionName != null && regionName.isNotEmpty) ...[
-          const SizedBox(height: 12),
+          const SizedBox(height: KisouTheme.gapS),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
             decoration: BoxDecoration(
-              color: KisouTheme.surface,
+              color: context.kisou.surface,
               borderRadius: BorderRadius.circular(100),
-              boxShadow: KisouTheme.tileShadow,
+              border: Border.all(color: context.kisou.hairline),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -262,14 +272,14 @@ class _Greeting extends StatelessWidget {
                 const Icon(
                   Icons.place_rounded,
                   size: 16,
-                  color: KisouTheme.deepSky,
+                  color: KisouTheme.accent,
                 ),
-                const SizedBox(width: 5),
+                const SizedBox(width: KisouTheme.gapXs),
                 Text(
                   regionName,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     fontWeight: FontWeight.w600,
-                    color: KisouTheme.ink,
+                    color: context.kisou.ink,
                   ),
                 ),
               ],

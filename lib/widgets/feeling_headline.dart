@@ -52,7 +52,7 @@ class FeelingHeadline extends StatelessWidget {
           ),
         ],
       ),
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(KisouTheme.gapL),
       child: Row(
         children: [
           Expanded(
@@ -66,7 +66,7 @@ class FeelingHeadline extends StatelessWidget {
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: KisouTheme.gapXs),
                 Text(
                   phrase,
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
@@ -77,8 +77,8 @@ class FeelingHeadline extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(width: 12),
-          Icon(icon, color: Colors.white, size: 44),
+          const SizedBox(width: KisouTheme.gapM),
+          Icon(icon, color: Colors.white, size: 40),
         ],
       ),
     );

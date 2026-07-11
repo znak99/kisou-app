@@ -36,7 +36,38 @@ class AuthController extends AsyncNotifier<AuthState> {
       final isNewUser = !onboardingCompleted;
       return AuthState.authenticated(isNewUser: isNewUser);
     }
-    return const AuthState.unauthenticated();
+    // No token yet: issue an anonymous account so the app is usable without
+    // signing in. Falls back to the login screen only if that fails (offline).
+    try {
+      final isNewUser = await authService.loginAnonymous(
+        dio: ref.read(apiClientProvider),
+      );
+      await authService.setOnboardingCompleted(!isNewUser);
+      return AuthState.authenticated(isNewUser: isNewUser);
+    } catch (_) {
+      return const AuthState.unauthenticated();
+    }
+  }
+
+  /// Links the current anonymous account to Apple, then refreshes state.
+  Future<void> linkWithApple() async {
+    await ref
+        .read(authServiceProvider)
+        .linkWithApple(dio: ref.read(apiClientProvider));
+  }
+
+  /// Links the current anonymous account to Google, then refreshes state.
+  Future<void> linkWithGoogle() async {
+    await ref
+        .read(authServiceProvider)
+        .linkWithGoogle(dio: ref.read(apiClientProvider));
+  }
+
+  /// Development-only account linking (uses a fake provider token).
+  Future<void> linkWithDevelopment() async {
+    await ref
+        .read(authServiceProvider)
+        .linkWithDevelopment(dio: ref.read(apiClientProvider));
   }
 
   Future<void> loginWithApple() {

@@ -9,6 +9,9 @@ import '../../providers/analysis_provider.dart';
 import '../../utils/api_error.dart';
 import '../../widgets/error_state.dart';
 
+/// Feedback threshold below which the detailed analysis stays locked.
+const int _kUnlockThreshold = 5;
+
 class AnalysisScreen extends ConsumerWidget {
   const AnalysisScreen({super.key});
 
@@ -33,40 +36,95 @@ class _AnalysisContent extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final unlocked = analysis.totalFeedbacks >= _kUnlockThreshold;
     return RefreshIndicator(
       onRefresh: () => ref.read(analysisProvider.notifier).refresh(),
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
+        padding: const EdgeInsets.fromLTRB(
+          KisouTheme.pagePad,
+          KisouTheme.gapS,
+          KisouTheme.pagePad,
+          KisouTheme.gapXl,
+        ),
         children: [
           Text(
             AppStrings.analysisTitle,
             style: Theme.of(context).textTheme.headlineSmall,
           ),
-          const SizedBox(height: 20),
-          _TendencyCard(analysis: analysis),
-          if (analysis.totalFeedbacks == 0) ...[
-            const SizedBox(height: 16),
-            ClayCard(
-              padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 20),
-              child: Center(
-                child: Text(
-                  AppStrings.analysisEmpty,
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: KisouTheme.softInk,
-                  ),
-                ),
-              ),
-            ),
-          ] else ...[
-            const SizedBox(height: 16),
+          const SizedBox(height: KisouTheme.gapL),
+          if (!unlocked) ...[
             _DistributionCard(counts: analysis.feedbackCounts),
-            const SizedBox(height: 16),
+            const SizedBox(height: KisouTheme.gapM),
+            _LockedHint(totalFeedbacks: analysis.totalFeedbacks),
+          ] else ...[
+            _TendencyCard(analysis: analysis),
+            const SizedBox(height: KisouTheme.gapM),
+            _DistributionCard(counts: analysis.feedbackCounts),
+            const SizedBox(height: KisouTheme.gapM),
             _TimelineCard(history: analysis.history),
-            const SizedBox(height: 16),
-            _ColdDaysCard(history: analysis.history),
+            const SizedBox(height: KisouTheme.gapM),
+            _DayListCard(
+              title: AppStrings.analysisColdDaysTitle,
+              history: analysis.history,
+              feedbackValue: 'cold',
+              icon: Icons.ac_unit_rounded,
+              accent: KisouTheme.cool,
+            ),
+            const SizedBox(height: KisouTheme.gapM),
+            _DayListCard(
+              title: AppStrings.analysisHotDaysTitle,
+              history: analysis.history,
+              feedbackValue: 'hot',
+              icon: Icons.local_fire_department_rounded,
+              accent: KisouTheme.warm,
+            ),
           ],
+        ],
+      ),
+    );
+  }
+}
+
+class _LockedHint extends StatelessWidget {
+  const _LockedHint({required this.totalFeedbacks});
+
+  final int totalFeedbacks;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.kisou;
+    final remaining = _kUnlockThreshold - totalFeedbacks;
+    return ClayCard(
+      color: c.surfaceAlt,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.lock_outline_rounded, size: 20, color: c.softInk),
+          const SizedBox(width: KisouTheme.gapM),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  AppStrings.analysisLockedMessage,
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+                if (remaining > 0) ...[
+                  const SizedBox(height: KisouTheme.gapXs),
+                  Text(
+                    '${AppStrings.analysisRemainingPrefix}'
+                    ' $remaining '
+                    '${AppStrings.analysisRemainingSuffix}',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: c.accent,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -94,7 +152,7 @@ class _TendencyCard extends StatelessWidget {
       _ => (
         AppStrings.tendencyNeutral,
         AppStrings.tendencyNeutralDesc,
-        KisouTheme.deepSky,
+        context.kisou.accent,
       ),
     };
     // Offset ranges -3..+3; map to a 0..1 gauge position.
@@ -107,16 +165,16 @@ class _TendencyCard extends StatelessWidget {
             AppStrings.analysisTendencyTitle,
             style: Theme.of(context).textTheme.bodySmall,
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: KisouTheme.gapXs),
           Text(
             label,
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
               color: color,
             ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: KisouTheme.gapXs),
           Text(desc, style: Theme.of(context).textTheme.bodyMedium),
-          const SizedBox(height: 18),
+          const SizedBox(height: KisouTheme.gapL),
           _OffsetGauge(position: gaugePosition, color: color),
         ],
       ),
@@ -132,6 +190,7 @@ class _OffsetGauge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.kisou;
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth;
@@ -145,8 +204,8 @@ class _OffsetGauge extends StatelessWidget {
                   Container(
                     height: 8,
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [KisouTheme.warm, KisouTheme.hairline, KisouTheme.cool],
+                      gradient: LinearGradient(
+                        colors: [KisouTheme.warm, c.hairline, KisouTheme.cool],
                       ),
                       borderRadius: BorderRadius.circular(100),
                     ),
@@ -159,15 +218,15 @@ class _OffsetGauge extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: color,
                         shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 2),
-                        boxShadow: KisouTheme.tileShadow,
+                        border: Border.all(color: c.surface, width: 2),
+                        boxShadow: c.tileShadow,
                       ),
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: KisouTheme.gapXs),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -203,9 +262,9 @@ class _DistributionCard extends StatelessWidget {
             AppStrings.analysisDistributionTitle,
             style: Theme.of(context).textTheme.titleMedium,
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: KisouTheme.gapL),
           SizedBox(
-            height: 160,
+            height: 132,
             child: BarChart(
               BarChartData(
                 alignment: BarChartAlignment.spaceAround,
@@ -225,7 +284,7 @@ class _DistributionCard extends StatelessWidget {
                   bottomTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
-                      reservedSize: 28,
+                      reservedSize: 26,
                       getTitlesWidget: (value, meta) {
                         final index = value.toInt();
                         if (index < 0 || index >= bars.length) {
@@ -274,6 +333,7 @@ class _TimelineCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.kisou;
     final spots = <FlSpot>[
       for (var i = 0; i < history.length; i++)
         FlSpot(i.toDouble(), history[i].offsetAtTime),
@@ -286,9 +346,9 @@ class _TimelineCard extends StatelessWidget {
             AppStrings.analysisTimelineTitle,
             style: Theme.of(context).textTheme.titleMedium,
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: KisouTheme.gapL),
           SizedBox(
-            height: 160,
+            height: 132,
             child: LineChart(
               LineChartData(
                 minY: -3,
@@ -299,7 +359,7 @@ class _TimelineCard extends StatelessWidget {
                   drawVerticalLine: false,
                   horizontalInterval: 1.5,
                   getDrawingHorizontalLine: (value) => FlLine(
-                    color: KisouTheme.hairline,
+                    color: c.hairline,
                     strokeWidth: 1,
                   ),
                 ),
@@ -308,12 +368,12 @@ class _TimelineCard extends StatelessWidget {
                   LineChartBarData(
                     spots: spots.isEmpty ? [const FlSpot(0, 0)] : spots,
                     isCurved: true,
-                    color: KisouTheme.deepSky,
+                    color: KisouTheme.accent,
                     barWidth: 3,
                     dotData: const FlDotData(show: true),
                     belowBarData: BarAreaData(
                       show: true,
-                      color: KisouTheme.deepSky.withValues(alpha: 0.10),
+                      color: KisouTheme.accent.withValues(alpha: 0.10),
                     ),
                   ),
                 ],
@@ -326,15 +386,35 @@ class _TimelineCard extends StatelessWidget {
   }
 }
 
-class _ColdDaysCard extends StatelessWidget {
-  const _ColdDaysCard({required this.history});
+class _DayListCard extends StatelessWidget {
+  const _DayListCard({
+    required this.title,
+    required this.history,
+    required this.feedbackValue,
+    required this.icon,
+    required this.accent,
+  });
 
+  final String title;
   final List<AnalysisHistoryItem> history;
+  final String feedbackValue;
+  final IconData icon;
+  final Color accent;
+
+  String _details(AnalysisHistoryItem item) {
+    final high = item.tempHigh != null ? '${item.tempHigh!.round()}°' : '-';
+    final low = item.tempLow != null ? '${item.tempLow!.round()}°' : '-';
+    final humidity = item.humidity != null ? '${item.humidity}%' : '-';
+    return '${AppStrings.analysisTempHigh}$high '
+        '${AppStrings.analysisTempLow}$low '
+        '${AppStrings.weatherHumidity}$humidity';
+  }
 
   @override
   Widget build(BuildContext context) {
-    final coldDays = history
-        .where((item) => item.feedbackValue == 'cold')
+    final c = context.kisou;
+    final days = history
+        .where((item) => item.feedbackValue == feedbackValue)
         .toList(growable: false)
         .reversed
         .toList(growable: false);
@@ -342,41 +422,40 @@ class _ColdDaysCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            AppStrings.analysisHistoryTitle,
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          const SizedBox(height: 12),
-          if (coldDays.isEmpty)
+          Text(title, style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: KisouTheme.gapS),
+          if (days.isEmpty)
             Text(
               '—',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: KisouTheme.softInk,
+                color: c.softInk,
               ),
             )
           else
-            for (final item in coldDays.take(8))
+            for (final item in days.take(8))
               Padding(
-                padding: const EdgeInsets.symmetric(vertical: 6),
+                padding: const EdgeInsets.symmetric(vertical: KisouTheme.gapXs),
                 child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    const Icon(
-                      Icons.ac_unit_rounded,
-                      size: 18,
-                      color: KisouTheme.cool,
-                    ),
-                    const SizedBox(width: 10),
+                    Icon(icon, size: 18, color: accent),
+                    const SizedBox(width: KisouTheme.gapS),
                     Expanded(
-                      child: Text(
-                        item.date,
-                        style: Theme.of(context).textTheme.bodyMedium,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            item.date,
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                          Text(
+                            _details(item),
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(color: c.softInk),
+                          ),
+                        ],
                       ),
                     ),
-                    if (item.tempHigh != null)
-                      Text(
-                        '${item.tempHigh!.round()}° / ${item.tempLow?.round() ?? '-'}°',
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
                   ],
                 ),
               ),

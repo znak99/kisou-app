@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../config/api_config.dart';
 import '../../config/theme.dart';
 import '../../constants/app_strings.dart';
 import '../../constants/major_cities.dart';
@@ -60,74 +61,237 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   Widget _buildProfile(User user) {
     return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
+      padding: const EdgeInsets.fromLTRB(
+        KisouTheme.pagePad,
+        KisouTheme.gapM,
+        KisouTheme.pagePad,
+        KisouTheme.gapXl + KisouTheme.gapS,
+      ),
       children: [
         Text(
           AppStrings.tabProfile,
           style: Theme.of(context).textTheme.headlineSmall,
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: KisouTheme.gapL),
         _ProfileHeader(user: user),
-        const SizedBox(height: 20),
-        if (_isSaving) const LinearProgressIndicator(),
-        _SettingsTile(
-          icon: Icons.person_outline,
-          title: AppStrings.nicknameSetting,
-          value: _displayValue(user.nickname),
-          onTap: _isSaving ? null : () => _editNickname(user),
+        const SizedBox(height: KisouTheme.gapL),
+        if (_isSaving) ...[
+          const LinearProgressIndicator(),
+          const SizedBox(height: KisouTheme.gapM),
+        ],
+        // --- 個人情報設定 ---
+        _CategorySection(
+          title: AppStrings.profileCategoryPersonal,
+          children: [
+            _SettingRow(
+              icon: Icons.person_outline,
+              title: AppStrings.nicknameSetting,
+              value: _displayValue(user.nickname),
+              onTap: _isSaving ? null : () => _editNickname(user),
+            ),
+            _SettingRow(
+              icon: Icons.wc_outlined,
+              title: AppStrings.genderSetting,
+              value: _genderLabel(user.gender),
+              onTap: _isSaving ? null : () => _editGender(user),
+            ),
+            _SettingRow(
+              icon: Icons.location_on_outlined,
+              title: AppStrings.locationSetting,
+              value: _displayValue(user.regionName),
+              onTap: _isSaving ? null : () => _editLocation(),
+            ),
+            _SettingRow(
+              icon: Icons.schedule_outlined,
+              title: AppStrings.timeSetting,
+              value:
+                  '${_displayTime(user.departureTime)}'
+                  '${AppStrings.timeRangeSeparator}'
+                  '${_displayTime(user.returnTime)}',
+              onTap: _isSaving ? null : () => _editTime(user),
+            ),
+          ],
         ),
-        _SettingsTile(
-          icon: Icons.wc_outlined,
-          title: AppStrings.genderSetting,
-          value: _genderLabel(user.gender),
-          onTap: _isSaving ? null : () => _editGender(user),
+        const SizedBox(height: KisouTheme.gapL),
+        // --- アカウント設定 ---
+        const _SectionLabel(title: AppStrings.profileCategoryAccount),
+        const SizedBox(height: KisouTheme.gapS),
+        _buildAccountLink(user),
+        const SizedBox(height: KisouTheme.gapS),
+        _TileCard(
+          children: [
+            _SettingRow(
+              icon: Icons.logout,
+              title: AppStrings.logout,
+              onTap: _isSaving ? null : _confirmLogout,
+            ),
+            _SettingRow(
+              icon: Icons.delete_outline,
+              title: AppStrings.accountDelete,
+              destructive: true,
+              onTap: _isSaving ? null : _confirmDeleteAccount,
+            ),
+          ],
         ),
-        _SettingsTile(
-          icon: Icons.thermostat_outlined,
-          title: AppStrings.sensitivitySetting,
-          value:
-              '${_coldSensitivityLabel(user.coldSensitivity)}'
-              '${AppStrings.sensitivitySeparator}'
-              '${_heatSensitivityLabel(user.heatSensitivity)}',
-          onTap: _isSaving ? null : () => _editSensitivity(user),
+        const SizedBox(height: KisouTheme.gapS),
+        Center(
+          child: TextButton.icon(
+            onPressed: _isSaving ? null : _openPrivacyPolicy,
+            icon: const Icon(Icons.privacy_tip_outlined, size: 16),
+            label: const Text(AppStrings.privacyPolicy),
+          ),
         ),
-        _SettingsTile(
-          icon: Icons.schedule_outlined,
-          title: AppStrings.timeSetting,
-          value:
-              '${_displayTime(user.departureTime)}'
-              '${AppStrings.timeRangeSeparator}'
-              '${_displayTime(user.returnTime)}',
-          onTap: _isSaving ? null : () => _editTime(user),
-        ),
-        _SettingsTile(
-          icon: Icons.location_on_outlined,
-          title: AppStrings.locationSetting,
-          value: _displayValue(user.regionName),
-          onTap: _isSaving ? null : () => _editLocation(),
-        ),
-        const Divider(height: 28),
-        _SettingsTile(
-          icon: Icons.privacy_tip_outlined,
-          title: AppStrings.privacyPolicy,
-          value: null,
-          onTap: _isSaving ? null : _openPrivacyPolicy,
-        ),
-        _SettingsTile(
-          icon: Icons.logout,
-          title: AppStrings.logout,
-          value: null,
-          onTap: _isSaving ? null : _confirmLogout,
-        ),
-        _SettingsTile(
-          icon: Icons.delete_outline,
-          title: AppStrings.accountDelete,
-          value: null,
-          destructive: true,
-          onTap: _isSaving ? null : _confirmDeleteAccount,
+        const SizedBox(height: KisouTheme.gapL),
+        // --- 体感設定 ---
+        _CategorySection(
+          title: AppStrings.profileCategoryComfort,
+          children: [
+            _SettingRow(
+              icon: Icons.thermostat_outlined,
+              title: AppStrings.sensitivitySetting,
+              value:
+                  '${_coldSensitivityLabel(user.coldSensitivity)}'
+                  '${AppStrings.sensitivitySeparator}'
+                  '${_heatSensitivityLabel(user.heatSensitivity)}',
+              onTap: _isSaving ? null : () => _editSensitivity(user),
+            ),
+            _SettingRow(
+              icon: Icons.restart_alt_rounded,
+              title: AppStrings.dataReset,
+              iconColor: const Color(0xFFF3A64C),
+              onTap: _isSaving ? null : _resetData,
+            ),
+          ],
         ),
       ],
     );
+  }
+
+  Widget _buildAccountLink(User user) {
+    final c = context.kisou;
+    if (!user.isAnonymous) {
+      final label = user.authProvider == 'google'
+          ? AppStrings.linkedWithGoogle
+          : AppStrings.linkedWithApple;
+      return ClayCard(
+        child: Row(
+          children: [
+            Icon(Icons.verified_user_rounded, color: c.accent, size: 22),
+            const SizedBox(width: KisouTheme.gapM),
+            Expanded(
+              child: Text(
+                label,
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+            ),
+            const Icon(
+              Icons.check_circle_rounded,
+              color: Color(0xFF4FC08A),
+              size: 22,
+            ),
+          ],
+        ),
+      );
+    }
+    return ClayCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.person_outline_rounded,
+                color: c.softInk,
+                size: 20,
+              ),
+              const SizedBox(width: KisouTheme.gapS),
+              Text(
+                AppStrings.anonymousAccount,
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+            ],
+          ),
+          const SizedBox(height: KisouTheme.gapS),
+          Text(
+            AppStrings.linkPrompt,
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+          const SizedBox(height: KisouTheme.gapM),
+          OutlinedButton.icon(
+            onPressed: _isSaving
+                ? null
+                : () => _linkAccount(
+                    () => ref.read(authProvider.notifier).linkWithApple(),
+                  ),
+            icon: const Icon(Icons.apple, size: 20),
+            label: const Text(AppStrings.linkWithApple),
+          ),
+          const SizedBox(height: KisouTheme.gapS),
+          OutlinedButton.icon(
+            onPressed: _isSaving
+                ? null
+                : () => _linkAccount(
+                    () => ref.read(authProvider.notifier).linkWithGoogle(),
+                  ),
+            icon: const Icon(Icons.g_mobiledata, size: 26),
+            label: const Text(AppStrings.linkWithGoogle),
+          ),
+          if (ApiConfig.showDevelopmentLogin) ...[
+            const SizedBox(height: KisouTheme.gapXs),
+            TextButton(
+              onPressed: _isSaving
+                  ? null
+                  : () => _linkAccount(
+                      () =>
+                          ref.read(authProvider.notifier).linkWithDevelopment(),
+                    ),
+              child: const Text('開発連携'),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Future<void> _linkAccount(Future<void> Function() action) async {
+    setState(() => _isSaving = true);
+    try {
+      await action();
+      final updated = await ref.read(userProvider.notifier).getMe();
+      _showMessage(
+        updated.authProvider == 'google'
+            ? AppStrings.linkedWithGoogle
+            : AppStrings.linkedWithApple,
+      );
+    } catch (_) {
+      _showMessage(AppStrings.linkFailed);
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
+    }
+  }
+
+  Future<void> _resetData() async {
+    final confirmed = await _confirm(
+      message: AppStrings.dataResetConfirm,
+      confirmLabel: AppStrings.deleteAction,
+      cancelLabel: AppStrings.cancel,
+    );
+    if (!confirmed) {
+      return;
+    }
+    setState(() => _isSaving = true);
+    try {
+      await ref.read(userProvider.notifier).resetData();
+      _showMessage(AppStrings.dataResetDone);
+    } catch (_) {
+      _showMessage(AppStrings.dataResetFailed);
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
+    }
   }
 
   Future<void> _loadUser() async {
@@ -645,22 +809,23 @@ class _ProfileHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.kisou;
     final nickname = user.nickname.trim();
     final region = user.regionName?.trim() ?? '';
     return ClayCard(
       child: Row(
         children: [
           Container(
-            width: 60,
-            height: 60,
+            width: 56,
+            height: 56,
             decoration: BoxDecoration(
-              color: KisouTheme.deepSky.withValues(alpha: 0.10),
-              borderRadius: BorderRadius.circular(18),
+              color: c.accent.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(KisouTheme.rMd),
             ),
             alignment: Alignment.center,
-            child: const BrandLogo(variant: BrandLogoVariant.mark, size: 40),
+            child: const BrandLogo(variant: BrandLogoVariant.mark, size: 38),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: KisouTheme.gapL),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -670,15 +835,11 @@ class _ProfileHeader extends StatelessWidget {
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 if (region.isNotEmpty) ...[
-                  const SizedBox(height: 4),
+                  const SizedBox(height: KisouTheme.gapXs),
                   Row(
                     children: [
-                      const Icon(
-                        Icons.place_rounded,
-                        size: 15,
-                        color: KisouTheme.softInk,
-                      ),
-                      const SizedBox(width: 4),
+                      Icon(Icons.place_rounded, size: 15, color: c.softInk),
+                      const SizedBox(width: KisouTheme.gapXs),
                       Text(
                         region,
                         style: Theme.of(context).textTheme.bodySmall,
@@ -695,30 +856,144 @@ class _ProfileHeader extends StatelessWidget {
   }
 }
 
-class _SettingsTile extends StatelessWidget {
-  const _SettingsTile({
+/// A titled group: a section label followed by a card of setting rows.
+class _CategorySection extends StatelessWidget {
+  const _CategorySection({required this.title, required this.children});
+
+  final String title;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _SectionLabel(title: title),
+        const SizedBox(height: KisouTheme.gapS),
+        _TileCard(children: children),
+      ],
+    );
+  }
+}
+
+class _SectionLabel extends StatelessWidget {
+  const _SectionLabel({required this.title});
+
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(left: KisouTheme.gapXs),
+      child: Text(
+        title,
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+          color: context.kisou.softInk,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.4,
+        ),
+      ),
+    );
+  }
+}
+
+/// A grouped card containing setting rows separated by hairline dividers.
+class _TileCard extends StatelessWidget {
+  const _TileCard({required this.children});
+
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.kisou;
+    final rows = <Widget>[];
+    for (var i = 0; i < children.length; i++) {
+      if (i > 0) {
+        rows.add(
+          Divider(height: 1, thickness: 1, color: c.hairline, indent: 50),
+        );
+      }
+      rows.add(children[i]);
+    }
+    return ClayCard(
+      padding: EdgeInsets.zero,
+      radius: KisouTheme.rLg,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(KisouTheme.rLg - 1),
+        child: Column(children: rows),
+      ),
+    );
+  }
+}
+
+class _SettingRow extends StatelessWidget {
+  const _SettingRow({
     required this.icon,
     required this.title,
-    required this.value,
     required this.onTap,
+    this.value,
     this.destructive = false,
+    this.iconColor,
   });
 
   final IconData icon;
   final String title;
-  final String? value;
   final VoidCallback? onTap;
+  final String? value;
   final bool destructive;
+  final Color? iconColor;
 
   @override
   Widget build(BuildContext context) {
-    final color = destructive ? Theme.of(context).colorScheme.error : null;
-    return ListTile(
-      leading: Icon(icon, color: color),
-      title: Text(title, style: TextStyle(color: color)),
-      subtitle: value == null ? null : Text(value!),
-      trailing: const Icon(Icons.chevron_right),
+    final c = context.kisou;
+    final disabled = onTap == null;
+    final titleColor = destructive
+        ? Theme.of(context).colorScheme.error
+        : c.ink;
+    final resolvedIconColor = destructive
+        ? Theme.of(context).colorScheme.error
+        : (iconColor ?? c.accent);
+    return InkWell(
       onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: KisouTheme.gapL,
+          vertical: KisouTheme.gapM,
+        ),
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              size: 22,
+              color: disabled ? c.softInk : resolvedIconColor,
+            ),
+            const SizedBox(width: KisouTheme.gapM),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      color: titleColor,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  if (value != null && value!.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      value!,
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right, size: 20, color: c.softInk),
+          ],
+        ),
+      ),
     );
   }
 }

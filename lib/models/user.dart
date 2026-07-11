@@ -1,6 +1,7 @@
 class User {
   const User({
     required this.id,
+    required this.authProvider,
     required this.nickname,
     required this.gender,
     required this.coldSensitivity,
@@ -18,6 +19,7 @@ class User {
   factory User.fromJson(Map<String, dynamic> json) {
     return User(
       id: json['id'] as String,
+      authProvider: json['auth_provider'] as String? ?? 'anonymous',
       nickname: json['nickname'] as String,
       gender: json['gender'] as String,
       coldSensitivity: json['cold_sensitivity'] as String,
@@ -34,7 +36,10 @@ class User {
   }
 
   final String id;
+  final String authProvider;
   final String nickname;
+
+  bool get isAnonymous => authProvider == 'anonymous';
   final String gender;
   final String coldSensitivity;
   final String heatSensitivity;
@@ -50,6 +55,7 @@ class User {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
+      'auth_provider': authProvider,
       'nickname': nickname,
       'gender': gender,
       'cold_sensitivity': coldSensitivity,

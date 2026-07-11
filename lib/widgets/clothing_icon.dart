@@ -59,7 +59,7 @@ class ClothingIcon extends StatelessWidget {
                 : _fallbackLabel(context, label),
           ),
           if (showLabel) ...[
-            const SizedBox(height: 8),
+            const SizedBox(height: KisouTheme.gapS),
             Text(
               label,
               textAlign: TextAlign.center,
@@ -68,7 +68,7 @@ class ClothingIcon extends StatelessWidget {
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 fontSize: size >= 72 ? 13 : 12,
                 fontWeight: FontWeight.w600,
-                color: KisouTheme.softInk,
+                color: context.kisou.softInk,
                 height: 1.25,
               ),
             ),
@@ -88,7 +88,7 @@ class ClothingIcon extends StatelessWidget {
         maxLines: 2,
         overflow: TextOverflow.ellipsis,
         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-          color: KisouTheme.ink,
+          color: context.kisou.ink,
           fontWeight: FontWeight.w700,
           fontSize: size >= 72 ? 14 : 12,
           height: 1.25,

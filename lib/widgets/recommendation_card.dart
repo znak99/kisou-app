@@ -22,17 +22,24 @@ class RecommendationCard extends StatelessWidget {
     final isLarge = size == RecommendationCardSize.large;
     final iconSize = isLarge ? 84.0 : 60.0;
     return ClayCard(
-      padding: EdgeInsets.all(isLarge ? 22 : 18),
-      color: isLarge ? KisouTheme.surface : KisouTheme.surface,
+      padding: EdgeInsets.all(isLarge ? KisouTheme.gapL : KisouTheme.gapM),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _RankBadge(rank: recommendation.rank, isLarge: isLarge),
-          SizedBox(height: isLarge ? 20 : 16),
+          SizedBox(height: isLarge ? KisouTheme.gapL : KisouTheme.gapM),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Ordering is a hard requirement: outer → top → bottom.
+              // When there is no outer, skip it (start with top).
+              if (recommendation.outer != null)
+                ClothingIcon(
+                  code: recommendation.outer,
+                  type: ClothingIconType.outer,
+                  size: iconSize,
+                ),
               ClothingIcon(
                 code: recommendation.top,
                 type: ClothingIconType.top,
@@ -43,12 +50,6 @@ class RecommendationCard extends StatelessWidget {
                 type: ClothingIconType.bottom,
                 size: iconSize,
               ),
-              if (recommendation.outer != null)
-                ClothingIcon(
-                  code: recommendation.outer,
-                  type: ClothingIconType.outer,
-                  size: iconSize,
-                ),
             ],
           ),
         ],
@@ -94,18 +95,18 @@ class _RankBadge extends StatelessWidget {
           width: 28,
           height: 28,
           alignment: Alignment.center,
-          decoration: const BoxDecoration(
-            color: KisouTheme.sand,
+          decoration: BoxDecoration(
+            color: context.kisou.surfaceAlt,
             shape: BoxShape.circle,
           ),
           child: Text(
             '$rank',
             style: Theme.of(context).textTheme.labelLarge?.copyWith(
-              color: KisouTheme.softInk,
+              color: context.kisou.softInk,
             ),
           ),
         ),
-        const SizedBox(width: 10),
+        const SizedBox(width: KisouTheme.gapS),
         Text(
           rank == 2 ? AppStrings.warmerOption : AppStrings.lighterOption,
           style: Theme.of(context).textTheme.bodySmall,

@@ -40,7 +40,7 @@ class BrandLogo extends StatelessWidget {
           style: TextStyle(
             fontSize: size * 0.82,
             fontWeight: FontWeight.w800,
-            color: KisouTheme.ink,
+            color: context.kisou.ink,
             letterSpacing: -0.5,
           ),
         ),

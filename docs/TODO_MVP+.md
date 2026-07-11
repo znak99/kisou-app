@@ -6,6 +6,9 @@ Post-MVP tasks in recommended priority order.
 
 ## High Priority
 
+### High-Quality App Icon (예정)
+- [ ] 추후 고품질 앱 아이콘 생성 및 교체 (현재 임시 클레이 심볼 사용 중, 리뉴얼 v2에서 아이콘 변경은 보류)
+
 ### UI Design Renewal
 - [ ] Design new visual identity (color palette, typography, spacing)
 - [ ] Redesign all screens (login, onboarding, home, feedback, settings)

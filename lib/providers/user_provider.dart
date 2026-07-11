@@ -32,6 +32,13 @@ class UserController extends AsyncNotifier<User?> {
     return user;
   }
 
+  Future<User> resetData() async {
+    state = const AsyncLoading<User?>();
+    final user = await ref.read(userServiceProvider).resetData();
+    state = AsyncData(user);
+    return user;
+  }
+
   Future<void> deleteMe() async {
     state = const AsyncLoading<User?>();
     await ref.read(userServiceProvider).deleteMe();

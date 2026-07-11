@@ -1,8 +1,12 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 
 import '../config/theme.dart';
 import '../constants/app_strings.dart';
 
+/// Compact, glassmorphic bottom navigation bar. Hugs the bottom safe-area and
+/// adapts to light/dark via `context.kisou`.
 class AppBottomNav extends StatelessWidget {
   const AppBottomNav({
     super.key,
@@ -21,30 +25,35 @@ class AppBottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        color: KisouTheme.surface,
-        boxShadow: [
-          BoxShadow(
-            color: Color(0x0F2C2622),
-            blurRadius: 16,
-            offset: Offset(0, -4),
+    final c = context.kisou;
+    return ClipRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: c.glass,
+            border: Border(
+              top: BorderSide(color: c.glassBorder),
+            ),
           ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-        child: Row(
-          children: [
-            for (var i = 0; i < _items.length; i++)
-              Expanded(
-                child: _NavItem(
-                  data: _items[i],
-                  selected: i == currentIndex,
-                  onTap: () => onTap(i),
-                ),
-              ),
-          ],
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: KisouTheme.gapS,
+              vertical: KisouTheme.gapXs,
+            ),
+            child: Row(
+              children: [
+                for (var i = 0; i < _items.length; i++)
+                  Expanded(
+                    child: _NavItem(
+                      data: _items[i],
+                      selected: i == currentIndex,
+                      onTap: () => onTap(i),
+                    ),
+                  ),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -71,27 +80,28 @@ class _NavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = selected ? KisouTheme.deepSky : KisouTheme.softInk;
+    final c = context.kisou;
+    final color = selected ? KisouTheme.accent : c.softInk;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(100),
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 6),
+        padding: const EdgeInsets.symmetric(vertical: 3),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             AnimatedContainer(
               duration: const Duration(milliseconds: 180),
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 3),
               decoration: BoxDecoration(
                 color: selected
-                    ? KisouTheme.deepSky.withValues(alpha: 0.12)
+                    ? KisouTheme.accent.withValues(alpha: 0.12)
                     : Colors.transparent,
                 borderRadius: BorderRadius.circular(100),
               ),
-              child: Icon(data.icon, color: color, size: 24),
+              child: Icon(data.icon, color: color, size: 22),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 2),
             Text(
               data.label,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(

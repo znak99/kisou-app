@@ -24,7 +24,7 @@ class RootShell extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final index = ref.watch(shellTabProvider);
     return Scaffold(
-      backgroundColor: KisouTheme.sand,
+      backgroundColor: context.kisou.bg,
       body: IndexedStack(index: index, children: _tabs),
       bottomNavigationBar: Column(
         mainAxisSize: MainAxisSize.min,
