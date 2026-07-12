@@ -26,6 +26,11 @@
 		<string>$(FLUTTER_BUILD_NUMBER)</string>
 		<key>LSRequiresIPhoneOS</key>
 		<true/>
+		<!-- ATS (audit S4): NSAllowsLocalNetworking permits cleartext only to
+		     loopback/local/private-network hosts (for simulator & LAN dev against
+		     http://127.0.0.1). It does NOT allow cleartext to public internet
+		     hosts, and production uses https (see ApiConfig.baseUrl), so this does
+		     not enable a plaintext production build. -->
 		<key>NSAppTransportSecurity</key>
 		<dict>
 			<key>NSAllowsLocalNetworking</key>
@@ -62,18 +67,16 @@
 		<string>Main</string>
 		<key>UIStatusBarHidden</key>
 		<false/>
+		<!-- Portrait-only: the UI is designed for portrait; allowing landscape
+		     caused overflow (esp. with the keyboard up) — audit B18. -->
 		<key>UISupportedInterfaceOrientations</key>
 		<array>
 			<string>UIInterfaceOrientationPortrait</string>
-			<string>UIInterfaceOrientationLandscapeLeft</string>
-			<string>UIInterfaceOrientationLandscapeRight</string>
 		</array>
 		<key>UISupportedInterfaceOrientations~ipad</key>
 		<array>
 			<string>UIInterfaceOrientationPortrait</string>
 			<string>UIInterfaceOrientationPortraitUpsideDown</string>
-			<string>UIInterfaceOrientationLandscapeLeft</string>
-			<string>UIInterfaceOrientationLandscapeRight</string>
 		</array>
 	</dict>
 </plist>

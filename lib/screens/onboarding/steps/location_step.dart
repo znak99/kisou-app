@@ -50,7 +50,12 @@ class _LocationStepState extends State<LocationStep> {
         return;
       }
 
-      final position = await Geolocator.getCurrentPosition();
+      final position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          timeLimit: Duration(seconds: 15),
+        ),
+      );
       final region = await reverseGeocodeRegion(
         position.latitude,
         position.longitude,
