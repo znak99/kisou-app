@@ -13,18 +13,29 @@ import 'profile/profile_screen.dart';
 
 /// Root scaffold after login/onboarding: three tabs behind a persistent
 /// bottom navigation, with an ad slot pinned above it on every tab.
-class RootShell extends ConsumerWidget {
+class RootShell extends ConsumerStatefulWidget {
   const RootShell({super.key});
 
+  @override
+  ConsumerState<RootShell> createState() => _RootShellState();
+}
+
+class _RootShellState extends ConsumerState<RootShell> {
   static const _tabs = [
     HomeScreen(),
     AnalysisScreen(),
     ProfileScreen(),
   ];
 
+  // Only tabs the user has actually opened are built; others stay as an empty
+  // placeholder so their providers don't fire on startup (audit B23). Once
+  // visited a tab is kept alive (IndexedStack preserves its state).
+  final Set<int> _visitedTabs = {ShellTab.home};
+
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final index = ref.watch(shellTabProvider);
+    _visitedTabs.add(index);
     return Scaffold(
       backgroundColor: context.kisou.bg,
       body: SafeArea(
@@ -36,7 +47,17 @@ class RootShell extends ConsumerWidget {
                   ? const FeedbackActionButton()
                   : null,
             ),
-            Expanded(child: IndexedStack(index: index, children: _tabs)),
+            Expanded(
+              child: IndexedStack(
+                index: index,
+                children: [
+                  for (var i = 0; i < _tabs.length; i++)
+                    _visitedTabs.contains(i)
+                        ? _tabs[i]
+                        : const SizedBox.shrink(),
+                ],
+              ),
+            ),
           ],
         ),
       ),
