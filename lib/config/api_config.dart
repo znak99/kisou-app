@@ -16,8 +16,15 @@ class ApiConfig {
     defaultValue: '',
   );
 
-  static const String baseUrl = developmentBaseUrl;
   static const bool isDevelopment = environment == 'development';
+
+  /// The active API base URL. Development builds hit [developmentBaseUrl];
+  /// every other build uses [productionBaseUrl]. (Previously this was hard-wired
+  /// to the development URL, so production/staging builds silently called
+  /// localhost — audit B2.)
+  static const String baseUrl =
+      isDevelopment ? developmentBaseUrl : productionBaseUrl;
+
   static const bool showDevelopmentLogin =
       isDevelopment &&
       bool.fromEnvironment('SHOW_DEV_LOGIN', defaultValue: true);
