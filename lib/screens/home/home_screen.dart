@@ -113,7 +113,7 @@ class _Greeting extends StatelessWidget {
         Text(
           nickname.isEmpty
               ? AppStrings.todayClothing
-              : '$nicknameさん、${AppStrings.todayClothing}',
+              : AppStrings.greetingWithNickname(nickname),
           style: Theme.of(context).textTheme.headlineSmall,
         ),
         if (regionName != null && regionName.isNotEmpty) ...[

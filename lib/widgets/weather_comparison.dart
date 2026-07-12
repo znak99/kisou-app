@@ -105,13 +105,10 @@ class _DiffPill extends StatelessWidget {
   }
 
   String _comparisonText(int diff) {
-    if (diff > 0) {
-      return '昨日より$diff°';
+    if (diff == 0) {
+      return AppStrings.sameAsYesterday;
     }
-    if (diff < 0) {
-      return '昨日より${diff.abs()}°';
-    }
-    return '昨日と同じ';
+    return AppStrings.comparedToYesterday(diff.abs());
   }
 }
 

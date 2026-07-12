@@ -39,7 +39,7 @@ class FeelingHeadline extends StatelessWidget {
     final name = nickname?.trim() ?? '';
     final lead = name.isEmpty
         ? AppStrings.feelingLead
-        : '今日の$nameさんは';
+        : AppStrings.feelingLeadNamed(name);
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(

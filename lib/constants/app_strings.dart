@@ -184,4 +184,14 @@ class AppStrings {
   static const notSet = '未設定';
   static const sensitivitySeparator = ' / ';
   static const timeRangeSeparator = ' 〜 ';
+
+  // Interpolated copy (kept here so all user-facing Japanese lives in one place).
+  static const sameAsYesterday = '昨日と同じ';
+
+  static String comparedToYesterday(int degrees) => '昨日より$degrees°';
+
+  static String feelingLeadNamed(String name) => '今日の$nameさんは';
+
+  static String greetingWithNickname(String nickname) =>
+      '$nicknameさん、$todayClothing';
 }

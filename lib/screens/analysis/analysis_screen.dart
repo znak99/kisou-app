@@ -230,8 +230,8 @@ class _OffsetGauge extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('暑がり', style: Theme.of(context).textTheme.bodySmall),
-                Text('寒がり', style: Theme.of(context).textTheme.bodySmall),
+                Text(AppStrings.heatHigh, style: Theme.of(context).textTheme.bodySmall),
+                Text(AppStrings.coldHigh, style: Theme.of(context).textTheme.bodySmall),
               ],
             ),
           ],
