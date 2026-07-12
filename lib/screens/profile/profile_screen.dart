@@ -70,10 +70,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         KisouTheme.gapXl + KisouTheme.gapS,
       ),
       children: [
-        const Padding(
-          padding: EdgeInsets.only(bottom: KisouTheme.gapL),
-          child: BrandLogo(variant: BrandLogoVariant.lockup, size: 32),
-        ),
         Text(
           AppStrings.tabProfile,
           style: Theme.of(context).textTheme.headlineSmall,

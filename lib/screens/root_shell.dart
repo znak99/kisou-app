@@ -5,6 +5,8 @@ import '../config/theme.dart';
 import '../providers/shell_provider.dart';
 import '../widgets/ad_slot.dart';
 import '../widgets/app_bottom_nav.dart';
+import '../widgets/feedback_action_button.dart';
+import '../widgets/kisou_top_bar.dart';
 import 'analysis/analysis_screen.dart';
 import 'home/home_screen.dart';
 import 'profile/profile_screen.dart';
@@ -25,7 +27,19 @@ class RootShell extends ConsumerWidget {
     final index = ref.watch(shellTabProvider);
     return Scaffold(
       backgroundColor: context.kisou.bg,
-      body: IndexedStack(index: index, children: _tabs),
+      body: SafeArea(
+        bottom: false,
+        child: Column(
+          children: [
+            KisouTopBar(
+              action: index == ShellTab.home
+                  ? const FeedbackActionButton()
+                  : null,
+            ),
+            Expanded(child: IndexedStack(index: index, children: _tabs)),
+          ],
+        ),
+      ),
       bottomNavigationBar: Column(
         mainAxisSize: MainAxisSize.min,
         children: [

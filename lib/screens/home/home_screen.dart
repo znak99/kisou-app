@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../config/theme.dart';
 import '../../constants/app_strings.dart';
-import '../../models/feedback.dart';
 import '../../models/home.dart';
 import '../../models/recommendation.dart';
 import '../../models/user.dart';
@@ -12,10 +11,8 @@ import '../../providers/home_provider.dart';
 import '../../providers/shell_provider.dart';
 import '../../providers/user_provider.dart';
 import '../../utils/api_error.dart';
-import '../../widgets/brand_logo.dart';
 import '../../widgets/error_state.dart';
 import '../../widgets/feeling_headline.dart';
-import '../../widgets/feedback_sheet.dart';
 import '../../widgets/recommendation_card.dart';
 import '../../widgets/today_weather_detail.dart';
 import '../../widgets/weather_comparison.dart';
@@ -43,7 +40,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final homeState = ref.watch(homeProvider);
-    final feedbackState = ref.watch(feedbackProvider);
     final user = ref
         .watch(userProvider)
         .when(
@@ -51,31 +47,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           error: (_, _) => null,
           loading: () => null,
         );
-    return SafeArea(
-      bottom: false,
-      child: homeState.when(
-        data: (home) => _HomeContent(
-          home: home,
-          user: user,
-          feedbackState: feedbackState,
-        ),
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => _HomeError(error: error),
-      ),
+    return homeState.when(
+      data: (home) => _HomeContent(home: home, user: user),
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, _) => _HomeError(error: error),
     );
   }
 }
 
 class _HomeContent extends ConsumerWidget {
-  const _HomeContent({
-    required this.home,
-    required this.user,
-    required this.feedbackState,
-  });
+  const _HomeContent({required this.home, required this.user});
 
   final HomeResponse home;
   final User? user;
-  final AsyncValue<FeedbackTodayResponse> feedbackState;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -95,15 +79,6 @@ class _HomeContent extends ConsumerWidget {
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
         children: [
-          Row(
-            children: [
-              // Logo ~15% larger, shared across all tabs.
-              const BrandLogo(variant: BrandLogoVariant.lockup, size: 32),
-              const Spacer(),
-              _FeedbackButton(user: user, feedbackState: feedbackState),
-            ],
-          ),
-          const SizedBox(height: KisouTheme.gapL),
           _Greeting(user: user),
           const SizedBox(height: KisouTheme.gapL),
           // 1. Today's weather
@@ -120,114 +95,6 @@ class _HomeContent extends ConsumerWidget {
         ],
       ),
     );
-  }
-}
-
-/// Compact feedback action pinned to the top-right of the home header.
-/// Reflects the submitted state (opening the sheet in edit mode) and otherwise
-/// prompts for new feedback. Both open the sheet via [showFeedbackSheet].
-class _FeedbackButton extends ConsumerWidget {
-  const _FeedbackButton({required this.user, required this.feedbackState});
-
-  final User? user;
-  final AsyncValue<FeedbackTodayResponse> feedbackState;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return feedbackState.when(
-      data: (status) {
-        final feedback = status.feedback;
-        final submitted = status.exists && feedback != null;
-        return _pill(
-          context: context,
-          icon: submitted
-              ? Icons.check_circle_rounded
-              : Icons.rate_review_outlined,
-          label: submitted
-              ? AppStrings.feedbackChange
-              : AppStrings.feedbackButton,
-          onTap: () => _openFeedbackSheet(
-            context: context,
-            ref: ref,
-            user: user,
-            initialFeedback: feedback,
-          ),
-        );
-      },
-      error: (error, _) => _pill(
-        context: context,
-        icon: Icons.refresh_rounded,
-        label: AppStrings.retry,
-        onTap: () => ref.read(feedbackProvider.notifier).refresh(),
-      ),
-      loading: () => const SizedBox(
-        width: 20,
-        height: 20,
-        child: CircularProgressIndicator(strokeWidth: 2),
-      ),
-    );
-  }
-
-  Widget _pill({
-    required BuildContext context,
-    required IconData icon,
-    required String label,
-    required VoidCallback onTap,
-  }) {
-    final c = context.kisou;
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(100),
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-          decoration: BoxDecoration(
-            color: c.surface,
-            borderRadius: BorderRadius.circular(100),
-            border: Border.all(color: c.hairline),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 16, color: KisouTheme.accent),
-              const SizedBox(width: KisouTheme.gapXs),
-              Text(
-                label,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: c.ink,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Future<void> _openFeedbackSheet({
-    required BuildContext context,
-    required WidgetRef ref,
-    required User? user,
-    required FeedbackResponse? initialFeedback,
-  }) async {
-    final submitted = await showFeedbackSheet(
-      context: context,
-      gender: user?.gender,
-      initialFeedback: initialFeedback,
-    );
-    if (submitted == true) {
-      await Future.wait([
-        ref.read(homeProvider.notifier).refresh(),
-        ref.read(userProvider.notifier).getMe(),
-      ]);
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text(AppStrings.feedbackApplied)),
-        );
-      }
-    }
   }
 }
 
