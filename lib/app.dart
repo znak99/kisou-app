@@ -57,6 +57,10 @@ class _AuthGate extends ConsumerWidget {
         if (!context.mounted) {
           return;
         }
+        // Dismiss any open modal/dialog (e.g. the feedback sheet) so it doesn't
+        // float over the login screen after the session ends (audit B11).
+        Navigator.of(context, rootNavigator: true)
+            .popUntil((route) => route.isFirst);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text(AppStrings.sessionExpired)),
         );
