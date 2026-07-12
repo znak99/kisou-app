@@ -4,6 +4,8 @@ import '../config/theme.dart';
 import '../constants/app_strings.dart';
 import '../models/weather.dart' as weather_model;
 
+String _fmtTemp(double? value) => value == null ? '—' : '${value.round()}°';
+
 /// Detailed weather card for today: high/low with feels-like, plus humidity,
 /// wind, precipitation chance, and (in summer) the heat index.
 class TodayWeatherDetail extends StatelessWidget {
@@ -17,12 +19,16 @@ class TodayWeatherDetail extends StatelessWidget {
       (
         Icons.water_drop_rounded,
         AppStrings.weatherHumidity,
-        '${today.humidityAvg}%',
+        today.humidityAvg == null ? '—' : '${today.humidityAvg}%',
       ),
       (
         Icons.air_rounded,
         AppStrings.weatherWind,
-        '${today.windSpeedAvg.round()} km/h',
+        // Stored value is km/h (Open-Meteo default); Japan conventionally uses
+        // m/s, so convert for display (audit B20).
+        today.windSpeedAvg == null
+            ? '—'
+            : '${(today.windSpeedAvg! / 3.6).toStringAsFixed(1)} m/s',
       ),
       (
         Icons.umbrella_rounded,
@@ -53,7 +59,7 @@ class TodayWeatherDetail extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Text(
-                '${today.tempHigh.round()}°',
+                _fmtTemp(today.tempHigh),
                 style: Theme.of(context).textTheme.displaySmall?.copyWith(
                   color: KisouTheme.warm,
                   fontSize: 30,
@@ -63,7 +69,7 @@ class TodayWeatherDetail extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.only(bottom: 5),
                 child: Text(
-                  '/ ${today.tempLow.round()}°',
+                  '/ ${_fmtTemp(today.tempLow)}',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     color: KisouTheme.cool,
                     fontSize: 15,
@@ -79,7 +85,7 @@ class TodayWeatherDetail extends StatelessWidget {
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                   Text(
-                    '${today.feelsLikeHigh.round()}° / ${today.feelsLikeLow.round()}°',
+                    '${_fmtTemp(today.feelsLikeHigh)} / ${_fmtTemp(today.feelsLikeLow)}',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontSize: 15,
                     ),

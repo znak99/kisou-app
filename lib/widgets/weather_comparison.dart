@@ -4,6 +4,8 @@ import '../config/theme.dart';
 import '../constants/app_strings.dart';
 import '../models/weather.dart' as weather_model;
 
+String _fmtTemp(double? value) => value == null ? '—' : '${value.round()}°';
+
 class WeatherComparison extends StatelessWidget {
   const WeatherComparison({super.key, required this.comparison});
 
@@ -11,9 +13,11 @@ class WeatherComparison extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final highDiff =
-        comparison.today.tempHigh.round() -
-        comparison.yesterday.tempHigh.round();
+    final todayHigh = comparison.today.tempHigh;
+    final yesterdayHigh = comparison.yesterday.tempHigh;
+    final highDiff = (todayHigh != null && yesterdayHigh != null)
+        ? todayHigh.round() - yesterdayHigh.round()
+        : null;
     return ClayCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -67,20 +71,21 @@ class WeatherComparison extends StatelessWidget {
 class _DiffPill extends StatelessWidget {
   const _DiffPill({required this.diff});
 
-  final int diff;
+  final int? diff;
 
   @override
   Widget build(BuildContext context) {
-    final color = diff > 0
+    final d = diff;
+    final color = (d == null || d == 0)
+        ? context.kisou.softInk
+        : d > 0
         ? KisouTheme.warm
-        : diff < 0
-        ? KisouTheme.cool
-        : context.kisou.softInk;
-    final icon = diff > 0
+        : KisouTheme.cool;
+    final icon = (d == null || d == 0)
+        ? Icons.remove_rounded
+        : d > 0
         ? Icons.arrow_upward_rounded
-        : diff < 0
-        ? Icons.arrow_downward_rounded
-        : Icons.remove_rounded;
+        : Icons.arrow_downward_rounded;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
       decoration: BoxDecoration(
@@ -104,7 +109,10 @@ class _DiffPill extends StatelessWidget {
     );
   }
 
-  String _comparisonText(int diff) {
+  String _comparisonText(int? diff) {
+    if (diff == null) {
+      return '—';
+    }
     if (diff == 0) {
       return AppStrings.sameAsYesterday;
     }
@@ -142,7 +150,7 @@ class _WeatherColumn extends StatelessWidget {
           ),
           const SizedBox(height: KisouTheme.gapS),
           Text(
-            '${summary.tempHigh.round()}°',
+            _fmtTemp(summary.tempHigh),
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
               color: KisouTheme.warm,
               fontWeight: FontWeight.w800,
@@ -150,7 +158,7 @@ class _WeatherColumn extends StatelessWidget {
           ),
           const SizedBox(height: 2),
           Text(
-            '${summary.tempLow.round()}°',
+            _fmtTemp(summary.tempLow),
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               color: KisouTheme.cool,
               fontWeight: FontWeight.w700,

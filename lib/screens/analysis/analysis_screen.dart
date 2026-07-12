@@ -12,6 +12,21 @@ import '../../widgets/error_state.dart';
 /// Feedback threshold below which the detailed analysis stays locked.
 const int _kUnlockThreshold = 5;
 
+/// Formats an ISO `YYYY-MM-DD` history date as `M月D日` instead of showing the
+/// raw ISO string (audit B19).
+String _formatHistoryDate(String iso) {
+  final parts = iso.split('-');
+  if (parts.length != 3) {
+    return iso;
+  }
+  final month = int.tryParse(parts[1]);
+  final day = int.tryParse(parts[2]);
+  if (month == null || day == null) {
+    return iso;
+  }
+  return '$month月$day日';
+}
+
 class AnalysisScreen extends ConsumerWidget {
   const AnalysisScreen({super.key});
 
@@ -445,7 +460,7 @@ class _DayListCard extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            item.date,
+                            _formatHistoryDate(item.date),
                             style: Theme.of(context).textTheme.bodyMedium,
                           ),
                           Text(
