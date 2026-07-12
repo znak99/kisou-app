@@ -51,12 +51,12 @@ Clothing items are represented as **codes** from the API. The app maps these cod
 
 | Code (from API) | Japanese | Icon |
 |-----------------|----------|------|
-| SHIRT | シャツ | top_shirt.svg |
-| LONG_PANTS | 長ズボン | bottom_long_pants.svg |
-| LIGHT_OUTER | 薄手の羽織り | outer_light_outer.svg |
+| SHORT_SLEEVE | 半袖 | top_short_sleeve.png |
+| LONG_PANTS | 長ズボン | bottom_long_pants.png |
+| LIGHT_OUTER | 薄手の羽織り | outer_light_outer.png |
 | ... | ... | ... |
 
-Full tag list — **Top (7):** SLEEVELESS, SHORT_SLEEVE, SHIRT, THIN_LONG, LONG_SLEEVE, THICK_LONG, KNIT_SWEAT. **Bottom (4):** LONG_PANTS, HALF_PANTS, SHORT_PANTS, SKIRT. **Outer (5 + null):** LIGHT_OUTER, CARDIGAN, JACKET, COAT, PADDING.
+Full tag list — **Top (6):** SLEEVELESS, SHORT_SLEEVE, THIN_LONG, LONG_SLEEVE, THICK_LONG, KNIT_SWEAT. **Bottom (4):** LONG_PANTS, HALF_PANTS, SHORT_PANTS, SKIRT. **Outer (5 + null):** LIGHT_OUTER, CARDIGAN, JACKET, COAT, PADDING.
 
 ### Screens
 

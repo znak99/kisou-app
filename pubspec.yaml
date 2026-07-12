@@ -102,8 +102,8 @@ flutter:
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
 
-# Primary icon = light. iOS dark is handled via an ALTERNATE app icon that the
-# app swaps at runtime based on the in-app theme (see lib/services/app_icon.dart).
+# Single static app icon (light design). The runtime theme-based icon swap was
+# removed because iOS shows an unsuppressable system alert on every change.
 flutter_launcher_icons:
   image_path: "assets/brand/app_icon_light.png"
   android: true
