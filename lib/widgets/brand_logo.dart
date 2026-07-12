@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
-
-import '../config/theme.dart';
-import '../constants/app_strings.dart';
 
 enum BrandLogoVariant { mark, lockup }
 
-/// The キソウ brand logo. [BrandLogoVariant.mark] is the clay sun+tee symbol;
-/// [BrandLogoVariant.lockup] pairs the mark with the キソウ wordmark.
+/// The KISOU brand logo.
+/// - [BrandLogoVariant.mark] is the clay clothing image logo.
+/// - [BrandLogoVariant.lockup] pairs the image logo with the KISOU wordmark
+///   (the wordmark swaps light/dark to stay legible on the current theme).
 class BrandLogo extends StatelessWidget {
   const BrandLogo({
     super.key,
@@ -17,33 +15,31 @@ class BrandLogo extends StatelessWidget {
 
   final BrandLogoVariant variant;
 
-  /// Height of the mark in logical pixels.
+  /// Height of the image mark in logical pixels.
   final double size;
 
   @override
   Widget build(BuildContext context) {
-    final mark = SvgPicture.asset(
-      'assets/brand/logo_mark.svg',
-      width: size,
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final wordmark = isDark
+        ? 'assets/brand/text_logo_dark.png'
+        : 'assets/brand/text_logo_light.png';
+
+    final mark = Image.asset(
+      'assets/brand/image_logo.png',
       height: size,
+      fit: BoxFit.contain,
     );
     if (variant == BrandLogoVariant.mark) {
       return mark;
     }
     return Row(
       mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         mark,
-        SizedBox(width: size * 0.28),
-        Text(
-          AppStrings.appName,
-          style: TextStyle(
-            fontSize: size * 0.82,
-            fontWeight: FontWeight.w800,
-            color: context.kisou.ink,
-            letterSpacing: -0.5,
-          ),
-        ),
+        SizedBox(width: size * 0.2),
+        Image.asset(wordmark, height: size * 0.6, fit: BoxFit.contain),
       ],
     );
   }

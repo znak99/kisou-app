@@ -11,9 +11,10 @@ Post-MVP tasks in recommended priority order.
 - [ ] (선택) 스플래시 로고도 신규 아이콘 톤에 맞춰 교체 검토
 
 ### 리뷰 후속 (v2.1)
-- [ ] 앱 아이콘 바꾸기 (현재 임시 심볼 → 최종 고품질 아이콘으로 교체)
-- [ ] 텍스트 로고 만들기 (KISOU 워드마크 전용 로고 디자인)
+- [x] 앱 아이콘 바꾸기 (클레이 KISOU 아이콘 라이트/다크 적용, 인앱 테마 기반 iOS 대체 아이콘 스왑)
+- [x] 텍스트 로고 만들기 (KISOU 워드마크 라이트/다크 + 이미지 로고, 스플래시·홈에 적용)
 - [ ] 외출/귀가 시간 설정 항목 삭제 (온보딩 및 프로필에서 제거 검토)
+- [ ] (후속) iOS 대체 아이콘 스왑 실기기 검증 + 시스템 알럿 UX 점검 (시뮬레이터 미지원)
 
 ### UI Design Renewal
 - [ ] Design new visual identity (color palette, typography, spacing)

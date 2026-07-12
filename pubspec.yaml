@@ -102,22 +102,27 @@ flutter:
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
 
+# Primary icon = light. iOS dark is handled via an ALTERNATE app icon that the
+# app swaps at runtime based on the in-app theme (see lib/services/app_icon.dart).
 flutter_launcher_icons:
-  image_path: "assets/brand/app_icon_v2.png"
+  image_path: "assets/brand/app_icon_light.png"
   android: true
   ios: true
   remove_alpha_ios: true
-  background_color_ios: "#FF9A5A"
-  image_path_ios: "assets/brand/app_icon_v2.png"
-  image_path_ios_dark_transparent: "assets/brand/app_icon_v2_glyph.png"
-  image_path_ios_tinted_grayscale: "assets/brand/app_icon_v2_glyph.png"
-  adaptive_icon_background: "assets/brand/app_icon_v2_bg.png"
-  adaptive_icon_foreground: "assets/brand/app_icon_v2_glyph.png"
-  adaptive_icon_monochrome: "assets/brand/app_icon_v2_glyph.png"
+  background_color_ios: "#FCF7EF"
+  image_path_ios: "assets/brand/app_icon_light.png"
+  # Android can't swap the launcher icon by in-app theme, so it stays static.
+  # Scene is pre-padded into the safe zone to avoid adaptive-mask cropping.
+  adaptive_icon_background: "#FCF7EF"
+  adaptive_icon_foreground: "assets/brand/app_icon_android_fg.png"
 
 flutter_native_splash:
   color: "#FBF7F0"
-  image: "assets/brand/splash_logo.png"
+  color_dark: "#0F1114"
+  image: "assets/brand/splash_light.png"
+  image_dark: "assets/brand/splash_dark.png"
   android_12:
     color: "#FBF7F0"
-    image: "assets/brand/splash_logo.png"
+    color_dark: "#0F1114"
+    image: "assets/brand/splash_light.png"
+    image_dark: "assets/brand/splash_dark.png"
