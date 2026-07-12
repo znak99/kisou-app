@@ -43,16 +43,14 @@ class FeelingHeadline extends StatelessWidget {
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        // Same-hue gradient: a lighter tint → base → a slightly deeper shade.
+        // Subtle top→bottom same-hue gradient (small difference between ends).
         gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
           colors: [
-            Color.lerp(color, Colors.white, 0.20)!,
-            color,
-            Color.lerp(color, Colors.black, 0.16)!,
+            Color.lerp(color, Colors.white, 0.08)!,
+            Color.lerp(color, Colors.black, 0.08)!,
           ],
-          stops: const [0.0, 0.55, 1.0],
         ),
         borderRadius: BorderRadius.circular(KisouTheme.rLg),
         boxShadow: [

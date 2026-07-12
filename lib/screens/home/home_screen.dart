@@ -5,6 +5,7 @@ import '../../config/theme.dart';
 import '../../constants/app_strings.dart';
 import '../../models/feedback.dart';
 import '../../models/home.dart';
+import '../../models/recommendation.dart';
 import '../../models/user.dart';
 import '../../providers/feedback_provider.dart';
 import '../../providers/home_provider.dart';
@@ -96,7 +97,8 @@ class _HomeContent extends ConsumerWidget {
         children: [
           Row(
             children: [
-              const BrandLogo(variant: BrandLogoVariant.lockup, size: 28),
+              // Logo ~15% larger, shared across all tabs.
+              const BrandLogo(variant: BrandLogoVariant.lockup, size: 32),
               const Spacer(),
               _FeedbackButton(user: user, feedbackState: feedbackState),
             ],
@@ -110,38 +112,8 @@ class _HomeContent extends ConsumerWidget {
           // 2. Predicted feeling
           FeelingHeadline(feeling: home.feeling, nickname: user?.nickname),
           const SizedBox(height: KisouTheme.gapL),
-          // 3. Clothing recommendations
-          Text(
-            AppStrings.recommendationSection,
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          const SizedBox(height: KisouTheme.gapM),
-          if (primary != null)
-            RecommendationCard(
-              recommendation: primary,
-              size: RecommendationCardSize.large,
-            ),
-          if (secondary.length >= 2) ...[
-            const SizedBox(height: KisouTheme.gapM),
-            IntrinsicHeight(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Expanded(
-                    child: RecommendationCard(recommendation: secondary[0]),
-                  ),
-                  const SizedBox(width: KisouTheme.gapM),
-                  Expanded(
-                    child: RecommendationCard(recommendation: secondary[1]),
-                  ),
-                ],
-              ),
-            ),
-          ] else
-            for (final item in secondary) ...[
-              const SizedBox(height: KisouTheme.gapM),
-              RecommendationCard(recommendation: item),
-            ],
+          // 3. Clothing recommendations (rank 2/3 foldable)
+          _RecommendationSection(primary: primary, secondary: secondary),
           const SizedBox(height: KisouTheme.gapL),
           // 4. Weather comparison
           WeatherComparison(comparison: home.weatherComparison),
@@ -341,6 +313,95 @@ class _HomeError extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Clothing recommendations: the top pick is always shown; the "warmer /
+/// lighter" alternatives fold behind a "more" toggle at the bottom-right.
+class _RecommendationSection extends StatefulWidget {
+  const _RecommendationSection({
+    required this.primary,
+    required this.secondary,
+  });
+
+  final RecommendationItem? primary;
+  final List<RecommendationItem> secondary;
+
+  @override
+  State<_RecommendationSection> createState() => _RecommendationSectionState();
+}
+
+class _RecommendationSectionState extends State<_RecommendationSection> {
+  bool _expanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final primary = widget.primary;
+    final secondary = widget.secondary;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          AppStrings.recommendationSection,
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        const SizedBox(height: KisouTheme.gapM),
+        if (primary != null)
+          RecommendationCard(
+            recommendation: primary,
+            size: RecommendationCardSize.large,
+          ),
+        if (secondary.length >= 2) ...[
+          AnimatedSize(
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeInOut,
+            alignment: Alignment.topCenter,
+            child: _expanded
+                ? Padding(
+                    padding: const EdgeInsets.only(top: KisouTheme.gapM),
+                    child: IntrinsicHeight(
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Expanded(
+                            child: RecommendationCard(
+                              recommendation: secondary[0],
+                            ),
+                          ),
+                          const SizedBox(width: KisouTheme.gapM),
+                          Expanded(
+                            child: RecommendationCard(
+                              recommendation: secondary[1],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                : const SizedBox(width: double.infinity),
+          ),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton.icon(
+              onPressed: () => setState(() => _expanded = !_expanded),
+              icon: Icon(
+                _expanded
+                    ? Icons.expand_less_rounded
+                    : Icons.expand_more_rounded,
+                size: 18,
+              ),
+              label: Text(
+                _expanded ? AppStrings.recShowLess : AppStrings.recShowMore,
+              ),
+            ),
+          ),
+        ] else
+          for (final item in secondary) ...[
+            const SizedBox(height: KisouTheme.gapM),
+            RecommendationCard(recommendation: item),
+          ],
+      ],
     );
   }
 }

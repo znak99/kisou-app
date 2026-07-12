@@ -39,6 +39,8 @@ class TodayWeatherDetail extends StatelessWidget {
         ),
     ];
     return ClayCard(
+      // ~5% more compact card.
+      padding: const EdgeInsets.all(15),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -46,7 +48,7 @@ class TodayWeatherDetail extends StatelessWidget {
             AppStrings.todayWeatherTitle,
             style: Theme.of(context).textTheme.titleMedium,
           ),
-          const SizedBox(height: KisouTheme.gapM),
+          const SizedBox(height: 11),
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
@@ -54,15 +56,17 @@ class TodayWeatherDetail extends StatelessWidget {
                 '${today.tempHigh.round()}°',
                 style: Theme.of(context).textTheme.displaySmall?.copyWith(
                   color: KisouTheme.warm,
+                  fontSize: 30,
                 ),
               ),
-              const SizedBox(width: 6),
+              const SizedBox(width: 5),
               Padding(
-                padding: const EdgeInsets.only(bottom: 6),
+                padding: const EdgeInsets.only(bottom: 5),
                 child: Text(
                   '/ ${today.tempLow.round()}°',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     color: KisouTheme.cool,
+                    fontSize: 15,
                   ),
                 ),
               ),
@@ -76,15 +80,17 @@ class TodayWeatherDetail extends StatelessWidget {
                   ),
                   Text(
                     '${today.feelsLikeHigh.round()}° / ${today.feelsLikeLow.round()}°',
-                    style: Theme.of(context).textTheme.titleMedium,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontSize: 15,
+                    ),
                   ),
                 ],
               ),
             ],
           ),
-          const SizedBox(height: KisouTheme.gapL),
+          const SizedBox(height: 15),
           const Divider(height: 1),
-          const SizedBox(height: KisouTheme.gapM),
+          const SizedBox(height: 11),
           Row(
             children: [
               for (final metric in metrics)
@@ -118,12 +124,15 @@ class _Metric extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Icon(icon, size: 20, color: KisouTheme.deepSky),
-        const SizedBox(height: 6),
-        Text(
-          value,
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            fontSize: 16,
+        Icon(icon, size: 19, color: KisouTheme.deepSky),
+        const SizedBox(height: 5),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            value,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontSize: 15,
+            ),
           ),
         ),
         const SizedBox(height: 2),

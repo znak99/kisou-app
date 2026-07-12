@@ -13,7 +13,7 @@ class AppStrings {
   // Bottom navigation
   static const tabHome = 'ホーム';
   static const tabAnalysis = '分析';
-  static const tabProfile = 'プロフィール';
+  static const tabProfile = 'メニュー';
 
   // Ad slot
   static const adLabel = '広告';
@@ -107,6 +107,8 @@ class AppStrings {
   static const bestRecommendation = 'おすすめ';
   static const warmerOption = '少し暖かめ';
   static const lighterOption = '少し軽め';
+  static const recShowMore = 'もっと見る';
+  static const recShowLess = '閉じる';
   static const today = '今日';
   static const yesterday = '昨日';
   static const twoDaysAgo = '一昨日';

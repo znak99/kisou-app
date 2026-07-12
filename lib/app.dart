@@ -11,7 +11,6 @@ import 'screens/onboarding/login_screen.dart';
 import 'screens/onboarding/onboarding_screen.dart';
 import 'screens/root_shell.dart';
 import 'screens/splash_view.dart';
-import 'services/app_icon.dart';
 
 class KisouApp extends ConsumerStatefulWidget {
   const KisouApp({super.key});
@@ -24,17 +23,6 @@ class _KisouAppState extends ConsumerState<KisouApp> {
   @override
   Widget build(BuildContext context) {
     final themeMode = ref.watch(themeModeProvider);
-    // The app icon follows the IN-APP theme (not the system appearance).
-    final platformBrightness =
-        WidgetsBinding.instance.platformDispatcher.platformBrightness;
-    final effectiveBrightness = switch (themeMode) {
-      ThemeMode.light => Brightness.light,
-      ThemeMode.dark => Brightness.dark,
-      ThemeMode.system => platformBrightness,
-    };
-    WidgetsBinding.instance.addPostFrameCallback(
-      (_) => AppIconService.applyForBrightness(effectiveBrightness),
-    );
     return MaterialApp(
       title: AppStrings.appName,
       debugShowCheckedModeBanner: false,

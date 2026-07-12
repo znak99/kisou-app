@@ -7,6 +7,7 @@ import '../../constants/app_strings.dart';
 import '../../models/analysis.dart';
 import '../../providers/analysis_provider.dart';
 import '../../utils/api_error.dart';
+import '../../widgets/brand_logo.dart';
 import '../../widgets/error_state.dart';
 
 /// Feedback threshold below which the detailed analysis stays locked.
@@ -48,6 +49,10 @@ class _AnalysisContent extends ConsumerWidget {
           KisouTheme.gapXl,
         ),
         children: [
+          const Padding(
+            padding: EdgeInsets.only(bottom: KisouTheme.gapL),
+            child: BrandLogo(variant: BrandLogoVariant.lockup, size: 32),
+          ),
           Text(
             AppStrings.analysisTitle,
             style: Theme.of(context).textTheme.headlineSmall,
