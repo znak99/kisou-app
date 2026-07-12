@@ -94,6 +94,14 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         : _departureTime;
     final returnTime = useDefaultTimes ? _defaultReturnTime : _returnTime;
 
+    // Departure must be before return (audit B16).
+    final departureMinutes = departureTime.hour * 60 + departureTime.minute;
+    final returnMinutes = returnTime.hour * 60 + returnTime.minute;
+    if (departureMinutes >= returnMinutes) {
+      setState(() => _errorMessage = AppStrings.timeRangeInvalid);
+      return;
+    }
+
     setState(() {
       _isSaving = true;
       _errorMessage = null;
