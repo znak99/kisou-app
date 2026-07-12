@@ -116,13 +116,12 @@ flutter_launcher_icons:
   adaptive_icon_background: "#FCF7EF"
   adaptive_icon_foreground: "assets/brand/app_icon_android_fg.png"
 
+# Native splash is a plain background color only; the branded splash (image
+# logo + text logo stacked, as two separate images) is rendered in Flutter by
+# lib/screens/splash_view.dart so the launch feels seamless.
 flutter_native_splash:
   color: "#FBF7F0"
   color_dark: "#0F1114"
-  image: "assets/brand/splash_light.png"
-  image_dark: "assets/brand/splash_dark.png"
   android_12:
     color: "#FBF7F0"
     color_dark: "#0F1114"
-    image: "assets/brand/splash_light.png"
-    image_dark: "assets/brand/splash_dark.png"

@@ -7,10 +7,11 @@ import 'constants/app_strings.dart';
 import 'providers/api_provider.dart';
 import 'providers/auth_provider.dart';
 import 'providers/theme_provider.dart';
-import 'services/app_icon.dart';
 import 'screens/onboarding/login_screen.dart';
 import 'screens/onboarding/onboarding_screen.dart';
 import 'screens/root_shell.dart';
+import 'screens/splash_view.dart';
+import 'services/app_icon.dart';
 
 class KisouApp extends ConsumerStatefulWidget {
   const KisouApp({super.key});
@@ -85,16 +86,7 @@ class _AuthGate extends ConsumerWidget {
         return const RootShell();
       },
       error: (_, _) => const LoginScreen(),
-      loading: () => const _LoadingScreen(),
+      loading: () => const SplashView(),
     );
-  }
-}
-
-class _LoadingScreen extends StatelessWidget {
-  const _LoadingScreen();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(body: Center(child: CircularProgressIndicator()));
   }
 }

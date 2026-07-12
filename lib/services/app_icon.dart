@@ -2,10 +2,10 @@ import 'package:flutter/services.dart';
 
 /// Swaps the iOS app icon to match the in-app theme (not the system appearance).
 ///
-/// iOS only: uses alternate app icons via a platform channel. On Android — and
-/// on iOS versions/simulators that don't support alternate icons — this is a
-/// no-op. Note: iOS shows a one-time system alert when the icon changes, and
-/// alternate icons only take visible effect on a physical device.
+/// iOS only, and a physical-device feature: `UIApplication.supportsAlternateIcons`
+/// returns false on the iOS Simulator, so the icon does not change there. On a
+/// real device the icon switches (light ⇄ dark) with the in-app theme. Android
+/// cannot change the launcher icon at runtime, so it stays static.
 class AppIconService {
   const AppIconService._();
 
@@ -25,7 +25,7 @@ class AppIconService {
     try {
       await _channel.invokeMethod<void>('setIcon', {'name': name});
     } on PlatformException catch (_) {
-      // Alternate icons unsupported / not configured — ignore.
+      // Alternate icons unsupported (e.g. iOS Simulator) — ignore.
     } on MissingPluginException catch (_) {
       // Non-iOS platform — ignore.
     }

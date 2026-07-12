@@ -7,13 +7,17 @@ import UIKit
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
-    let result = super.application(application, didFinishLaunchingWithOptions: launchOptions)
+    return super.application(application, didFinishLaunchingWithOptions: launchOptions)
+  }
 
-    // Channel for switching the app icon based on the in-app theme.
-    if let controller = window?.rootViewController as? FlutterViewController {
+  func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
+    GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
+
+    // Register the app-icon channel on the implicit engine's messenger.
+    if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "KisouAppIcon") {
       let channel = FlutterMethodChannel(
         name: "kisou/app_icon",
-        binaryMessenger: controller.binaryMessenger
+        binaryMessenger: registrar.messenger()
       )
       channel.setMethodCallHandler { call, reply in
         guard call.method == "setIcon" else {
@@ -27,21 +31,23 @@ import UIKit
                              message: "Alternate icons not supported", details: nil))
           return
         }
-        UIApplication.shared.setAlternateIconName(name) { error in
-          if let error = error {
-            reply(FlutterError(code: "ICON_ERROR",
-                               message: error.localizedDescription, details: nil))
-          } else {
+        DispatchQueue.main.async {
+          // Skip if already showing the requested icon — avoids the system
+          // "icon changed" alert firing on every launch.
+          if UIApplication.shared.alternateIconName == name {
             reply(nil)
+            return
+          }
+          UIApplication.shared.setAlternateIconName(name) { error in
+            if let error = error {
+              reply(FlutterError(code: "ICON_ERROR",
+                                 message: error.localizedDescription, details: nil))
+            } else {
+              reply(nil)
+            }
           }
         }
       }
     }
-
-    return result
-  }
-
-  func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
-    GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
   }
 }
