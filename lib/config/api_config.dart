@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 class ApiConfig {
   const ApiConfig._();
 
@@ -25,7 +27,10 @@ class ApiConfig {
   static const String baseUrl =
       isDevelopment ? developmentBaseUrl : productionBaseUrl;
 
+  // Double-gated: never in a release build (kReleaseMode), only in the dev
+  // environment, and only when explicitly enabled — audit S3.
   static const bool showDevelopmentLogin =
+      !kReleaseMode &&
       isDevelopment &&
       bool.fromEnvironment('SHOW_DEV_LOGIN', defaultValue: true);
   static const Duration connectTimeout = Duration(seconds: 10);

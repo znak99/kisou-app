@@ -265,33 +265,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               ),
             ],
           ),
-          const SizedBox(height: KisouTheme.gapS),
-          Text(
-            AppStrings.linkPrompt,
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
-          const SizedBox(height: KisouTheme.gapM),
-          OutlinedButton.icon(
-            onPressed: _isSaving
-                ? null
-                : () => _linkAccount(
-                    () => ref.read(authProvider.notifier).linkWithApple(),
-                  ),
-            icon: const Icon(Icons.apple, size: 20),
-            label: const Text(AppStrings.linkWithApple),
-          ),
-          const SizedBox(height: KisouTheme.gapS),
-          OutlinedButton.icon(
-            onPressed: _isSaving
-                ? null
-                : () => _linkAccount(
-                    () => ref.read(authProvider.notifier).linkWithGoogle(),
-                  ),
-            icon: const Icon(Icons.g_mobiledata, size: 26),
-            label: const Text(AppStrings.linkWithGoogle),
-          ),
+          // Social account linking (Apple/Google) is intentionally hidden for
+          // the anonymous-only MVP. The dev-only link stays for testing.
           if (ApiConfig.showDevelopmentLogin) ...[
-            const SizedBox(height: KisouTheme.gapXs),
+            const SizedBox(height: KisouTheme.gapM),
             TextButton(
               onPressed: _isSaving
                   ? null

@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_svg/flutter_svg.dart';
-import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
 import '../../config/api_config.dart';
 import '../../config/theme.dart';
@@ -70,23 +68,18 @@ class LoginScreen extends ConsumerWidget {
                 const SizedBox(height: KisouTheme.gapL),
               ],
 
-              // Social sign-in in its natural position near the bottom.
-              SignInWithAppleButton(
-                text: AppStrings.appleLogin,
-                height: 50,
-                style: Theme.of(context).brightness == Brightness.dark
-                    ? SignInWithAppleButtonStyle.white
-                    : SignInWithAppleButtonStyle.black,
-                borderRadius: BorderRadius.circular(25),
+              // Anonymous-only MVP: the app auto-creates an anonymous account on
+              // launch, so this screen only appears when that failed (e.g.
+              // offline). Social sign-in is intentionally not offered yet.
+              FilledButton(
                 onPressed: isLoading
                     ? null
-                    : () => ref.read(authProvider.notifier).loginWithApple(),
-              ),
-              const SizedBox(height: KisouTheme.gapM),
-              _GoogleSignInButton(
-                isLoading: isLoading,
-                onPressed: () =>
-                    ref.read(authProvider.notifier).loginWithGoogle(),
+                    : () => ref.invalidate(authProvider),
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size.fromHeight(50),
+                  shape: const StadiumBorder(),
+                ),
+                child: Text(AppStrings.retry),
               ),
 
               if (hasError) ...[
@@ -141,39 +134,3 @@ class _DevLoginButton extends StatelessWidget {
   }
 }
 
-class _GoogleSignInButton extends StatelessWidget {
-  const _GoogleSignInButton({required this.isLoading, required this.onPressed});
-
-  final bool isLoading;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.kisou;
-    return OutlinedButton(
-      onPressed: isLoading ? null : onPressed,
-      style: OutlinedButton.styleFrom(
-        backgroundColor: c.surface,
-        foregroundColor: c.ink,
-        minimumSize: const Size.fromHeight(50),
-        side: BorderSide(color: c.hairline),
-        shape: const StadiumBorder(),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          SvgPicture.asset(
-            'assets/brand/google_logo.svg',
-            width: 20,
-            height: 20,
-          ),
-          const SizedBox(width: KisouTheme.gapM),
-          Text(
-            AppStrings.googleLogin,
-            style: Theme.of(context).textTheme.labelLarge,
-          ),
-        ],
-      ),
-    );
-  }
-}
