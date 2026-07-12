@@ -182,6 +182,7 @@ class AppStrings {
   static const updateFailed = '更新に失敗しました。もう一度お試しください。';
   static const privacyPolicyOpenFailed = 'プライバシーポリシーを開けませんでした。';
   static const notSet = '未設定';
+  static const timeRangeInvalid = '外出時間は帰宅時間より前に設定してください。';
   static const sensitivitySeparator = ' / ';
   static const timeRangeSeparator = ' 〜 ';
 

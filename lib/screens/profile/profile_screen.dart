@@ -330,39 +330,50 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 
   Future<void> _editNickname(User user) async {
-    final nickname = await showDialog<String>(
-      context: context,
-      builder: (context) {
-        final controller = TextEditingController(text: user.nickname);
-        return AlertDialog(
-          title: const Text(AppStrings.editNickname),
-          content: TextField(
-            controller: controller,
-            maxLength: 10,
-            autofocus: true,
-            inputFormatters: [LengthLimitingTextInputFormatter(10)],
-            decoration: const InputDecoration(
-              hintText: AppStrings.nicknameHint,
+    // Controller is owned here (not in the builder) so it can be disposed —
+    // audit B17.
+    final controller = TextEditingController(text: user.nickname);
+    try {
+      final nickname = await showDialog<String>(
+        context: context,
+        builder: (context) {
+          return AlertDialog(
+            title: const Text(AppStrings.editNickname),
+            content: TextField(
+              controller: controller,
+              maxLength: 10,
+              autofocus: true,
+              inputFormatters: [LengthLimitingTextInputFormatter(10)],
+              decoration: const InputDecoration(
+                hintText: AppStrings.nicknameHint,
+              ),
             ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text(AppStrings.cancel),
-            ),
-            FilledButton(
-              onPressed: () =>
-                  Navigator.of(context).pop(controller.text.trim()),
-              child: const Text(AppStrings.save),
-            ),
-          ],
-        );
-      },
-    );
-    if (nickname == null || nickname.isEmpty || nickname == user.nickname) {
-      return;
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text(AppStrings.cancel),
+              ),
+              FilledButton(
+                onPressed: () =>
+                    Navigator.of(context).pop(controller.text.trim()),
+                child: const Text(AppStrings.save),
+              ),
+            ],
+          );
+        },
+      );
+      if (nickname == null || nickname == user.nickname) {
+        return;
+      }
+      // Enforce the same minimum length as onboarding (audit B15).
+      if (nickname.length < 2) {
+        _showMessage(AppStrings.nicknameMinLength);
+        return;
+      }
+      await _updateUser(UserUpdate(nickname: nickname));
+    } finally {
+      controller.dispose();
     }
-    await _updateUser(UserUpdate(nickname: nickname));
   }
 
   Future<void> _editGender(User user) async {
@@ -531,6 +542,16 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       },
     );
     if (selection == null) {
+      return;
+    }
+    // Departure must be before return (audit B16); an inverted range yields
+    // an empty time window and breaks the recommendation calculation.
+    final departureMinutes =
+        selection.departure.hour * 60 + selection.departure.minute;
+    final returningMinutes =
+        selection.returning.hour * 60 + selection.returning.minute;
+    if (departureMinutes >= returningMinutes) {
+      _showMessage(AppStrings.timeRangeInvalid);
       return;
     }
     final departureTime = _formatTime(selection.departure);
