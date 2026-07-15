@@ -1,0 +1,6 @@
+{
+  "_comment": "개발(시뮬레이터/로컬 API). 사용: flutter run --dart-define-from-file=config/dev.json",
+  "APP_ENV": "development",
+  "API_BASE_URL": "http://127.0.0.1:8000",
+  "SHOW_DEV_LOGIN": true
+}

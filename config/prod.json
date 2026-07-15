@@ -1,0 +1,5 @@
+{
+  "_comment": "운영. 사용: flutter run --release --dart-define-from-file=config/prod.json",
+  "APP_ENV": "production",
+  "API_PRODUCTION_BASE_URL": "https://kisou.znak99.cloud"
+}
