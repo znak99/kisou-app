@@ -36,11 +36,7 @@ class SplashView extends StatelessWidget {
               fit: BoxFit.contain,
             ),
             const SizedBox(height: 24),
-            Image.asset(
-              wordmark,
-              width: 180,
-              fit: BoxFit.contain,
-            ),
+            Image.asset(wordmark, width: 180, fit: BoxFit.contain),
             // Reserved slot: keeps the logo centred whether or not the message
             // is showing.
             SizedBox(
@@ -98,9 +94,9 @@ class _LoadingMessageState extends State<_LoadingMessage> {
 
   @override
   Widget build(BuildContext context) {
-    final style = Theme.of(context).textTheme.bodySmall?.copyWith(
-      color: context.kisou.softInk,
-    );
+    final style = Theme.of(
+      context,
+    ).textTheme.bodySmall?.copyWith(color: context.kisou.softInk);
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [

@@ -149,7 +149,18 @@ void main() {
         child: const KisouApp(),
       ),
     );
-    await pumpPastSplash(tester);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 1600));
+
+    // 서버에 못 닿으면 스플래시에서 재시도한다(_kHomeRetryLimit 회).
+    expect(find.text(AppStrings.splashLoading), findsOneWidget);
+    expect(find.text(AppStrings.timeoutError), findsNothing);
+
+    // 상한을 넘기면 홈으로 넘겨 홈의 에러 UI가 처리한다.
+    for (var i = 0; i < 6; i++) {
+      await tester.pump(const Duration(seconds: 2));
+    }
+    await tester.pumpAndSettle();
 
     expect(find.text(AppStrings.timeoutError), findsOneWidget);
     expect(find.text(AppStrings.retry), findsOneWidget);
@@ -261,6 +272,57 @@ void main() {
     // 위젯 정리(점 타이머 해제)
     await tester.pumpWidget(const SizedBox());
   });
+
+  testWidgets('서버가 죽어 있으면 스플래시에서 재시도하고, 살아나면 자동으로 홈에 들어간다', (
+    WidgetTester tester,
+  ) async {
+    var serverDown = true;
+    final dio = Dio();
+    dio.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (options, handler) {
+          if (serverDown) {
+            handler.reject(
+              DioException(
+                requestOptions: options,
+                type: DioExceptionType.connectionError,
+              ),
+            );
+            return;
+          }
+          _resolveAppRequest(options, handler);
+        },
+      ),
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authServiceProvider.overrideWithValue(
+            _FakeAuthService(
+              hasTokenValue: true,
+              onboardingCompletedValue: true,
+            ),
+          ),
+          apiClientProvider.overrideWithValue(dio),
+        ],
+        child: const KisouApp(),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 1600));
+
+    // 연결 거부는 즉시 실패하지만, 홈으로 떨어뜨리지 않고 스플래시에서 기다린다.
+    expect(find.text(AppStrings.splashLoading), findsOneWidget);
+
+    // 서버가 살아나면 다음 재시도에서 홈으로 진입한다.
+    serverDown = false;
+    await tester.pump(const Duration(seconds: 2));
+    await tester.pumpAndSettle();
+
+    expect(find.text(AppStrings.splashLoading), findsNothing);
+    expect(find.text('たろうさん、${AppStrings.todayClothing}'), findsOneWidget);
+  });
 }
 
 /// KisouApp 은 시작 시 최소 1.5초 스플래시를 띄운다(app.dart의 _kMinSplash).
@@ -274,86 +336,92 @@ Future<void> pumpPastSplash(WidgetTester tester) async {
 Dio _createHangingDio() {
   final dio = Dio();
   dio.interceptors.add(
-    InterceptorsWrapper(onRequest: (options, handler) {/* 응답하지 않음 */}),
+    InterceptorsWrapper(
+      onRequest: (options, handler) {
+        /* 응답하지 않음 */
+      },
+    ),
   );
   return dio;
 }
 
 Dio _createAppDio() {
   final dio = Dio();
-  dio.interceptors.add(
-    InterceptorsWrapper(
-      onRequest: (options, handler) {
-        switch (options.path) {
-          case '/users/me':
-            handler.resolve(
-              Response<Map<String, dynamic>>(
-                requestOptions: options,
-                data: {
-                  'id': '00000000-0000-0000-0000-000000000001',
-                  'nickname': 'たろう',
-                  'gender': 'unspecified',
-                  'cold_sensitivity': 'normal',
-                  'heat_sensitivity': 'normal',
-                  'offset_value': 0,
-                  'departure_time': '09:00:00',
-                  'return_time': '18:00:00',
-                  'latitude': 35.6812,
-                  'longitude': 139.7671,
-                  'region_name': '東京',
-                  'created_at': '2026-05-06T00:00:00Z',
-                  'updated_at': '2026-05-06T00:00:00Z',
-                },
-              ),
-            );
-          case '/home':
-            handler.resolve(
-              Response<Map<String, dynamic>>(
-                requestOptions: options,
-                data: {
-                  'date': '2026-05-06',
-                  'recommendations': [
-                    {
-                      'rank': 1,
-                      'top': 'SHORT_SLEEVE',
-                      'bottom': 'LONG_PANTS',
-                      'outer': 'LIGHT_OUTER',
-                    },
-                    {
-                      'rank': 2,
-                      'top': 'LONG_SLEEVE',
-                      'bottom': 'LONG_PANTS',
-                      'outer': null,
-                    },
-                    {
-                      'rank': 3,
-                      'top': 'THIN_LONG',
-                      'bottom': 'SKIRT',
-                      'outer': 'CARDIGAN',
-                    },
-                  ],
-                  'weather_comparison': {
-                    'today': _weather(tempHigh: 22, tempLow: 14),
-                    'yesterday': _weather(tempHigh: 19, tempLow: 12),
-                    'two_days_ago': _weather(tempHigh: 24, tempLow: 16),
-                  },
-                },
-              ),
-            );
-          case '/feedback/today':
-            handler.resolve(
-              Response<Map<String, dynamic>>(
-                requestOptions: options,
-                data: {'exists': false, 'feedback': null},
-              ),
-            );
-          default:
-            handler.reject(DioException(requestOptions: options));
-        }
-      },
-    ),
-  );
+  dio.interceptors.add(InterceptorsWrapper(onRequest: _resolveAppRequest));
   return dio;
+}
+
+/// 정상 응답하는 앱 백엔드 목. 서버 상태를 바꿔가며 쓰는 테스트에서 재사용한다.
+void _resolveAppRequest(
+  RequestOptions options,
+  RequestInterceptorHandler handler,
+) {
+  switch (options.path) {
+    case '/users/me':
+      handler.resolve(
+        Response<Map<String, dynamic>>(
+          requestOptions: options,
+          data: {
+            'id': '00000000-0000-0000-0000-000000000001',
+            'nickname': 'たろう',
+            'gender': 'unspecified',
+            'cold_sensitivity': 'normal',
+            'heat_sensitivity': 'normal',
+            'offset_value': 0,
+            'departure_time': '09:00:00',
+            'return_time': '18:00:00',
+            'latitude': 35.6812,
+            'longitude': 139.7671,
+            'region_name': '東京',
+            'created_at': '2026-05-06T00:00:00Z',
+            'updated_at': '2026-05-06T00:00:00Z',
+          },
+        ),
+      );
+    case '/home':
+      handler.resolve(
+        Response<Map<String, dynamic>>(
+          requestOptions: options,
+          data: {
+            'date': '2026-05-06',
+            'recommendations': [
+              {
+                'rank': 1,
+                'top': 'SHORT_SLEEVE',
+                'bottom': 'LONG_PANTS',
+                'outer': 'LIGHT_OUTER',
+              },
+              {
+                'rank': 2,
+                'top': 'LONG_SLEEVE',
+                'bottom': 'LONG_PANTS',
+                'outer': null,
+              },
+              {
+                'rank': 3,
+                'top': 'THIN_LONG',
+                'bottom': 'SKIRT',
+                'outer': 'CARDIGAN',
+              },
+            ],
+            'weather_comparison': {
+              'today': _weather(tempHigh: 22, tempLow: 14),
+              'yesterday': _weather(tempHigh: 19, tempLow: 12),
+              'two_days_ago': _weather(tempHigh: 24, tempLow: 16),
+            },
+          },
+        ),
+      );
+    case '/feedback/today':
+      handler.resolve(
+        Response<Map<String, dynamic>>(
+          requestOptions: options,
+          data: {'exists': false, 'feedback': null},
+        ),
+      );
+    default:
+      handler.reject(DioException(requestOptions: options));
+  }
 }
 
 Dio _createHomeErrorDio(DioExceptionType type) {
