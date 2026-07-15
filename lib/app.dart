@@ -8,6 +8,7 @@ import 'config/theme.dart';
 import 'constants/app_strings.dart';
 import 'providers/api_provider.dart';
 import 'providers/auth_provider.dart';
+import 'providers/home_provider.dart';
 import 'providers/theme_provider.dart';
 import 'screens/onboarding/login_screen.dart';
 import 'screens/onboarding/onboarding_screen.dart';
@@ -56,6 +57,7 @@ class _AuthGate extends ConsumerStatefulWidget {
 class _AuthGateState extends ConsumerState<_AuthGate> {
   Timer? _minSplashTimer;
   bool _minSplashElapsed = false;
+  bool _initialHomeSettled = false;
 
   @override
   void initState() {
@@ -108,6 +110,18 @@ class _AuthGateState extends ConsumerState<_AuthGate> {
         }
         if (state.isNewUser) {
           return const OnboardingScreen();
+        }
+        // Returning user: a stored token authenticates without touching the
+        // server, so the splash would otherwise end before we've fetched
+        // anything. Keep it up for the FIRST home load too, then hand over.
+        // Only the first one — once settled we stop gating, otherwise a retry
+        // from the home error screen would throw the user back to the splash.
+        if (!_initialHomeSettled) {
+          if (ref.watch(homeProvider).isLoading) {
+            return const SplashView(showMessage: true);
+          }
+          // Settled with data or an error; home renders its own error state.
+          _initialHomeSettled = true;
         }
         return const RootShell();
       },

@@ -228,6 +228,39 @@ void main() {
     expect(find.text('2/5'), findsOneWidget);
     expect(find.text(AppStrings.genderPrompt), findsOneWidget);
   });
+
+  testWidgets('재방문 사용자: 홈 응답이 늦으면 스플래시가 계속 뜨고 안내 문구가 보인다', (
+    WidgetTester tester,
+  ) async {
+    // 토큰이 있으면 인증은 서버 없이 즉시 끝난다. 그래도 첫 홈 로드를 기다려야 한다.
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authServiceProvider.overrideWithValue(
+            _FakeAuthService(
+              hasTokenValue: true,
+              onboardingCompletedValue: true,
+            ),
+          ),
+          apiClientProvider.overrideWithValue(_createHangingDio()),
+        ],
+        child: const KisouApp(),
+      ),
+    );
+    await tester.pump();
+
+    // 최소 시간 전: 스플래시만, 문구 없음
+    expect(find.text(AppStrings.splashLoading), findsNothing);
+
+    // 최소 시간 경과 후에도 홈이 안 오면 문구가 뜬다 (pumpAndSettle 금지: 점 타이머가 계속 돈다)
+    await tester.pump(const Duration(milliseconds: 1600));
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.text(AppStrings.splashLoading), findsOneWidget);
+    expect(find.text(AppStrings.todayClothing), findsNothing); // 홈으로 안 넘어감
+
+    // 위젯 정리(점 타이머 해제)
+    await tester.pumpWidget(const SizedBox());
+  });
 }
 
 /// KisouApp 은 시작 시 최소 1.5초 스플래시를 띄운다(app.dart의 _kMinSplash).
@@ -235,6 +268,15 @@ void main() {
 Future<void> pumpPastSplash(WidgetTester tester) async {
   await tester.pump(const Duration(milliseconds: 1600));
   await tester.pumpAndSettle();
+}
+
+/// 요청을 영원히 붙잡아 두는 Dio — provider 를 loading 상태에 묶어 둔다.
+Dio _createHangingDio() {
+  final dio = Dio();
+  dio.interceptors.add(
+    InterceptorsWrapper(onRequest: (options, handler) {/* 응답하지 않음 */}),
+  );
+  return dio;
 }
 
 Dio _createAppDio() {
