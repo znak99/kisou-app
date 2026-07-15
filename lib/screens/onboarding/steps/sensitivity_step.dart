@@ -182,10 +182,7 @@ class _StepHeader extends StatelessWidget {
         ),
         const SizedBox(width: KisouTheme.gapM),
         Expanded(
-          child: Text(
-            title,
-            style: Theme.of(context).textTheme.headlineSmall,
-          ),
+          child: Text(title, style: Theme.of(context).textTheme.headlineSmall),
         ),
       ],
     );

@@ -79,15 +79,10 @@ class KisouTheme {
 
   static ThemeData _build(Brightness brightness, KisouColors colors) {
     final textTheme = _textTheme(colors.ink, colors.softInk);
-    final colorScheme =
-        ColorScheme.fromSeed(
-          seedColor: accent,
-          brightness: brightness,
-        ).copyWith(
-          primary: accent,
-          surface: colors.surface,
-          onSurface: colors.ink,
-        );
+    final colorScheme = ColorScheme.fromSeed(
+      seedColor: accent,
+      brightness: brightness,
+    ).copyWith(primary: accent, surface: colors.surface, onSurface: colors.ink);
 
     return ThemeData(
       useMaterial3: true,
@@ -108,9 +103,7 @@ class KisouTheme {
         color: colors.surface,
         elevation: 0,
         margin: EdgeInsets.zero,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(rMd),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(rMd)),
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
@@ -141,7 +134,10 @@ class KisouTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: colors.surface,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 14,
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(rSm),
           borderSide: BorderSide(color: colors.hairline),

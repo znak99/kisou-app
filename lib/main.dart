@@ -10,9 +10,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // Portrait-only across platforms (matches the design; avoids landscape
   // overflow) — audit B18.
-  await SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp,
-  ]);
+  await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   // Preload the saved theme so the very first frame renders in it instead of
   // flashing the system theme and then correcting (audit B22).
   final prefs = await SharedPreferences.getInstance();

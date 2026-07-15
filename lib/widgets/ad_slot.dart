@@ -47,10 +47,9 @@ class AdSlot extends StatelessWidget {
           const SizedBox(width: KisouTheme.gapS),
           Text(
             AppStrings.adLabel,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: c.softInk,
-              letterSpacing: 2,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: c.softInk, letterSpacing: 2),
           ),
         ],
       ),

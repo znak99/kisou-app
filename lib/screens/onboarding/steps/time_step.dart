@@ -153,9 +153,9 @@ class _TimeTile extends StatelessWidget {
               ),
               Text(
                 _formatTime(time),
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: c.accent,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(color: c.accent),
               ),
               const SizedBox(width: KisouTheme.gapS),
               Icon(Icons.expand_more_rounded, size: 20, color: c.softInk),
@@ -199,10 +199,7 @@ class _StepHeader extends StatelessWidget {
         ),
         const SizedBox(width: KisouTheme.gapM),
         Expanded(
-          child: Text(
-            title,
-            style: Theme.of(context).textTheme.headlineSmall,
-          ),
+          child: Text(title, style: Theme.of(context).textTheme.headlineSmall),
         ),
       ],
     );

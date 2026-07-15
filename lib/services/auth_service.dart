@@ -172,7 +172,9 @@ class AuthService {
   }) async {
     final response = await dio.post<Map<String, dynamic>>(
       '/auth/anonymous',
-      data: deviceSecret == null ? <String, dynamic>{} : {'device_secret': deviceSecret},
+      data: deviceSecret == null
+          ? <String, dynamic>{}
+          : {'device_secret': deviceSecret},
     );
     final data = response.data;
     if (data == null) {
@@ -232,7 +234,10 @@ class AuthService {
       return;
     }
     try {
-      await dio.post<void>('/auth/logout', data: {'refresh_token': refreshToken});
+      await dio.post<void>(
+        '/auth/logout',
+        data: {'refresh_token': refreshToken},
+      );
     } on DioException {
       // Logout is best-effort; local tokens are cleared regardless.
     }

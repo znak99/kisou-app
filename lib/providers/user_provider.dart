@@ -42,7 +42,9 @@ class UserController extends AsyncNotifier<User?> {
     } catch (error, stackTrace) {
       // Keep the profile usable by restoring the prior data; the caller
       // surfaces the failure (e.g. a snackbar).
-      state = previous.hasValue ? previous : AsyncError<User?>(error, stackTrace);
+      state = previous.hasValue
+          ? previous
+          : AsyncError<User?>(error, stackTrace);
       rethrow;
     }
   }
@@ -55,7 +57,9 @@ class UserController extends AsyncNotifier<User?> {
       state = AsyncData(user);
       return user;
     } catch (error, stackTrace) {
-      state = previous.hasValue ? previous : AsyncError<User?>(error, stackTrace);
+      state = previous.hasValue
+          ? previous
+          : AsyncError<User?>(error, stackTrace);
       rethrow;
     }
   }
@@ -67,7 +71,9 @@ class UserController extends AsyncNotifier<User?> {
       await ref.read(userServiceProvider).deleteMe();
       state = const AsyncData(null);
     } catch (error, stackTrace) {
-      state = previous.hasValue ? previous : AsyncError<User?>(error, stackTrace);
+      state = previous.hasValue
+          ? previous
+          : AsyncError<User?>(error, stackTrace);
       rethrow;
     }
   }

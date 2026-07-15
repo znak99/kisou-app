@@ -212,9 +212,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             ],
             selected: {mode},
             showSelectedIcon: false,
-            onSelectionChanged: (selection) => ref
-                .read(themeModeProvider.notifier)
-                .setMode(selection.first),
+            onSelectionChanged: (selection) =>
+                ref.read(themeModeProvider.notifier).setMode(selection.first),
           ),
         ],
       ),
@@ -253,11 +252,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         children: [
           Row(
             children: [
-              Icon(
-                Icons.person_outline_rounded,
-                color: c.softInk,
-                size: 20,
-              ),
+              Icon(Icons.person_outline_rounded, color: c.softInk, size: 20),
               const SizedBox(width: KisouTheme.gapS),
               Text(
                 AppStrings.anonymousAccount,
@@ -1043,10 +1038,7 @@ class _SettingRow extends StatelessWidget {
                   ),
                   if (value != null && value!.isNotEmpty) ...[
                     const SizedBox(height: 2),
-                    Text(
-                      value!,
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
+                    Text(value!, style: Theme.of(context).textTheme.bodySmall),
                   ],
                 ],
               ),

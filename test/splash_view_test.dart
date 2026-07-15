@@ -32,7 +32,9 @@ void main() {
           .widgetList<Text>(find.byType(Text))
           .map((t) => t.data)
           .whereType<String>();
-      return texts.firstWhere((t) => t.isNotEmpty && RegExp(r'^\.+$').hasMatch(t));
+      return texts.firstWhere(
+        (t) => t.isNotEmpty && RegExp(r'^\.+$').hasMatch(t),
+      );
     }
 
     final seen = <String>[dots()];

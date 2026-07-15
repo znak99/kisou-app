@@ -4,11 +4,7 @@ import '../../../config/theme.dart';
 import '../../../constants/app_strings.dart';
 
 class SelectionOption {
-  const SelectionOption({
-    required this.label,
-    required this.value,
-    this.icon,
-  });
+  const SelectionOption({required this.label, required this.value, this.icon});
 
   final String label;
   final String value;
@@ -106,9 +102,7 @@ class _SelectionButton extends StatelessWidget {
             vertical: KisouTheme.gapL,
           ),
           decoration: BoxDecoration(
-            color: isSelected
-                ? c.accent.withValues(alpha: 0.10)
-                : c.surface,
+            color: isSelected ? c.accent.withValues(alpha: 0.10) : c.surface,
             border: Border.all(
               color: isSelected ? c.accent : c.hairline,
               width: isSelected ? 1.5 : 1,
@@ -118,11 +112,7 @@ class _SelectionButton extends StatelessWidget {
           child: Row(
             children: [
               if (icon != null) ...[
-                Icon(
-                  icon,
-                  size: 22,
-                  color: isSelected ? c.accent : c.softInk,
-                ),
+                Icon(icon, size: 22, color: isSelected ? c.accent : c.softInk),
                 const SizedBox(width: KisouTheme.gapM),
               ],
               Expanded(
@@ -167,10 +157,7 @@ class _StepHeader extends StatelessWidget {
         ),
         const SizedBox(width: KisouTheme.gapM),
         Expanded(
-          child: Text(
-            title,
-            style: Theme.of(context).textTheme.headlineSmall,
-          ),
+          child: Text(title, style: Theme.of(context).textTheme.headlineSmall),
         ),
       ],
     );
