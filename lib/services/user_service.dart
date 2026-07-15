@@ -28,6 +28,17 @@ class UserService {
     return User.fromJson(data);
   }
 
+  Future<User> resetData() async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      '/users/me/reset-data',
+    );
+    final data = response.data;
+    if (data == null) {
+      throw const UserServiceException('Reset response is empty.');
+    }
+    return User.fromJson(data);
+  }
+
   Future<void> deleteMe() async {
     await _dio.delete<void>('/users/me');
   }

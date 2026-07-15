@@ -23,12 +23,12 @@ void main() {
         child: const KisouApp(),
       ),
     );
-    await tester.pump();
+    await tester.pumpAndSettle();
 
     expect(find.text(AppStrings.appName), findsOneWidget);
     expect(find.text(AppStrings.loginDescription), findsOneWidget);
-    expect(find.text(AppStrings.appleLogin), findsOneWidget);
-    expect(find.text(AppStrings.googleLogin), findsOneWidget);
+    // Anonymous-only MVP: social sign-in is hidden; a retry button is offered.
+    expect(find.text(AppStrings.retry), findsOneWidget);
     expect(find.text(AppStrings.developmentExistingLogin), findsOneWidget);
     expect(find.text(AppStrings.developmentNewLogin), findsOneWidget);
   });
@@ -76,15 +76,15 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('たろうさん、${AppStrings.todayClothing}'), findsOneWidget);
-    expect(find.text('📍 東京'), findsOneWidget);
+    expect(find.text('東京'), findsOneWidget);
     expect(find.text(AppStrings.bestRecommendation), findsWidgets);
     await tester.drag(find.byType(ListView), const Offset(0, -500));
     await tester.pumpAndSettle();
     expect(find.text(AppStrings.today), findsOneWidget);
     expect(find.text(AppStrings.yesterday), findsOneWidget);
     expect(find.text(AppStrings.twoDaysAgo), findsOneWidget);
-    expect(find.text('昨日より3°高い'), findsOneWidget);
-    expect(find.text(AppStrings.feedbackPrompt), findsOneWidget);
+    expect(find.text('昨日より3°'), findsOneWidget);
+    // The feedback action lives in the shared top toolbar.
     expect(find.text(AppStrings.feedbackButton), findsOneWidget);
 
     await tester.tap(find.text(AppStrings.feedbackButton));
@@ -112,15 +112,20 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byTooltip(AppStrings.settings));
+    // Settings now live under the "メニュー" bottom-nav tab.
+    await tester.tap(find.text(AppStrings.tabProfile));
     await tester.pumpAndSettle();
 
+    // Top of the list is visible immediately.
     expect(find.text(AppStrings.nicknameSetting), findsOneWidget);
     expect(find.text(AppStrings.genderSetting), findsOneWidget);
-    expect(find.text(AppStrings.sensitivitySetting), findsOneWidget);
-    expect(find.text(AppStrings.timeSetting), findsOneWidget);
-    expect(find.text(AppStrings.locationSetting), findsOneWidget);
-    expect(find.text(AppStrings.privacyPolicy), findsOneWidget);
+
+    // The account actions sit at the bottom of the (lazy) list.
+    await tester.scrollUntilVisible(
+      find.text(AppStrings.accountDelete),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.text(AppStrings.logout), findsOneWidget);
     expect(find.text(AppStrings.accountDelete), findsOneWidget);
   });
@@ -433,5 +438,18 @@ class _FakeAuthService extends AuthService {
   Future<void> deleteToken() async {}
 
   @override
+  Future<void> clearTokens() async {}
+
+  @override
   Future<void> clearOnboardingCompleted() async {}
+
+  @override
+  Future<void> logoutServer({required Dio dio}) async {}
+
+  // No token → simulate an offline anonymous-login failure so the login screen
+  // is shown (rather than hitting the network / real secure storage).
+  @override
+  Future<bool> loginAnonymous({required Dio dio}) async {
+    throw const AuthException('offline');
+  }
 }

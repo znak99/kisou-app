@@ -11,24 +11,26 @@ class WeatherSummary {
   });
 
   factory WeatherSummary.fromJson(Map<String, dynamic> json) {
+    // All aggregates are nullable to match the API (Open-Meteo can return
+    // all-null hourly arrays for the past edge of the window) — audit B21.
     return WeatherSummary(
-      tempHigh: (json['temp_high'] as num).toDouble(),
-      tempLow: (json['temp_low'] as num).toDouble(),
-      feelsLikeHigh: (json['feels_like_high'] as num).toDouble(),
-      feelsLikeLow: (json['feels_like_low'] as num).toDouble(),
-      humidityAvg: json['humidity_avg'] as int,
-      windSpeedAvg: (json['wind_speed_avg'] as num).toDouble(),
+      tempHigh: (json['temp_high'] as num?)?.toDouble(),
+      tempLow: (json['temp_low'] as num?)?.toDouble(),
+      feelsLikeHigh: (json['feels_like_high'] as num?)?.toDouble(),
+      feelsLikeLow: (json['feels_like_low'] as num?)?.toDouble(),
+      humidityAvg: json['humidity_avg'] as int?,
+      windSpeedAvg: (json['wind_speed_avg'] as num?)?.toDouble(),
       precipitationChanceMax: json['precipitation_chance_max'] as int?,
       wbgtMax: (json['wbgt_max'] as num?)?.toDouble(),
     );
   }
 
-  final double tempHigh;
-  final double tempLow;
-  final double feelsLikeHigh;
-  final double feelsLikeLow;
-  final int humidityAvg;
-  final double windSpeedAvg;
+  final double? tempHigh;
+  final double? tempLow;
+  final double? feelsLikeHigh;
+  final double? feelsLikeLow;
+  final int? humidityAvg;
+  final double? windSpeedAvg;
   final int? precipitationChanceMax;
   final double? wbgtMax;
 }

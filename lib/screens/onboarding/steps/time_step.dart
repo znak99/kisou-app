@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../config/theme.dart';
 import '../../../constants/app_strings.dart';
 
 class TimeStep extends StatelessWidget {
@@ -24,24 +25,26 @@ class TimeStep extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.kisou;
     return Padding(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(KisouTheme.pagePad),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const SizedBox(height: 32),
-          Text(
-            AppStrings.timePrompt,
-            style: Theme.of(context).textTheme.headlineSmall,
+          const SizedBox(height: KisouTheme.gapXl),
+          const _StepHeader(
+            icon: Icons.schedule_rounded,
+            title: AppStrings.timePrompt,
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: KisouTheme.gapM),
           Text(
             AppStrings.changeLater,
             style: Theme.of(context).textTheme.bodySmall,
           ),
-          const SizedBox(height: 32),
+          const SizedBox(height: KisouTheme.gapXl),
           _TimeTile(
             label: AppStrings.departureTime,
+            icon: Icons.logout_rounded,
             time: departureTime,
             onTap: isSaving
                 ? null
@@ -55,9 +58,10 @@ class TimeStep extends StatelessWidget {
                     }
                   },
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: KisouTheme.gapM),
           _TimeTile(
             label: AppStrings.returnTime,
+            icon: Icons.login_rounded,
             time: returnTime,
             onTap: isSaving
                 ? null
@@ -71,17 +75,31 @@ class TimeStep extends StatelessWidget {
                     }
                   },
           ),
+          const SizedBox(height: KisouTheme.gapM),
+          Row(
+            children: [
+              Icon(Icons.info_outline_rounded, size: 16, color: c.softInk),
+              const SizedBox(width: KisouTheme.gapXs),
+              Expanded(
+                child: Text(
+                  AppStrings.timeApproximateNote,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ),
+            ],
+          ),
           const Spacer(),
-          FilledButton(
+          FilledButton.icon(
             onPressed: isSaving ? null : onComplete,
-            child: isSaving
+            icon: isSaving
                 ? const SizedBox.square(
                     dimension: 20,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : const Text(AppStrings.setTime),
+                : const Icon(Icons.check_rounded, size: 20),
+            label: const Text(AppStrings.setTime),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: KisouTheme.gapM),
           TextButton(
             onPressed: isSaving ? null : onSkip,
             child: const Text(AppStrings.skip),
@@ -95,39 +113,54 @@ class TimeStep extends StatelessWidget {
 class _TimeTile extends StatelessWidget {
   const _TimeTile({
     required this.label,
+    required this.icon,
     required this.time,
     required this.onTap,
   });
 
   final String label;
+  final IconData icon;
   final TimeOfDay time;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(8),
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          border: Border.all(color: const Color(0xFFE8F0F4)),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(
-                label,
-                style: Theme.of(context).textTheme.titleMedium,
+    final c = context.kisou;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(KisouTheme.rSm),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: KisouTheme.gapL,
+            vertical: KisouTheme.gapL,
+          ),
+          decoration: BoxDecoration(
+            color: c.surface,
+            border: Border.all(color: c.hairline),
+            borderRadius: BorderRadius.circular(KisouTheme.rSm),
+          ),
+          child: Row(
+            children: [
+              Icon(icon, size: 20, color: c.accent),
+              const SizedBox(width: KisouTheme.gapM),
+              Expanded(
+                child: Text(
+                  label,
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
               ),
-            ),
-            Text(
-              _formatTime(time),
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-          ],
+              Text(
+                _formatTime(time),
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: c.accent,
+                ),
+              ),
+              const SizedBox(width: KisouTheme.gapS),
+              Icon(Icons.expand_more_rounded, size: 20, color: c.softInk),
+            ],
+          ),
         ),
       ),
     );
@@ -140,4 +173,38 @@ String _formatTime(TimeOfDay time) {
   final hour = time.hour.toString().padLeft(2, '0');
   final minute = time.minute.toString().padLeft(2, '0');
   return '$hour:$minute';
+}
+
+/// Leading icon + prompt title shown at the top of each onboarding step.
+class _StepHeader extends StatelessWidget {
+  const _StepHeader({required this.icon, required this.title});
+
+  final IconData icon;
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.kisou;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(KisouTheme.gapM),
+          decoration: BoxDecoration(
+            gradient: c.accentGradient,
+            borderRadius: BorderRadius.circular(KisouTheme.rSm),
+            boxShadow: c.tileShadow,
+          ),
+          child: Icon(icon, color: Colors.white, size: 24),
+        ),
+        const SizedBox(width: KisouTheme.gapM),
+        Expanded(
+          child: Text(
+            title,
+            style: Theme.of(context).textTheme.headlineSmall,
+          ),
+        ),
+      ],
+    );
+  }
 }

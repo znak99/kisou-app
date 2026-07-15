@@ -1,15 +1,96 @@
 class AppStrings {
   const AppStrings._();
 
-  static const appName = 'キソウ';
-  static const loginDescription = '今日、どのくらいの厚さで着ればいい？\nキソウが教えます';
+  static const appName = 'KISOU';
+
+  // Display / theme
+  static const profileCategoryDisplay = '表示設定';
+  static const themeSetting = 'テーマ';
+  static const themeSystem = 'システム';
+  static const themeLight = 'ライト';
+  static const themeDark = 'ダーク';
+
+  // Bottom navigation
+  static const tabHome = 'ホーム';
+  static const tabAnalysis = '分析';
+  static const tabProfile = 'メニュー';
+
+  // Ad slot
+  static const adLabel = '広告';
+
+  // Feeling headline (7 levels)
+  static const feelingLead = '今日のあなたは';
+  static const feelingVeryHot = 'とても暑く感じるでしょう';
+  static const feelingHot = '暑く感じるでしょう';
+  static const feelingWarm = '暖かく感じるでしょう';
+  static const feelingPerfect = 'ちょうど良く感じるでしょう';
+  static const feelingCool = '涼しく感じるでしょう';
+  static const feelingCold = '寒く感じるでしょう';
+  static const feelingVeryCold = 'とても寒く感じるでしょう';
+
+  // Today weather detail
+  static const todayWeatherTitle = '今日の天気';
+  static const weatherFeelsLike = '体感';
+  static const weatherHumidity = '湿度';
+  static const weatherWind = '風速';
+  static const weatherPrecipitation = '降水確率';
+  static const weatherWbgt = '暑さ指数';
+
+  // Analysis screen
+  static const analysisTitle = '分析';
+  static const analysisTendencyTitle = 'あなたの体感タイプ';
+  static const tendencyColdSensitive = '寒がりタイプ';
+  static const tendencyNeutral = 'バランスタイプ';
+  static const tendencyHeatSensitive = '暑がりタイプ';
+  static const tendencyColdSensitiveDesc = '同じ気温でも寒く感じやすい傾向です';
+  static const tendencyNeutralDesc = '気温に対してバランスよく感じる傾向です';
+  static const tendencyHeatSensitiveDesc = '同じ気温でも暑く感じやすい傾向です';
+  static const analysisDistributionTitle = '体感の記録';
+  static const analysisHistoryTitle = '寒いと感じた日';
+  static const analysisEmpty = 'まだ記録がありません。\nフィードバックすると分析が表示されます。';
+  static const feedbackCountCold = '寒かった';
+  static const feedbackCountPerfect = 'ちょうど良い';
+  static const feedbackCountHot = '暑かった';
+  static const analysisTimelineTitle = '体感の推移';
+  // Analysis v2
+  static const analysisColdDaysTitle = '寒いと感じた日';
+  static const analysisHotDaysTitle = '暑いと感じた日';
+  static const analysisTempHigh = '最高';
+  static const analysisTempLow = '最低';
+  static const analysisLockedMessage = 'フィードバックが5回たまると、くわしい分析が表示されます';
+  static const analysisRemainingSuffix = '回';
+  static const analysisRemainingPrefix = 'あと';
+
+  // Onboarding v2
+  static const nicknameMinLength = 'ニックネームは2文字以上で入力してください';
+  static const timeApproximateNote = 'おおよその時間で大丈夫です';
+
+  // Profile v2 (category tree + account linking)
+  static const profileCategoryPersonal = '個人情報設定';
+  static const profileCategoryAccount = 'アカウント設定';
+  static const profileCategoryComfort = '体感設定';
+  static const dataReset = 'データを初期化';
+  static const dataResetConfirm = '体感データを初期化しますか？補正値とフィードバック記録がリセットされます。';
+  static const dataResetDone = 'データを初期化しました';
+  static const dataResetFailed = 'データの初期化に失敗しました。';
+  static const accountLinkTitle = 'アカウント連携';
+  static const linkWithApple = 'Appleと連携';
+  static const linkWithGoogle = 'Googleと連携';
+  static const linkedWithApple = 'Apple連携済み';
+  static const linkedWithGoogle = 'Google連携済み';
+  static const anonymousAccount = 'ゲスト（未連携）';
+  static const linkPrompt = 'アカウントを連携すると、機種変更時もデータを引き継げます';
+  static const linkFailed = 'アカウント連携に失敗しました。';
+  static const skipForNow = 'あとで';
+
+  static const loginDescription = '今日、どのくらいの厚さで着ればいい？\nKISOUが教えます';
   static const appleLogin = 'Appleでログイン';
   static const googleLogin = 'Googleでログイン';
   static const developmentExistingLogin = '開発ログイン（既存）';
   static const developmentNewLogin = '開発ログイン（新規）';
   static const loginFailed = 'ログインに失敗しました。もう一度お試しください。';
   static const onboarding = 'オンボーディング';
-  static const home = 'キソウ ホーム';
+  static const home = 'KISOU ホーム';
   static const settings = '設定';
   static const logout = 'ログアウト';
   static const retry = '再試行';
@@ -24,6 +105,10 @@ class AppStrings {
   static const recommendationSection = 'おすすめ';
   static const weatherComparisonSection = '天気の比較';
   static const bestRecommendation = 'おすすめ';
+  static const warmerOption = '少し暖かめ';
+  static const lighterOption = '少し軽め';
+  static const recShowMore = 'もっと見る';
+  static const recShowLess = '閉じる';
   static const today = '今日';
   static const yesterday = '昨日';
   static const twoDaysAgo = '一昨日';
@@ -33,7 +118,7 @@ class AppStrings {
   static const saveFailed = '設定の保存に失敗しました。もう一度お試しください。';
   static const onboardingComplete = '設定完了！今日のおすすめを確認しましょう';
   static const ok = 'OK';
-  static const nicknamePrompt = 'キソウで使う名前を教えてください';
+  static const nicknamePrompt = 'KISOUで使う名前を教えてください';
   static const nicknameHint = '10文字以内';
   static const genderPrompt = '性別を選んでください';
   static const male = '男性';
@@ -97,6 +182,17 @@ class AppStrings {
   static const updateFailed = '更新に失敗しました。もう一度お試しください。';
   static const privacyPolicyOpenFailed = 'プライバシーポリシーを開けませんでした。';
   static const notSet = '未設定';
+  static const timeRangeInvalid = '外出時間は帰宅時間より前に設定してください。';
   static const sensitivitySeparator = ' / ';
   static const timeRangeSeparator = ' 〜 ';
+
+  // Interpolated copy (kept here so all user-facing Japanese lives in one place).
+  static const sameAsYesterday = '昨日と同じ';
+
+  static String comparedToYesterday(int degrees) => '昨日より$degrees°';
+
+  static String feelingLeadNamed(String name) => '今日の$nameさんは';
+
+  static String greetingWithNickname(String nickname) =>
+      '$nicknameさん、$todayClothing';
 }

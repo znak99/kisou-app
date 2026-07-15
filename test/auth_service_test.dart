@@ -9,11 +9,13 @@ void main() {
   test('parses snake case new user flag from login response', () {
     final response = LoginResponse.fromJson({
       'access_token': 'access-token',
+      'refresh_token': 'refresh-token',
       'token_type': 'bearer',
       'is_new_user': true,
     });
 
     expect(response.accessToken, 'access-token');
+    expect(response.refreshToken, 'refresh-token');
     expect(response.tokenType, 'bearer');
     expect(response.isNewUser, isTrue);
   });
@@ -96,6 +98,7 @@ Dio _createLoginDio(List<String> tokens, {required bool isNewUser}) {
             requestOptions: options,
             data: {
               'access_token': 'access-token-${tokens.length}',
+              'refresh_token': 'refresh-token-${tokens.length}',
               'token_type': 'bearer',
               'is_new_user': isNewUser,
             },

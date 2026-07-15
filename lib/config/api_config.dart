@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 class ApiConfig {
   const ApiConfig._();
 
@@ -16,9 +18,19 @@ class ApiConfig {
     defaultValue: '',
   );
 
-  static const String baseUrl = developmentBaseUrl;
   static const bool isDevelopment = environment == 'development';
+
+  /// The active API base URL. Development builds hit [developmentBaseUrl];
+  /// every other build uses [productionBaseUrl]. (Previously this was hard-wired
+  /// to the development URL, so production/staging builds silently called
+  /// localhost — audit B2.)
+  static const String baseUrl =
+      isDevelopment ? developmentBaseUrl : productionBaseUrl;
+
+  // Double-gated: never in a release build (kReleaseMode), only in the dev
+  // environment, and only when explicitly enabled — audit S3.
   static const bool showDevelopmentLogin =
+      !kReleaseMode &&
       isDevelopment &&
       bool.fromEnvironment('SHOW_DEV_LOGIN', defaultValue: true);
   static const Duration connectTimeout = Duration(seconds: 10);

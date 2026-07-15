@@ -20,8 +20,9 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.example.kisou_app"
+        // Store/backend app identity (audit S1). namespace stays as the internal
+        // R-class package; only the applicationId is the shipped identifier.
+        applicationId = "cloud.znak99.kisou"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = 24

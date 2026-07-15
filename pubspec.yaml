@@ -44,6 +44,9 @@ dependencies:
   geolocator: ^14.0.2
   shared_preferences: ^2.5.5
   url_launcher: ^6.3.2
+  flutter_svg: ^2.3.0
+  fl_chart: ^1.2.0
+  geocoding: ^3.0.0
 
 dev_dependencies:
   flutter_test:
@@ -55,6 +58,8 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.4
+  flutter_native_splash: ^2.4.7
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -67,10 +72,9 @@ flutter:
   # the material Icons class.
   uses-material-design: true
 
-  # To add assets to your application, add an assets section, like this:
-  # assets:
-  #   - images/a_dot_burr.jpeg
-  #   - images/a_dot_ham.jpeg
+  assets:
+    - assets/icons/
+    - assets/brand/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
@@ -97,3 +101,27 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+# Single static app icon (light design). The runtime theme-based icon swap was
+# removed because iOS shows an unsuppressable system alert on every change.
+flutter_launcher_icons:
+  image_path: "assets/brand/app_icon_light.png"
+  android: true
+  ios: true
+  remove_alpha_ios: true
+  background_color_ios: "#FCF7EF"
+  image_path_ios: "assets/brand/app_icon_light.png"
+  # Android can't swap the launcher icon by in-app theme, so it stays static.
+  # Scene is pre-padded into the safe zone to avoid adaptive-mask cropping.
+  adaptive_icon_background: "#FCF7EF"
+  adaptive_icon_foreground: "assets/brand/app_icon_android_fg.png"
+
+# Native splash is a plain background color only; the branded splash (image
+# logo + text logo stacked, as two separate images) is rendered in Flutter by
+# lib/screens/splash_view.dart so the launch feels seamless.
+flutter_native_splash:
+  color: "#FBF7F0"
+  color_dark: "#0F1114"
+  android_12:
+    color: "#FBF7F0"
+    color_dark: "#0F1114"

@@ -4,6 +4,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
+import '../config/api_config.dart';
 import '../models/auth.dart';
 
 enum AuthLoginProvider {
@@ -24,12 +25,17 @@ class AuthService {
            preferencesFactory ?? SharedPreferences.getInstance;
 
   static const String _tokenKey = 'jwt_token';
+  static const String _refreshTokenKey = 'refresh_token';
+  // The server-issued anonymous secret. Stored in the (encrypted) secure
+  // storage — never SharedPreferences — so it isn't exposed via Android backup.
+  static const String _deviceSecretKey = 'device_secret';
   static const String _hasLaunchedBeforeKey = 'has_launched_before';
   static const String _onboardingCompletedKey = 'onboarding_completed';
 
   final FlutterSecureStorage _storage;
   final Future<SharedPreferences> Function() _preferencesFactory;
   Future<void>? _googleInitializeFuture;
+  Future<bool>? _refreshInFlight;
   int _developmentLoginSequence = 0;
 
   Future<void> clearKeychainOnFirstLaunch() async {
@@ -56,9 +62,31 @@ class AuthService {
     return _storage.delete(key: _tokenKey);
   }
 
+  Future<String?> readRefreshToken() {
+    return _storage.read(key: _refreshTokenKey);
+  }
+
   Future<bool> hasToken() async {
     final token = await readToken();
     return token != null && token.isNotEmpty;
+  }
+
+  /// Persists the access + refresh tokens (and the anonymous secret when the
+  /// server issued a new one) from a login/anonymous response.
+  Future<void> _saveSession(LoginResponse response) async {
+    await _storage.write(key: _tokenKey, value: response.accessToken);
+    await _storage.write(key: _refreshTokenKey, value: response.refreshToken);
+    final secret = response.deviceSecret;
+    if (secret != null && secret.isNotEmpty) {
+      await _storage.write(key: _deviceSecretKey, value: secret);
+    }
+  }
+
+  /// Clears the access + refresh tokens (session), keeping the anonymous
+  /// device_secret so the same anonymous account can be restored on next launch.
+  Future<void> clearTokens() async {
+    await _storage.delete(key: _tokenKey);
+    await _storage.delete(key: _refreshTokenKey);
   }
 
   Future<bool> isOnboardingCompleted() async {
@@ -116,8 +144,137 @@ class AuthService {
     }
 
     final loginResponse = LoginResponse.fromJson(data);
-    await saveToken(loginResponse.accessToken);
+    await _saveSession(loginResponse);
     return loginResponse.isNewUser;
+  }
+
+  /// Issues (or restores) an anonymous account. On first launch there is no
+  /// stored secret, so the server creates an account and returns a device_secret
+  /// which we persist; subsequent launches present that secret to restore the
+  /// same account. If the stored secret is rejected (e.g. the server was reset),
+  /// we discard it and create a fresh account.
+  Future<bool> loginAnonymous({required Dio dio}) async {
+    final secret = await _storage.read(key: _deviceSecretKey);
+    try {
+      return await _postAnonymous(dio: dio, deviceSecret: secret);
+    } on DioException catch (error) {
+      if (error.response?.statusCode == 401 && secret != null) {
+        await _storage.delete(key: _deviceSecretKey);
+        return _postAnonymous(dio: dio, deviceSecret: null);
+      }
+      rethrow;
+    }
+  }
+
+  Future<bool> _postAnonymous({
+    required Dio dio,
+    required String? deviceSecret,
+  }) async {
+    final response = await dio.post<Map<String, dynamic>>(
+      '/auth/anonymous',
+      data: deviceSecret == null ? <String, dynamic>{} : {'device_secret': deviceSecret},
+    );
+    final data = response.data;
+    if (data == null) {
+      throw const AuthException('Anonymous login response is empty.');
+    }
+    final loginResponse = LoginResponse.fromJson(data);
+    await _saveSession(loginResponse);
+    return loginResponse.isNewUser;
+  }
+
+  /// Exchanges the stored refresh token for a fresh access + refresh token.
+  /// De-duplicated so concurrent 401s trigger a single refresh call. Uses a
+  /// bare Dio (no auth interceptor) to avoid recursion. Returns false when
+  /// there is no refresh token or the server rejects it.
+  Future<bool> refreshAccessToken() {
+    return _refreshInFlight ??= _performRefresh().whenComplete(() {
+      _refreshInFlight = null;
+    });
+  }
+
+  Future<bool> _performRefresh() async {
+    final refreshToken = await readRefreshToken();
+    if (refreshToken == null || refreshToken.isEmpty) {
+      return false;
+    }
+    final refreshDio = Dio(
+      BaseOptions(
+        baseUrl: ApiConfig.baseUrl,
+        connectTimeout: ApiConfig.connectTimeout,
+        receiveTimeout: ApiConfig.receiveTimeout,
+      ),
+    );
+    try {
+      final response = await refreshDio.post<Map<String, dynamic>>(
+        '/auth/refresh',
+        data: {'refresh_token': refreshToken},
+      );
+      final data = response.data;
+      if (data == null) {
+        return false;
+      }
+      await saveToken((data['access_token'] ?? data['accessToken']) as String);
+      await _storage.write(
+        key: _refreshTokenKey,
+        value: (data['refresh_token'] ?? data['refreshToken']) as String,
+      );
+      return true;
+    } on DioException {
+      return false;
+    }
+  }
+
+  /// Best-effort server-side logout: revokes the refresh token.
+  Future<void> logoutServer({required Dio dio}) async {
+    final refreshToken = await readRefreshToken();
+    if (refreshToken == null || refreshToken.isEmpty) {
+      return;
+    }
+    try {
+      await dio.post<void>('/auth/logout', data: {'refresh_token': refreshToken});
+    } on DioException {
+      // Logout is best-effort; local tokens are cleared regardless.
+    }
+  }
+
+  /// Links the current (anonymous) account to a verified social identity.
+  Future<void> linkAccount({
+    required Dio dio,
+    required AuthLoginProvider provider,
+    required String token,
+  }) async {
+    await dio.post<Map<String, dynamic>>(
+      '/auth/link',
+      data: {'provider': provider.apiValue, 'token': token},
+    );
+  }
+
+  Future<void> linkWithApple({required Dio dio}) async {
+    final token = await signInWithApple();
+    await linkAccount(
+      dio: dio,
+      provider: AuthLoginProvider.apple,
+      token: token,
+    );
+  }
+
+  Future<void> linkWithGoogle({required Dio dio}) async {
+    final token = await signInWithGoogle();
+    await linkAccount(
+      dio: dio,
+      provider: AuthLoginProvider.google,
+      token: token,
+    );
+  }
+
+  Future<void> linkWithDevelopment({required Dio dio}) {
+    final timestamp = DateTime.now().microsecondsSinceEpoch;
+    return linkAccount(
+      dio: dio,
+      provider: AuthLoginProvider.google,
+      token: 'dev-link-$timestamp',
+    );
   }
 
   Future<bool> loginWithApple({required Dio dio}) async {

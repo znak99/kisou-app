@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../config/theme.dart';
 import '../../constants/app_strings.dart';
 import '../../models/location.dart';
 import '../../models/user.dart';
@@ -93,6 +94,14 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         : _departureTime;
     final returnTime = useDefaultTimes ? _defaultReturnTime : _returnTime;
 
+    // Departure must be before return (audit B16).
+    final departureMinutes = departureTime.hour * 60 + departureTime.minute;
+    final returnMinutes = returnTime.hour * 60 + returnTime.minute;
+    if (departureMinutes >= returnMinutes) {
+      setState(() => _errorMessage = AppStrings.timeRangeInvalid);
+      return;
+    }
+
     setState(() {
       _isSaving = true;
       _errorMessage = null;
@@ -158,27 +167,45 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           child: Column(
             children: [
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                padding: const EdgeInsets.fromLTRB(
+                  KisouTheme.gapS,
+                  KisouTheme.gapM,
+                  KisouTheme.pagePad,
+                  KisouTheme.gapXs,
+                ),
                 child: Row(
                   children: [
                     IconButton(
                       onPressed: _currentStep == 0 ? null : _goBack,
-                      icon: const Icon(Icons.arrow_back),
+                      icon: const Icon(Icons.arrow_back_rounded),
                       tooltip: AppStrings.back,
                     ),
                     Expanded(
-                      child: LinearProgressIndicator(
-                        value: (_currentStep + 1) / _stepCount,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(KisouTheme.rSm),
+                        child: LinearProgressIndicator(
+                          value: (_currentStep + 1) / _stepCount,
+                          minHeight: 6,
+                          backgroundColor: context.kisou.hairline,
+                          valueColor: const AlwaysStoppedAnimation<Color>(
+                            KisouTheme.accent,
+                          ),
+                        ),
                       ),
                     ),
-                    const SizedBox(width: 12),
-                    Text('${_currentStep + 1}/$_stepCount'),
+                    const SizedBox(width: KisouTheme.gapM),
+                    Text(
+                      '${_currentStep + 1}/$_stepCount',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
                   ],
                 ),
               ),
               if (_errorMessage != null)
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: KisouTheme.pagePad,
+                  ),
                   child: Text(
                     _errorMessage!,
                     textAlign: TextAlign.center,

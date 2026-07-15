@@ -107,9 +107,10 @@ lib/
   models/
   providers/
   screens/
+    analysis/
     home/
     onboarding/
-    settings/
+    profile/
   services/
   utils/
   widgets/

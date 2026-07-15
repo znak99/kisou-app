@@ -6,9 +6,11 @@ import 'config/theme.dart';
 import 'constants/app_strings.dart';
 import 'providers/api_provider.dart';
 import 'providers/auth_provider.dart';
-import 'screens/home/home_screen.dart';
+import 'providers/theme_provider.dart';
 import 'screens/onboarding/login_screen.dart';
 import 'screens/onboarding/onboarding_screen.dart';
+import 'screens/root_shell.dart';
+import 'screens/splash_view.dart';
 
 class KisouApp extends ConsumerStatefulWidget {
   const KisouApp({super.key});
@@ -20,6 +22,7 @@ class KisouApp extends ConsumerStatefulWidget {
 class _KisouAppState extends ConsumerState<KisouApp> {
   @override
   Widget build(BuildContext context) {
+    final themeMode = ref.watch(themeModeProvider);
     return MaterialApp(
       title: AppStrings.appName,
       debugShowCheckedModeBanner: false,
@@ -31,6 +34,8 @@ class _KisouAppState extends ConsumerState<KisouApp> {
         GlobalWidgetsLocalizations.delegate,
       ],
       theme: KisouTheme.light(),
+      darkTheme: KisouTheme.dark(),
+      themeMode: themeMode,
       home: const _AuthGate(),
     );
   }
@@ -52,6 +57,10 @@ class _AuthGate extends ConsumerWidget {
         if (!context.mounted) {
           return;
         }
+        // Dismiss any open modal/dialog (e.g. the feedback sheet) so it doesn't
+        // float over the login screen after the session ends (audit B11).
+        Navigator.of(context, rootNavigator: true)
+            .popUntil((route) => route.isFirst);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text(AppStrings.sessionExpired)),
         );
@@ -66,19 +75,10 @@ class _AuthGate extends ConsumerWidget {
         if (state.isNewUser) {
           return const OnboardingScreen();
         }
-        return const HomeScreen();
+        return const RootShell();
       },
       error: (_, _) => const LoginScreen(),
-      loading: () => const _LoadingScreen(),
+      loading: () => const SplashView(),
     );
-  }
-}
-
-class _LoadingScreen extends StatelessWidget {
-  const _LoadingScreen();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(body: Center(child: CircularProgressIndicator()));
   }
 }
