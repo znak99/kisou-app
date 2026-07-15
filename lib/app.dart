@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -41,11 +43,36 @@ class _KisouAppState extends ConsumerState<KisouApp> {
   }
 }
 
-class _AuthGate extends ConsumerWidget {
+/// Minimum time the splash stays up, so it never flashes by on a fast start.
+const _kMinSplash = Duration(milliseconds: 1500);
+
+class _AuthGate extends ConsumerStatefulWidget {
   const _AuthGate();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_AuthGate> createState() => _AuthGateState();
+}
+
+class _AuthGateState extends ConsumerState<_AuthGate> {
+  Timer? _minSplashTimer;
+  bool _minSplashElapsed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _minSplashTimer = Timer(_kMinSplash, () {
+      if (mounted) setState(() => _minSplashElapsed = true);
+    });
+  }
+
+  @override
+  void dispose() {
+    _minSplashTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
     ref.listen(authRequiredProvider, (previous, next) {
       if (next != true) {
@@ -66,6 +93,13 @@ class _AuthGate extends ConsumerWidget {
         );
       });
     });
+
+    // Splash stays up until BOTH the minimum time has passed and auth settled.
+    // Once the minimum has elapsed and we're still waiting on the server, the
+    // splash explains itself instead of sitting there silently.
+    if (!_minSplashElapsed || authState.isLoading) {
+      return SplashView(showMessage: _minSplashElapsed && authState.isLoading);
+    }
 
     return authState.when(
       data: (state) {

@@ -23,7 +23,7 @@ void main() {
         child: const KisouApp(),
       ),
     );
-    await tester.pumpAndSettle();
+    await pumpPastSplash(tester);
 
     expect(find.text(AppStrings.appName), findsOneWidget);
     expect(find.text(AppStrings.loginDescription), findsOneWidget);
@@ -49,7 +49,7 @@ void main() {
           child: const KisouApp(),
         ),
       );
-      await tester.pump();
+      await pumpPastSplash(tester);
 
       expect(find.text('1/5'), findsOneWidget);
       expect(find.text(AppStrings.nicknamePrompt), findsOneWidget);
@@ -73,7 +73,7 @@ void main() {
         child: const KisouApp(),
       ),
     );
-    await tester.pumpAndSettle();
+    await pumpPastSplash(tester);
 
     expect(find.text('たろうさん、${AppStrings.todayClothing}'), findsOneWidget);
     expect(find.text('東京'), findsOneWidget);
@@ -110,7 +110,7 @@ void main() {
         child: const KisouApp(),
       ),
     );
-    await tester.pumpAndSettle();
+    await pumpPastSplash(tester);
 
     // Settings now live under the "メニュー" bottom-nav tab.
     await tester.tap(find.text(AppStrings.tabProfile));
@@ -149,7 +149,7 @@ void main() {
         child: const KisouApp(),
       ),
     );
-    await tester.pumpAndSettle();
+    await pumpPastSplash(tester);
 
     expect(find.text(AppStrings.timeoutError), findsOneWidget);
     expect(find.text(AppStrings.retry), findsOneWidget);
@@ -172,7 +172,7 @@ void main() {
         child: const KisouApp(),
       ),
     );
-    await tester.pumpAndSettle();
+    await pumpPastSplash(tester);
 
     expect(find.text(AppStrings.locationMissing), findsOneWidget);
     expect(find.text(AppStrings.openSettings), findsOneWidget);
@@ -194,7 +194,7 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(container: container, child: const KisouApp()),
     );
-    await tester.pumpAndSettle();
+    await pumpPastSplash(tester);
     expect(find.text('たろうさん、${AppStrings.todayClothing}'), findsOneWidget);
 
     container.read(authRequiredProvider.notifier).requireAuth();
@@ -228,6 +228,13 @@ void main() {
     expect(find.text('2/5'), findsOneWidget);
     expect(find.text(AppStrings.genderPrompt), findsOneWidget);
   });
+}
+
+/// KisouApp 은 시작 시 최소 1.5초 스플래시를 띄운다(app.dart의 _kMinSplash).
+/// 실제 화면을 검증하려면 그 시간을 넘겨야 한다.
+Future<void> pumpPastSplash(WidgetTester tester) async {
+  await tester.pump(const Duration(milliseconds: 1600));
+  await tester.pumpAndSettle();
 }
 
 Dio _createAppDio() {
