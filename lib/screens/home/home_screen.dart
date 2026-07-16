@@ -215,11 +215,6 @@ class _RecommendationSectionState extends State<_RecommendationSection> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          AppStrings.recommendationSection,
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
-        const SizedBox(height: KisouTheme.gapM),
         if (primary != null)
           RecommendationCard(
             recommendation: primary,
