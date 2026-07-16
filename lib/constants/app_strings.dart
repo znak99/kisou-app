@@ -189,7 +189,6 @@ class AppStrings {
 
   // 予報 tab
   static const tabForecast = '予報';
-  static const forecastTitle = '服装予報';
   static const forecastTomorrowLabel = '明日';
   static const forecastSameAsToday = '今日と同じくらいです';
   static const forecastNudgeTitle = '今日はどうでしたか？';
@@ -197,6 +196,7 @@ class AppStrings {
   static const forecastNudgeAction = '記録する';
   static const forecastNudgeDone = '記録済み ✓';
   static const forecastOutlookTitle = '日付で予想する';
+  static const forecastOutlookEntry = '日付で予想';
   static const forecastOutlookDateLabel = '日付';
   static const forecastOutlookPlaceLabel = '場所';
   static const forecastOutlookSubmit = '予想する';

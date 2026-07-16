@@ -7,6 +7,7 @@ import '../widgets/ad_slot.dart';
 import '../widgets/app_bottom_nav.dart';
 import '../widgets/feedback_action_button.dart';
 import '../widgets/kisou_top_bar.dart';
+import '../widgets/outlook_action_button.dart';
 import 'forecast/forecast_screen.dart';
 import 'home/home_screen.dart';
 import 'profile/profile_screen.dart';
@@ -39,9 +40,11 @@ class _RootShellState extends ConsumerState<RootShell> {
         child: Column(
           children: [
             KisouTopBar(
-              action: index == ShellTab.home
-                  ? const FeedbackActionButton()
-                  : null,
+              action: switch (index) {
+                ShellTab.home => const FeedbackActionButton(),
+                ShellTab.forecast => const OutlookActionButton(),
+                _ => null,
+              },
             ),
             Expanded(
               child: IndexedStack(

@@ -117,18 +117,13 @@ void main() {
     await tester.tap(find.text(AppStrings.tabForecast));
     await tester.pumpAndSettle();
 
-    expect(find.text(AppStrings.forecastTitle), findsOneWidget);
     // 내일(19°) vs 오늘(22°) 목 데이터 → 3° 시원해진다는 문구.
     expect(find.text('明日は今日より3°涼しくなります'), findsOneWidget);
     // 오늘 피드백 미기록 → 유도 카드.
     expect(find.text(AppStrings.forecastNudgeTitle), findsOneWidget);
     expect(find.text(AppStrings.forecastNudgeAction), findsOneWidget);
-    // 날짜 예상 입구는 뷰포트 아래라 스크롤해서 확인.
-    await tester.drag(find.text(AppStrings.forecastTitle), const Offset(0, -400));
-    await tester.pumpAndSettle();
-    expect(find.text(AppStrings.forecastOutlookTitle), findsOneWidget);
-    final submit = tester.widget<FilledButton>(find.byType(FilledButton));
-    expect(submit.onPressed, isNull);
+    // 날짜 예상 입구는 툴바의 pill 버튼.
+    expect(find.text(AppStrings.forecastOutlookEntry), findsOneWidget);
   });
 
   testWidgets('予報 탭: 날짜를 골라 예상하면 예년 범위와 각주가 나온다', (
@@ -152,8 +147,15 @@ void main() {
 
     await tester.tap(find.text(AppStrings.tabForecast));
     await tester.pumpAndSettle();
-    await tester.drag(find.text(AppStrings.forecastTitle), const Offset(0, -400));
+
+    // 툴바의 입구를 눌러 전용 페이지로 이동.
+    await tester.tap(find.text(AppStrings.forecastOutlookEntry));
     await tester.pumpAndSettle();
+    expect(find.text(AppStrings.forecastOutlookTitle), findsOneWidget);
+
+    // 날짜를 고르기 전에는 予想する 비활성.
+    final submit = tester.widget<FilledButton>(find.byType(FilledButton));
+    expect(submit.onPressed, isNull);
 
     // 날짜 피커를 열고 초기값(내일)을 그대로 확정.
     await tester.tap(find.text(AppStrings.forecastOutlookDateLabel));
