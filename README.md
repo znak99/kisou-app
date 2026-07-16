@@ -37,22 +37,46 @@ Flutter mobile app for **キソウ**, a weather-based personalized clothing reco
 
 The app expects `kisou-api` to be running separately. Business logic, recommendation calculation, weather fetching, offset updates, and account deletion are handled by the API.
 
-Default development URL:
+## Environments
 
-```text
-http://127.0.0.1:8000
-```
+Environment values are compile-time `--dart-define`s, so **changing one requires a rebuild**. Ready-made config files live in `config/`:
 
-Override it at run time:
-
-```bash
-flutter run --dart-define=API_BASE_URL=http://YOUR_SERVER_IP:8000
-```
-
-Development login buttons are shown by default in development builds. To hide them:
+| File | Environment | API base URL |
+|------|-------------|--------------|
+| `config/dev.json` | development | `http://127.0.0.1:8000` (simulator / local) |
+| `config/prod.json` | production | `https://kisou.znak99.cloud` |
 
 ```bash
-flutter run --dart-define=SHOW_DEV_LOGIN=false
+# development (simulator, local API) — this is also the default with no flags
+flutter run --dart-define-from-file=config/dev.json
+
+# production (e.g. release install on a physical device)
+flutter run --release --dart-define-from-file=config/prod.json
+```
+
+### Available defines
+
+| Define | Default | Purpose |
+|--------|---------|---------|
+| `APP_ENV` | `development` | Selects the environment |
+| `API_BASE_URL` | `http://127.0.0.1:8000` | Development API base URL |
+| `API_PRODUCTION_BASE_URL` | *(empty)* | Production API base URL |
+| `SHOW_DEV_LOGIN` | `true` | Show the development login buttons |
+
+Resolution rules (`lib/config/api_config.dart`):
+
+- `baseUrl` = `APP_ENV == 'development' ? API_BASE_URL : API_PRODUCTION_BASE_URL`
+- `showDevelopmentLogin` = `!kReleaseMode && isDevelopment && SHOW_DEV_LOGIN` — never shown in a release build
+- Non-development builds assert that `baseUrl` is `https`
+
+### Testing on a physical device over the LAN
+
+The Mac's LAN IP changes per network, so keep it out of git — copy the dev config and edit the URL (`config/*.local.json` is gitignored):
+
+```bash
+cp config/dev.json config/dev.local.json
+# edit API_BASE_URL to e.g. http://192.168.0.242:8000  (find it with: ipconfig getifaddr en0)
+flutter run --dart-define-from-file=config/dev.local.json
 ```
 
 ## Build And Run
@@ -66,13 +90,7 @@ flutter pub get
 Run on the selected simulator or device:
 
 ```bash
-flutter run
-```
-
-Run with an explicit API server:
-
-```bash
-flutter run --dart-define=API_BASE_URL=http://127.0.0.1:8000
+flutter run --dart-define-from-file=config/dev.json
 ```
 
 ## Verification

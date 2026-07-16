@@ -124,13 +124,12 @@ class _DevLoginButton extends StatelessWidget {
           minimumSize: const Size.fromHeight(38),
           side: BorderSide(color: c.hairline),
           shape: const StadiumBorder(),
-          textStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
-            fontWeight: FontWeight.w600,
-          ),
+          textStyle: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
         ),
         child: Text(label),
       ),
     );
   }
 }
-

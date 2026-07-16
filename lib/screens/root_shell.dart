@@ -21,11 +21,7 @@ class RootShell extends ConsumerStatefulWidget {
 }
 
 class _RootShellState extends ConsumerState<RootShell> {
-  static const _tabs = [
-    HomeScreen(),
-    AnalysisScreen(),
-    ProfileScreen(),
-  ];
+  static const _tabs = [HomeScreen(), AnalysisScreen(), ProfileScreen()];
 
   // Only tabs the user has actually opened are built; others stay as an empty
   // placeholder so their providers don't fire on startup (audit B23). Once

@@ -32,9 +32,7 @@ class AppBottomNav extends StatelessWidget {
         child: DecoratedBox(
           decoration: BoxDecoration(
             color: c.glass,
-            border: Border(
-              top: BorderSide(color: c.glassBorder),
-            ),
+            border: Border(top: BorderSide(color: c.glassBorder)),
           ),
           child: Padding(
             padding: const EdgeInsets.symmetric(

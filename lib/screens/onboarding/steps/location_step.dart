@@ -124,11 +124,7 @@ class _LocationStepState extends State<LocationStep> {
             const SizedBox(height: KisouTheme.gapL),
             Row(
               children: [
-                Icon(
-                  Icons.info_outline_rounded,
-                  size: 16,
-                  color: c.softInk,
-                ),
+                Icon(Icons.info_outline_rounded, size: 16, color: c.softInk),
                 const SizedBox(width: KisouTheme.gapXs),
                 Expanded(
                   child: Text(
@@ -191,11 +187,7 @@ class _LocationStepState extends State<LocationStep> {
                     title: Text(city.regionName),
                     selected: isSelected,
                     trailing: isSelected
-                        ? Icon(
-                            Icons.check_rounded,
-                            size: 20,
-                            color: c.accent,
-                          )
+                        ? Icon(Icons.check_rounded, size: 20, color: c.accent)
                         : null,
                     onTap: () => widget.onLocationSelected(city),
                   );
@@ -234,10 +226,7 @@ class _StepHeader extends StatelessWidget {
         ),
         const SizedBox(width: KisouTheme.gapM),
         Expanded(
-          child: Text(
-            title,
-            style: Theme.of(context).textTheme.headlineSmall,
-          ),
+          child: Text(title, style: Theme.of(context).textTheme.headlineSmall),
         ),
       ],
     );

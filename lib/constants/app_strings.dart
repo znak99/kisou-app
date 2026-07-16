@@ -183,6 +183,9 @@ class AppStrings {
   static const privacyPolicyOpenFailed = 'プライバシーポリシーを開けませんでした。';
   static const notSet = '未設定';
   static const timeRangeInvalid = '外出時間は帰宅時間より前に設定してください。';
+
+  /// 스플래시에서 서버 응답이 늦어질 때 노출. 뒤에 애니메이션 점이 붙는다.
+  static const splashLoading = '今日のおすすめを考えています';
   static const sensitivitySeparator = ' / ';
   static const timeRangeSeparator = ' 〜 ';
 

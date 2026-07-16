@@ -86,9 +86,9 @@ class TodayWeatherDetail extends StatelessWidget {
                   ),
                   Text(
                     '${_fmtTemp(today.feelsLikeHigh)} / ${_fmtTemp(today.feelsLikeLow)}',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontSize: 15,
-                    ),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.titleMedium?.copyWith(fontSize: 15),
                   ),
                 ],
               ),
@@ -116,11 +116,7 @@ class TodayWeatherDetail extends StatelessWidget {
 }
 
 class _Metric extends StatelessWidget {
-  const _Metric({
-    required this.icon,
-    required this.label,
-    required this.value,
-  });
+  const _Metric({required this.icon, required this.label, required this.value});
 
   final IconData icon;
   final String label;
@@ -136,9 +132,9 @@ class _Metric extends StatelessWidget {
           fit: BoxFit.scaleDown,
           child: Text(
             value,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontSize: 15,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontSize: 15),
           ),
         ),
         const SizedBox(height: 2),

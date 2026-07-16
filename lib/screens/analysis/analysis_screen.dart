@@ -183,9 +183,9 @@ class _TendencyCard extends StatelessWidget {
           const SizedBox(height: KisouTheme.gapXs),
           Text(
             label,
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              color: color,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.headlineSmall?.copyWith(color: color),
           ),
           const SizedBox(height: KisouTheme.gapXs),
           Text(desc, style: Theme.of(context).textTheme.bodyMedium),
@@ -245,8 +245,14 @@ class _OffsetGauge extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(AppStrings.heatHigh, style: Theme.of(context).textTheme.bodySmall),
-                Text(AppStrings.coldHigh, style: Theme.of(context).textTheme.bodySmall),
+                Text(
+                  AppStrings.heatHigh,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                Text(
+                  AppStrings.coldHigh,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
               ],
             ),
           ],
@@ -265,7 +271,11 @@ class _DistributionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final bars = <(String, Color, int)>[
       (AppStrings.feedbackCountCold, KisouTheme.cool, counts.cold),
-      (AppStrings.feedbackCountPerfect, const Color(0xFF6FBF73), counts.perfect),
+      (
+        AppStrings.feedbackCountPerfect,
+        const Color(0xFF6FBF73),
+        counts.perfect,
+      ),
       (AppStrings.feedbackCountHot, KisouTheme.warm, counts.hot),
     ];
     final maxCount = bars.map((b) => b.$3).fold(0, (a, b) => a > b ? a : b);
@@ -373,10 +383,8 @@ class _TimelineCard extends StatelessWidget {
                   show: true,
                   drawVerticalLine: false,
                   horizontalInterval: 1.5,
-                  getDrawingHorizontalLine: (value) => FlLine(
-                    color: c.hairline,
-                    strokeWidth: 1,
-                  ),
+                  getDrawingHorizontalLine: (value) =>
+                      FlLine(color: c.hairline, strokeWidth: 1),
                 ),
                 titlesData: const FlTitlesData(show: false),
                 lineBarsData: [
@@ -442,9 +450,9 @@ class _DayListCard extends StatelessWidget {
           if (days.isEmpty)
             Text(
               '—',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: c.softInk,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: c.softInk),
             )
           else
             for (final item in days.take(8))
@@ -465,8 +473,9 @@ class _DayListCard extends StatelessWidget {
                           ),
                           Text(
                             _details(item),
-                            style: Theme.of(context).textTheme.bodySmall
-                                ?.copyWith(color: c.softInk),
+                            style: Theme.of(
+                              context,
+                            ).textTheme.bodySmall?.copyWith(color: c.softInk),
                           ),
                         ],
                       ),

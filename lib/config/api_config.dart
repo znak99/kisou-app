@@ -24,8 +24,9 @@ class ApiConfig {
   /// every other build uses [productionBaseUrl]. (Previously this was hard-wired
   /// to the development URL, so production/staging builds silently called
   /// localhost — audit B2.)
-  static const String baseUrl =
-      isDevelopment ? developmentBaseUrl : productionBaseUrl;
+  static const String baseUrl = isDevelopment
+      ? developmentBaseUrl
+      : productionBaseUrl;
 
   // Double-gated: never in a release build (kReleaseMode), only in the dev
   // environment, and only when explicitly enabled — audit S3.
