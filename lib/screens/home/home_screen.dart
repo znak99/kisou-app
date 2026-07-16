@@ -73,6 +73,12 @@ class _HomeContent extends ConsumerWidget {
         await Future.wait([
           ref.read(homeProvider.notifier).refresh(),
           ref.read(feedbackProvider.notifier).refresh(),
+          // Profile too (offset drives the recommendation the user is looking
+          // at) — quietly, a failed profile fetch must not break the pull.
+          ref
+              .read(userProvider.notifier)
+              .getMe()
+              .then((_) {}, onError: (_) {}),
         ]);
       },
       child: ListView(
