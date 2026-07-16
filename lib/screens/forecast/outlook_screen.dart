@@ -369,6 +369,13 @@ class _OutlookResult extends StatelessWidget {
               ),
           ],
         ),
+        // Personalized felt-temperature line: the estimate runs through the
+        // same comfort engine as home, offset included (review 15).
+        const SizedBox(height: KisouTheme.gapS),
+        Text(
+          AppStrings.forecastFeelingLine(outlook.feeling),
+          style: textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
+        ),
         if (recommendations.isNotEmpty) ...[
           const SizedBox(height: KisouTheme.gapM),
           RecommendationCard(
@@ -376,16 +383,32 @@ class _OutlookResult extends StatelessWidget {
             size: RecommendationCardSize.large,
           ),
         ],
-        if (outlook.isClimatology && climate != null) ...[
-          const SizedBox(height: KisouTheme.gapS),
-          Text(
-            AppStrings.forecastClimateSource(climate.yearsUsed),
-            style: textTheme.bodySmall?.copyWith(
-              color: c.softInk,
-              fontSize: 11,
+        // How the estimate was made — data source template (review 15).
+        const SizedBox(height: KisouTheme.gapS),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(Icons.info_outline_rounded, size: 13, color: c.softInk),
+            const SizedBox(width: KisouTheme.gapXs),
+            Expanded(
+              child: Text(
+                outlook.isClimatology && climate != null
+                    ? AppStrings.forecastExplainClimatology(
+                        years: climate.yearsUsed,
+                        sampleDays: climate.sampleDays,
+                        low: climate.tempLowAvg.round().toString(),
+                        high: climate.tempHighAvg.round().toString(),
+                      )
+                    : AppStrings.forecastExplainForecastMode,
+                style: textTheme.bodySmall?.copyWith(
+                  color: c.softInk,
+                  fontSize: 11,
+                  height: 1.4,
+                ),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ],
     );
   }

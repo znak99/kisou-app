@@ -173,10 +173,21 @@ void main() {
     await tester.tap(find.text(AppStrings.forecastOutlookSubmit));
     await tester.pumpAndSettle();
 
-    // climatology 목 응답: 평균이 메인 숫자(15°〜24°), 과거 5년 각주,
-    // 기본 도시(東京)가 결과에 붙는다.
+    // climatology 목 응답: 평균이 메인 숫자(15°〜24°), 근거 템플릿(과거
+    // 5년·표본 35일), 개인 체감 문구, 기본 도시(東京)가 결과에 붙는다.
     expect(find.text(AppStrings.forecastClimateRange('15', '24')), findsOneWidget);
-    expect(find.text(AppStrings.forecastClimateSource(5)), findsOneWidget);
+    expect(
+      find.text(
+        AppStrings.forecastExplainClimatology(
+          years: 5,
+          sampleDays: 35,
+          low: '15',
+          high: '24',
+        ),
+      ),
+      findsOneWidget,
+    );
+    expect(find.text(AppStrings.forecastFeelingLine('COOL')), findsOneWidget);
     expect(find.textContaining('東京・'), findsOneWidget);
   });
 

@@ -227,6 +227,33 @@ class AppStrings {
 
   static String forecastClimateRange(String low, String high) =>
       '例年 $low°〜$high°';
+
+  // 날짜 예상 결과의 근거 템플릿 (리뷰 15) — 어떤 데이터로 어떻게
+  // 예상했는지를 명시해 신뢰를 얻는다.
+  static const forecastExplainForecastMode = '気象機関の予報データにもとづく予想です。';
+
+  static String forecastExplainClimatology({
+    required int years,
+    required int sampleDays,
+    required String low,
+    required String high,
+  }) =>
+      '過去$years年・同時期$sampleDays日分の気象データを分析。'
+      '例年この時期は $low°〜$high° です。';
+
+  /// 사용자 개인 보정을 반영한 체감 예상 문구. `feeling` 은 API 코드.
+  static String forecastFeelingLine(String feeling) {
+    final sentence = switch (feeling) {
+      'VERY_HOT' => feelingVeryHot,
+      'HOT' => feelingHot,
+      'WARM' => feelingWarm,
+      'COOL' => feelingCool,
+      'COLD' => feelingCold,
+      'VERY_COLD' => feelingVeryCold,
+      _ => feelingPerfect,
+    };
+    return 'この日のあなたは、$sentence';
+  }
   static const sensitivitySeparator = ' / ';
   static const timeRangeSeparator = ' 〜 ';
 
