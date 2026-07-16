@@ -184,13 +184,19 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             children: [
               Icon(
                 Icons.brightness_6_outlined,
-                size: 20,
-                color: context.kisou.softInk,
+                size: 22,
+                color: context.kisou.accent,
               ),
-              const SizedBox(width: KisouTheme.gapS),
+              const SizedBox(width: KisouTheme.gapM),
+              // Matches _SettingRow's title styling so the display section
+              // doesn't shout over the other settings rows.
               Text(
                 AppStrings.themeSetting,
-                style: Theme.of(context).textTheme.titleMedium,
+                style: TextStyle(
+                  color: context.kisou.ink,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ],
           ),
