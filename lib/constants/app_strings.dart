@@ -107,7 +107,7 @@ class AppStrings {
   static const bestRecommendation = 'おすすめ';
   static const warmerOption = '少し暖かめ';
   static const lighterOption = '少し軽め';
-  static const recShowMore = 'もっと見る';
+  static const recShowMore = '他の服装を見る';
   static const recShowLess = '閉じる';
   static const today = '今日';
   static const yesterday = '昨日';
