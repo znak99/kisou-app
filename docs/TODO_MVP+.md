@@ -6,6 +6,13 @@ Post-MVP tasks in recommended priority order.
 
 ## High Priority
 
+### 予報 탭 후속 (2026-07)
+- [ ] 리워드 광고 연동 — 날짜 예상 횟수 +1 게이트 (현재 「準備中」 표기, 무료 3회/일)
+- [ ] 하단 AdSlot 실제 광고(AdMob) 연결
+- [ ] 여행 일정 저장(v2) — 조회 결과 저장 → D-day 카운트다운 → 출발 전 푸시
+- [ ] 예상 결과에 극단값(가장 추운/더운 해) 보조 표시 여부 결정
+- [ ] 체감 타입(寒がりタイプ 등)을 메뉴 탭으로 이동 (백엔드 /analysis 재사용)
+
 ### High-Quality App Icon
 - [x] 모던·미니멀 앱 아이콘 제작 (해+티셔츠 플랫 실루엣, 라이트/다크/틴티드 + Android 모노크롬 대응, flutter_launcher_icons)
 - [ ] (선택) 스플래시 로고도 신규 아이콘 톤에 맞춰 교체 검토
@@ -13,7 +20,7 @@ Post-MVP tasks in recommended priority order.
 ### 리뷰 후속 (v2.1)
 - [x] 앱 아이콘 바꾸기 (클레이 KISOU 아이콘 라이트/다크 적용, 인앱 테마 기반 iOS 대체 아이콘 스왑)
 - [x] 텍스트 로고 만들기 (KISOU 워드마크 라이트/다크 + 이미지 로고, 스플래시·홈에 적용)
-- [ ] 외출/귀가 시간 설정 항목 삭제 (온보딩 및 프로필에서 제거 검토)
+- [x] 외출/귀가 시간 설정 항목 삭제 (온보딩 4단계화 + 메뉴 항목 제거, 피드백 시간대 다중선택으로 대체 — 2026-07-17)
 - [ ] (후속) iOS 대체 아이콘 스왑 실기기 검증 + 시스템 알럿 UX 점검 (시뮬레이터 미지원)
 
 ### UI Design Renewal
@@ -39,10 +46,10 @@ Post-MVP tasks in recommended priority order.
 - [ ] Remove development login buttons for production build
 
 ### Environment Separation
-- [ ] Create separate config for development and production
-- [ ] Development: show dev login buttons, use dev API URL
-- [ ] Production: hide dev login buttons, use production API URL
-- [ ] Use flutter build flags or .env files
+- [x] Create separate config for development and production (config/dev.json·prod.json)
+- [x] Development: show dev login buttons, use dev API URL
+- [x] Production: hide dev login buttons, use production API URL (kReleaseMode + define 이중 게이트)
+- [x] Use flutter build flags or .env files (--dart-define-from-file)
 
 ### Privacy Policy Integration
 - [ ] Update privacy policy URL in settings screen (replace placeholder)
@@ -96,7 +103,7 @@ Post-MVP tasks in recommended priority order.
 - [ ] Home screen pull-to-refresh animation
 - [ ] Skeleton loading UI (instead of spinner)
 - [ ] Haptic feedback on button taps
-- [ ] Dark mode support
+- [x] Dark mode support (라이트/다크/시스템 테마 설정)
 
 ### Accessibility
 - [ ] VoiceOver / TalkBack support
