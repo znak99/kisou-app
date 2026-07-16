@@ -6,6 +6,7 @@ import '../constants/app_strings.dart';
 import '../constants/clothing_tags.dart';
 import '../models/feedback.dart';
 import '../providers/feedback_provider.dart';
+import '../providers/home_provider.dart';
 import '../utils/api_error.dart';
 import 'clothing_icon.dart';
 
@@ -53,10 +54,28 @@ class _FeedbackSheetState extends ConsumerState<FeedbackSheet> {
   void initState() {
     super.initState();
     final initialFeedback = widget.initialFeedback;
-    _selectedTop = initialFeedback?.actualTop;
-    _selectedBottom = initialFeedback?.actualBottom;
-    _selectedOuter = initialFeedback?.actualOuter;
-    _selectedFeeling = initialFeedback?.feedbackValue;
+    if (initialFeedback != null) {
+      _selectedTop = initialFeedback.actualTop;
+      _selectedBottom = initialFeedback.actualBottom;
+      _selectedOuter = initialFeedback.actualOuter;
+      _selectedFeeling = initialFeedback.feedbackValue;
+      return;
+    }
+    // First feedback of the day: preselect today's rank-1 recommendation —
+    // most users wore (roughly) what the app suggested, so the common case
+    // becomes "confirm and rate" instead of picking everything by hand.
+    final home = ref
+        .read(homeProvider)
+        .maybeWhen(data: (value) => value, orElse: () => null);
+    if (home == null || home.recommendations.isEmpty) {
+      return;
+    }
+    final recommendations = [...home.recommendations]
+      ..sort((a, b) => a.rank.compareTo(b.rank));
+    final primary = recommendations.first;
+    _selectedTop = primary.top;
+    _selectedBottom = primary.bottom;
+    _selectedOuter = primary.outer;
   }
 
   Future<void> _submit(String feedbackValue) async {
