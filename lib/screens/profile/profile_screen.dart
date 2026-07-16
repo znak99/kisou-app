@@ -15,7 +15,6 @@ import '../../providers/theme_provider.dart';
 import '../../providers/user_provider.dart';
 import '../../utils/api_error.dart';
 import '../../utils/geocode.dart';
-import '../../widgets/brand_logo.dart';
 import '../../widgets/error_state.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
@@ -877,15 +876,14 @@ class _ProfileHeader extends StatelessWidget {
     return ClayCard(
       child: Row(
         children: [
-          Container(
-            width: 56,
-            height: 56,
-            decoration: BoxDecoration(
-              color: c.accent.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(KisouTheme.rMd),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(KisouTheme.rMd),
+            child: Image.asset(
+              'assets/brand/default_avatar.png',
+              width: 56,
+              height: 56,
+              fit: BoxFit.cover,
             ),
-            alignment: Alignment.center,
-            child: const BrandLogo(variant: BrandLogoVariant.mark, size: 38),
           ),
           const SizedBox(width: KisouTheme.gapL),
           Expanded(
