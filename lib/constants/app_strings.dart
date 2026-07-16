@@ -206,6 +206,11 @@ class AppStrings {
   static const forecastNudgeDone = '記録済み ✓';
   static const forecastOutlookTitle = '日付で予想する';
   static const forecastOutlookEntry = '日付で予想';
+  static const forecastOutlookIntro = '旅行や予定の日を選ぶと、その日の気温とおすすめの服装をKISOUが予想します。';
+  static const forecastOutlookQuotaEmpty = '今日の予想回数を使い切りました';
+  static const forecastOutlookAdNote = '広告を見ると1回追加できます（準備中）';
+
+  static String forecastOutlookQuota(int remaining) => '今日はあと$remaining回予想できます';
   static const forecastOutlookDateLabel = '日付';
   static const forecastOutlookPlaceLabel = '場所';
   static const forecastOutlookSubmit = '予想する';

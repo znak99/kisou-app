@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../config/theme.dart';
 import '../../constants/app_strings.dart';
@@ -9,6 +10,12 @@ import '../../models/location.dart';
 import '../../providers/forecast_provider.dart';
 import '../../utils/jp_date.dart';
 import '../../widgets/recommendation_card.dart';
+
+/// Free lookups per day (JST). The rewarded-ad "+1" is planned but not wired
+/// yet, so the intro copy marks it 準備中.
+const _freeLookupsPerDay = 3;
+const _quotaDateKey = 'outlook_quota_date';
+const _quotaUsedKey = 'outlook_quota_used';
 
 /// Full-page "日付で予想する": pick a future date and city, get an outfit
 /// estimate (real forecast when near, past-years average when far).
@@ -27,9 +34,44 @@ class _OutlookScreenState extends ConsumerState<OutlookScreen> {
   DateTime? _date;
   LocationValue _city = majorCities.first;
 
+  /// Lookups left today. Null while loading from storage.
+  int? _remaining;
+
   /// City shown with the current result (captured when 予想する is pressed, so
   /// changing the picker afterwards doesn't relabel an old result).
   LocationValue? _lookedUpCity;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadQuota();
+  }
+
+  Future<void> _loadQuota() async {
+    final prefs = await SharedPreferences.getInstance();
+    final today = formatIsoDate(jstToday());
+    final used = prefs.getString(_quotaDateKey) == today
+        ? (prefs.getInt(_quotaUsedKey) ?? 0)
+        : 0; // 날짜가 바뀌면 리셋.
+    if (mounted) {
+      setState(() => _remaining = (_freeLookupsPerDay - used).clamp(0, 99));
+    }
+  }
+
+  Future<void> _consumeQuota() async {
+    final prefs = await SharedPreferences.getInstance();
+    final today = formatIsoDate(jstToday());
+    final used = prefs.getString(_quotaDateKey) == today
+        ? (prefs.getInt(_quotaUsedKey) ?? 0)
+        : 0;
+    await prefs.setString(_quotaDateKey, today);
+    await prefs.setInt(_quotaUsedKey, used + 1);
+    if (mounted) {
+      setState(() {
+        _remaining = (_freeLookupsPerDay - used - 1).clamp(0, 99);
+      });
+    }
+  }
 
   Future<void> _pickDate() async {
     final now = DateTime.now();
@@ -72,23 +114,24 @@ class _OutlookScreenState extends ConsumerState<OutlookScreen> {
     }
   }
 
-  void _lookup() {
+  Future<void> _lookup() async {
     final date = _date;
-    if (date == null) {
+    if (date == null || (_remaining ?? 0) <= 0) {
       return;
     }
     _lookedUpCity = _city;
-    final formatted =
-        '${date.year.toString().padLeft(4, '0')}-'
-        '${date.month.toString().padLeft(2, '0')}-'
-        '${date.day.toString().padLeft(2, '0')}';
-    ref
+    final succeeded = await ref
         .read(forecastOutlookProvider.notifier)
         .lookup(
-          date: formatted,
+          date: formatIsoDate(date),
           latitude: _city.latitude,
           longitude: _city.longitude,
         );
+    // Only a successful estimate consumes the daily count — failures retry
+    // for free.
+    if (succeeded) {
+      await _consumeQuota();
+    }
   }
 
   @override
@@ -122,6 +165,48 @@ class _OutlookScreenState extends ConsumerState<OutlookScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // What this does + how many estimates are left today +
+                // rewarded-ad note (review 1).
+                Text(
+                  AppStrings.forecastOutlookIntro,
+                  style: textTheme.bodySmall?.copyWith(
+                    color: c.softInk,
+                    height: 1.5,
+                  ),
+                ),
+                const SizedBox(height: KisouTheme.gapS),
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.confirmation_number_outlined,
+                      size: 15,
+                      color: KisouTheme.accent,
+                    ),
+                    const SizedBox(width: KisouTheme.gapXs),
+                    Text(
+                      switch (_remaining) {
+                        null => '',
+                        0 => AppStrings.forecastOutlookQuotaEmpty,
+                        final n => AppStrings.forecastOutlookQuota(n),
+                      },
+                      style: textTheme.bodySmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 2),
+                Padding(
+                  padding: const EdgeInsets.only(left: 21),
+                  child: Text(
+                    AppStrings.forecastOutlookAdNote,
+                    style: textTheme.bodySmall?.copyWith(
+                      color: c.softInk,
+                      fontSize: 11,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: KisouTheme.gapL),
                 Row(
                   children: [
                     Expanded(
@@ -145,7 +230,9 @@ class _OutlookScreenState extends ConsumerState<OutlookScreen> {
                 SizedBox(
                   width: double.infinity,
                   child: FilledButton(
-                    onPressed: _date == null ? null : _lookup,
+                    onPressed: _date == null || (_remaining ?? 0) <= 0
+                        ? null
+                        : _lookup,
                     child: const Text(AppStrings.forecastOutlookSubmit),
                   ),
                 ),

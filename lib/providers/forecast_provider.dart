@@ -48,7 +48,9 @@ class ForecastOutlookController extends Notifier<AsyncValue<ForecastOutlook>?> {
   @override
   AsyncValue<ForecastOutlook>? build() => null;
 
-  Future<void> lookup({
+  /// Runs a lookup; returns whether it succeeded (quota is only consumed on
+  /// success — a network failure must not eat the user's daily count).
+  Future<bool> lookup({
     required String date,
     required double latitude,
     required double longitude,
@@ -59,6 +61,7 @@ class ForecastOutlookController extends Notifier<AsyncValue<ForecastOutlook>?> {
           .read(forecastServiceProvider)
           .getOutlook(date: date, latitude: latitude, longitude: longitude);
     });
+    return state?.hasError == false;
   }
 
   void clear() {

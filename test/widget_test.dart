@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:shared_preferences/shared_preferences.dart';
+
 import 'package:kisou_app/app.dart';
 import 'package:kisou_app/constants/app_strings.dart';
 import 'package:kisou_app/providers/api_provider.dart';
@@ -10,6 +12,11 @@ import 'package:kisou_app/screens/onboarding/onboarding_screen.dart';
 import 'package:kisou_app/services/auth_service.dart';
 
 void main() {
+  setUp(() {
+    // 날짜 예상 화면의 일일 횟수(quota)가 SharedPreferences 를 읽는다.
+    SharedPreferences.setMockInitialValues({});
+  });
+
   testWidgets('shows login screen for signed out users', (
     WidgetTester tester,
   ) async {
