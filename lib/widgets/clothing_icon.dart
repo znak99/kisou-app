@@ -13,6 +13,7 @@ class ClothingIcon extends StatelessWidget {
     this.size = 72,
     this.showLabel = true,
     this.selected = false,
+    this.plain = false,
   });
 
   final String? code;
@@ -20,6 +21,10 @@ class ClothingIcon extends StatelessWidget {
   final double size;
   final bool showLabel;
   final bool selected;
+
+  /// Picker style (feedback sheet): neutral tile, no shadow — selection is
+  /// communicated by the accent border alone.
+  final bool plain;
 
   Color get _tileColor => switch (type) {
     ClothingIconType.top => KisouTheme.topBlue,
@@ -41,12 +46,17 @@ class ClothingIcon extends StatelessWidget {
             width: size,
             height: size,
             decoration: BoxDecoration(
-              color: _tileColor,
+              color: plain ? context.kisou.surface : _tileColor,
               borderRadius: BorderRadius.circular(radius),
-              boxShadow: KisouTheme.tileShadow,
-              border: selected
-                  ? Border.all(color: KisouTheme.deepSky, width: 3)
-                  : null,
+              boxShadow: plain ? null : KisouTheme.tileShadow,
+              border: plain
+                  ? Border.all(
+                      color: selected ? KisouTheme.accent : context.kisou.hairline,
+                      width: selected ? 2 : 1,
+                    )
+                  : (selected
+                        ? Border.all(color: KisouTheme.deepSky, width: 3)
+                        : null),
             ),
             clipBehavior: Clip.antiAlias,
             child: assetPath != null

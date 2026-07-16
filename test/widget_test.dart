@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:shared_preferences/shared_preferences.dart';
+
 import 'package:kisou_app/app.dart';
 import 'package:kisou_app/constants/app_strings.dart';
 import 'package:kisou_app/providers/api_provider.dart';
@@ -10,6 +12,11 @@ import 'package:kisou_app/screens/onboarding/onboarding_screen.dart';
 import 'package:kisou_app/services/auth_service.dart';
 
 void main() {
+  setUp(() {
+    // 날짜 예상 화면의 일일 횟수(quota)가 SharedPreferences 를 읽는다.
+    SharedPreferences.setMockInitialValues({});
+  });
+
   testWidgets('shows login screen for signed out users', (
     WidgetTester tester,
   ) async {
@@ -51,7 +58,7 @@ void main() {
       );
       await pumpPastSplash(tester);
 
-      expect(find.text('1/5'), findsOneWidget);
+      expect(find.text('1/4'), findsOneWidget);
       expect(find.text(AppStrings.nicknamePrompt), findsOneWidget);
     },
   );
@@ -91,6 +98,97 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text(AppStrings.feedbackClothingTitle), findsOneWidget);
+  });
+
+  testWidgets('予報 탭: 내일 카드·피드백 유도·날짜 예상 입구가 보인다', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authServiceProvider.overrideWithValue(
+            _FakeAuthService(
+              hasTokenValue: true,
+              onboardingCompletedValue: true,
+            ),
+          ),
+          apiClientProvider.overrideWithValue(_createAppDio()),
+        ],
+        child: const KisouApp(),
+      ),
+    );
+    await pumpPastSplash(tester);
+
+    // 하단 탭에 分析 대신 予報가 있다.
+    expect(find.text(AppStrings.tabForecast), findsOneWidget);
+    await tester.tap(find.text(AppStrings.tabForecast));
+    await tester.pumpAndSettle();
+
+    // 내일(19°) vs 오늘(22°) 목 데이터 → 3° 시원해진다는 문구.
+    expect(find.text('明日は今日より3°涼しくなります'), findsOneWidget);
+    // 오늘 피드백 미기록 → 유도 카드.
+    expect(find.text(AppStrings.forecastNudgeTitle), findsOneWidget);
+    expect(find.text(AppStrings.forecastNudgeAction), findsOneWidget);
+    // 날짜 예상 입구는 툴바의 pill 버튼.
+    expect(find.text(AppStrings.forecastOutlookEntry), findsOneWidget);
+  });
+
+  testWidgets('予報 탭: 날짜를 골라 예상하면 예년 범위와 각주가 나온다', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authServiceProvider.overrideWithValue(
+            _FakeAuthService(
+              hasTokenValue: true,
+              onboardingCompletedValue: true,
+            ),
+          ),
+          apiClientProvider.overrideWithValue(_createAppDio()),
+        ],
+        child: const KisouApp(),
+      ),
+    );
+    await pumpPastSplash(tester);
+
+    await tester.tap(find.text(AppStrings.tabForecast));
+    await tester.pumpAndSettle();
+
+    // 툴바의 입구를 눌러 전용 페이지로 이동.
+    await tester.tap(find.text(AppStrings.forecastOutlookEntry));
+    await tester.pumpAndSettle();
+    expect(find.text(AppStrings.forecastOutlookTitle), findsOneWidget);
+
+    // 날짜를 고르기 전에는 予想する 비활성.
+    final submit = tester.widget<FilledButton>(find.byType(FilledButton));
+    expect(submit.onPressed, isNull);
+
+    // 날짜 피커를 열고 초기값(내일)을 그대로 확정.
+    await tester.tap(find.text(AppStrings.forecastOutlookDateLabel));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('OK'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text(AppStrings.forecastOutlookSubmit));
+    await tester.pumpAndSettle();
+
+    // climatology 목 응답: 평균이 메인 숫자(15°〜24°), 근거 템플릿(과거
+    // 5년·표본 35일), 개인 체감 문구, 기본 도시(東京)가 결과에 붙는다.
+    expect(find.text(AppStrings.forecastClimateRange('15', '24')), findsOneWidget);
+    expect(
+      find.text(
+        AppStrings.forecastExplainClimatology(
+          years: 5,
+          sampleDays: 35,
+          low: '15',
+          high: '24',
+        ),
+      ),
+      findsOneWidget,
+    );
+    expect(find.text(AppStrings.forecastFeelingLine('COOL')), findsOneWidget);
+    expect(find.textContaining('東京・'), findsOneWidget);
   });
 
   testWidgets('shows complete settings list from home', (
@@ -223,7 +321,7 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.text('1/5'), findsOneWidget);
+    expect(find.text('1/4'), findsOneWidget);
     expect(find.text(AppStrings.nicknamePrompt), findsOneWidget);
 
     final nextButton = tester.widget<FilledButton>(
@@ -236,7 +334,7 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, AppStrings.next));
     await tester.pumpAndSettle();
 
-    expect(find.text('2/5'), findsOneWidget);
+    expect(find.text('2/4'), findsOneWidget);
     expect(find.text(AppStrings.genderPrompt), findsOneWidget);
   });
 
@@ -417,6 +515,61 @@ void _resolveAppRequest(
         Response<Map<String, dynamic>>(
           requestOptions: options,
           data: {'exists': false, 'feedback': null},
+        ),
+      );
+    case '/forecast/tomorrow':
+      handler.resolve(
+        Response<Map<String, dynamic>>(
+          requestOptions: options,
+          data: {
+            'date': '2026-05-07',
+            'feeling': 'PERFECT',
+            'comfort_min': 20,
+            'comfort_max': 24,
+            'recommendations': [
+              {
+                'rank': 1,
+                'top': 'LONG_SLEEVE',
+                'bottom': 'LONG_PANTS',
+                'outer': null,
+              },
+            ],
+            // 내일 19° vs 오늘 22° → '明日は今日より3°涼しくなります'
+            'weather': _weather(tempHigh: 19, tempLow: 12),
+            'today_weather': _weather(tempHigh: 22, tempLow: 14),
+          },
+        ),
+      );
+    case '/forecast/outlook':
+      handler.resolve(
+        Response<Map<String, dynamic>>(
+          requestOptions: options,
+          data: {
+            'date': options.queryParameters['date'],
+            'mode': 'climatology',
+            'feeling': 'COOL',
+            'comfort_min': 12,
+            'comfort_max': 18,
+            'recommendations': [
+              {
+                'rank': 1,
+                'top': 'THIN_LONG',
+                'bottom': 'LONG_PANTS',
+                'outer': 'LIGHT_OUTER',
+              },
+            ],
+            'weather': null,
+            'climate': {
+              'temp_low_avg': 15.2,
+              'temp_low_min': 9.2,
+              'temp_low_max': 20.7,
+              'temp_high_avg': 24.2,
+              'temp_high_min': 17.8,
+              'temp_high_max': 27.9,
+              'years_used': 5,
+              'sample_days': 35,
+            },
+          },
         ),
       );
     default:

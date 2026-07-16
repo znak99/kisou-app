@@ -107,7 +107,7 @@ class AppStrings {
   static const bestRecommendation = 'おすすめ';
   static const warmerOption = '少し暖かめ';
   static const lighterOption = '少し軽め';
-  static const recShowMore = 'もっと見る';
+  static const recShowMore = '他の服装を見る';
   static const recShowLess = '閉じる';
   static const today = '今日';
   static const yesterday = '昨日';
@@ -151,6 +151,15 @@ class AppStrings {
   static const feedbackChange = '変更する';
   static const feedbackClothingTitle = '今日の服装は？';
   static const feedbackFeelingTitle = '今日の体感は？';
+  static const feedbackDateLabel = '日付';
+  static const feedbackDateToday = '今日';
+  static const feedbackTimeSlotsTitle = '外にいた時間帯（複数選択）';
+  static const slotEarlyMorning = '早朝';
+  static const slotMorning = '朝';
+  static const slotForenoon = '午前';
+  static const slotAfternoon = '午後';
+  static const slotEvening = '夕方';
+  static const slotNight = '夜';
   static const feedbackTops = 'トップス';
   static const feedbackBottoms = 'ボトムス';
   static const feedbackOuter = 'アウター';
@@ -186,6 +195,65 @@ class AppStrings {
 
   /// 스플래시에서 서버 응답이 늦어질 때 노출. 뒤에 애니메이션 점이 붙는다.
   static const splashLoading = '今日のおすすめを考えています';
+
+  // 予報 tab
+  static const tabForecast = '予報';
+  static const forecastTomorrowLabel = '明日';
+  static const forecastSameAsToday = '今日と同じくらいです';
+  static const forecastNudgeTitle = '今日はどうでしたか？';
+  static const forecastNudgeBody = '記録すると明日の予報が賢くなります';
+  static const forecastNudgeAction = '記録する';
+  static const forecastNudgeDone = '記録済み ✓';
+  static const forecastOutlookTitle = '日付で予想する';
+  static const forecastOutlookEntry = '日付で予想';
+  static const forecastOutlookIntro = '旅行や予定の日を選ぶと、その日の気温とおすすめの服装をKISOUが予想します。';
+  static const forecastOutlookQuotaEmpty = '今日の予想回数を使い切りました';
+  static const forecastOutlookAdNote = '広告を見ると1回追加できます（準備中）';
+
+  static String forecastOutlookQuota(int remaining) => '今日はあと$remaining回予想できます';
+  static const forecastOutlookDateLabel = '日付';
+  static const forecastOutlookPlaceLabel = '場所';
+  static const forecastOutlookSubmit = '予想する';
+  static const forecastOutlookTempHigh = '最高';
+  static const forecastOutlookTempLow = '最低';
+  static const forecastOutlookFailed = '予想できませんでした。もう一度お試しください。';
+
+  static String forecastComparedToToday(int degrees) {
+    final direction = degrees > 0 ? '暖かく' : '涼しく';
+    return '明日は今日より${degrees.abs()}°$directionなります';
+  }
+
+  static String forecastClimateSource(int years) => '過去$years年の気象データによる予想です';
+
+  static String forecastClimateRange(String low, String high) =>
+      '例年 $low°〜$high°';
+
+  // 날짜 예상 결과의 근거 템플릿 (리뷰 15) — 어떤 데이터로 어떻게
+  // 예상했는지를 명시해 신뢰를 얻는다.
+  static const forecastExplainForecastMode = '気象機関の予報データにもとづく予想です。';
+
+  static String forecastExplainClimatology({
+    required int years,
+    required int sampleDays,
+    required String low,
+    required String high,
+  }) =>
+      '過去$years年・同時期$sampleDays日分の気象データを分析。'
+      '例年この時期は $low°〜$high° です。';
+
+  /// 사용자 개인 보정을 반영한 체감 예상 문구. `feeling` 은 API 코드.
+  static String forecastFeelingLine(String feeling) {
+    final sentence = switch (feeling) {
+      'VERY_HOT' => feelingVeryHot,
+      'HOT' => feelingHot,
+      'WARM' => feelingWarm,
+      'COOL' => feelingCool,
+      'COLD' => feelingCold,
+      'VERY_COLD' => feelingVeryCold,
+      _ => feelingPerfect,
+    };
+    return 'この日のあなたは、$sentence';
+  }
   static const sensitivitySeparator = ' / ';
   static const timeRangeSeparator = ' 〜 ';
 

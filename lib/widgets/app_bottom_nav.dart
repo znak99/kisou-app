@@ -19,8 +19,8 @@ class AppBottomNav extends StatelessWidget {
 
   static const _items = [
     _NavItemData(Icons.home_rounded, AppStrings.tabHome),
-    _NavItemData(Icons.insights_rounded, AppStrings.tabAnalysis),
-    _NavItemData(Icons.more_horiz_rounded, AppStrings.tabProfile),
+    _NavItemData(Icons.wb_sunny_rounded, AppStrings.tabForecast),
+    _NavItemData(Icons.menu_rounded, AppStrings.tabProfile),
   ];
 
   @override

@@ -68,7 +68,7 @@ class _RankBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     if (rank == 1) {
       return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
           color: KisouTheme.accent,
           borderRadius: BorderRadius.circular(100),
@@ -76,13 +76,13 @@ class _RankBadge extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.star_rounded, size: 18, color: Colors.white),
-            const SizedBox(width: 6),
+            const Icon(Icons.star_rounded, size: 13, color: Colors.white),
+            const SizedBox(width: 4),
             Text(
               AppStrings.bestRecommendation,
               style: Theme.of(context).textTheme.labelLarge?.copyWith(
                 color: Colors.white,
-                fontSize: isLarge ? 16 : 15,
+                fontSize: isLarge ? 11 : 10,
               ),
             ),
           ],

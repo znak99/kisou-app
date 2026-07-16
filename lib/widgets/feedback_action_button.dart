@@ -6,6 +6,7 @@ import '../constants/app_strings.dart';
 import '../models/feedback.dart';
 import '../models/user.dart';
 import '../providers/feedback_provider.dart';
+import '../providers/forecast_provider.dart';
 import '../providers/home_provider.dart';
 import '../providers/user_provider.dart';
 import 'feedback_sheet.dart';
@@ -111,6 +112,10 @@ class FeedbackActionButton extends ConsumerWidget {
       initialFeedback: initialFeedback,
     );
     if (submitted == true) {
+      // Feedback shifts the personal offset, so tomorrow's recommendation is
+      // stale too. invalidate (not refresh) so an unvisited 予報 tab doesn't
+      // get initialized just to be refreshed (lazy-tab principle, audit B23).
+      ref.invalidate(forecastTomorrowProvider);
       await Future.wait([
         ref.read(homeProvider.notifier).refresh(),
         ref.read(userProvider.notifier).getMe(),

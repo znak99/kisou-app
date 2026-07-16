@@ -73,6 +73,12 @@ class _HomeContent extends ConsumerWidget {
         await Future.wait([
           ref.read(homeProvider.notifier).refresh(),
           ref.read(feedbackProvider.notifier).refresh(),
+          // Profile too (offset drives the recommendation the user is looking
+          // at) — quietly, a failed profile fetch must not break the pull.
+          ref
+              .read(userProvider.notifier)
+              .getMe()
+              .then((_) {}, onError: (_) {}),
         ]);
       },
       child: ListView(
@@ -81,15 +87,15 @@ class _HomeContent extends ConsumerWidget {
         children: [
           _Greeting(user: user),
           const SizedBox(height: KisouTheme.gapL),
-          // 1. Today's weather
-          TodayWeatherDetail(today: home.weatherComparison.today),
-          const SizedBox(height: KisouTheme.gapM),
+          // 1. Clothing recommendations (rank 2/3 foldable)
+          _RecommendationSection(primary: primary, secondary: secondary),
+          const SizedBox(height: KisouTheme.gapL),
           // 2. Predicted feeling
           FeelingHeadline(feeling: home.feeling, nickname: user?.nickname),
           const SizedBox(height: KisouTheme.gapL),
-          // 3. Clothing recommendations (rank 2/3 foldable)
-          _RecommendationSection(primary: primary, secondary: secondary),
-          const SizedBox(height: KisouTheme.gapL),
+          // 3. Today's weather
+          TodayWeatherDetail(today: home.weatherComparison.today),
+          const SizedBox(height: KisouTheme.gapM),
           // 4. Weather comparison
           WeatherComparison(comparison: home.weatherComparison),
         ],
@@ -209,11 +215,6 @@ class _RecommendationSectionState extends State<_RecommendationSection> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          AppStrings.recommendationSection,
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
-        const SizedBox(height: KisouTheme.gapM),
         if (primary != null)
           RecommendationCard(
             recommendation: primary,

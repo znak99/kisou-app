@@ -4,6 +4,8 @@ class FeedbackRequest {
     required this.actualTop,
     required this.actualBottom,
     required this.actualOuter,
+    this.date,
+    this.timeSlots,
   });
 
   final String feedbackValue;
@@ -11,12 +13,20 @@ class FeedbackRequest {
   final String actualBottom;
   final String? actualOuter;
 
+  /// Date this feedback applies to (YYYY-MM-DD, JST). Null means today.
+  final String? date;
+
+  /// Parts of the day the user was outside (multi-select), or null.
+  final List<String>? timeSlots;
+
   Map<String, dynamic> toJson() {
     return {
       'feedback_value': feedbackValue,
       'actual_top': actualTop,
       'actual_bottom': actualBottom,
       'actual_outer': actualOuter,
+      if (date != null) 'date': date,
+      if (timeSlots != null && timeSlots!.isNotEmpty) 'time_slots': timeSlots,
     };
   }
 }
@@ -31,6 +41,7 @@ class FeedbackResponse {
     required this.actualOuter,
     required this.createdAt,
     required this.updatedAt,
+    this.timeSlots,
   });
 
   factory FeedbackResponse.fromJson(Map<String, dynamic> json) {
@@ -43,6 +54,7 @@ class FeedbackResponse {
       actualOuter: json['actual_outer'] as String?,
       createdAt: json['created_at'] as String,
       updatedAt: json['updated_at'] as String,
+      timeSlots: (json['time_slots'] as List<dynamic>?)?.cast<String>(),
     );
   }
 
@@ -54,6 +66,7 @@ class FeedbackResponse {
   final String? actualOuter;
   final String createdAt;
   final String updatedAt;
+  final List<String>? timeSlots;
 }
 
 class FeedbackTodayResponse {
