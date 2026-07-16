@@ -1,6 +1,30 @@
 import 'recommendation.dart';
 import 'weather.dart';
 
+/// One row of the compact multi-day strip under the tomorrow card.
+class DailyOutlook {
+  const DailyOutlook({
+    required this.date,
+    required this.tempHigh,
+    required this.tempLow,
+    required this.precipitationChanceMax,
+  });
+
+  factory DailyOutlook.fromJson(Map<String, dynamic> json) {
+    return DailyOutlook(
+      date: json['date'] as String,
+      tempHigh: (json['temp_high'] as num?)?.toDouble(),
+      tempLow: (json['temp_low'] as num?)?.toDouble(),
+      precipitationChanceMax: json['precipitation_chance_max'] as int?,
+    );
+  }
+
+  final String date;
+  final double? tempHigh;
+  final double? tempLow;
+  final int? precipitationChanceMax;
+}
+
 /// GET /forecast/tomorrow — tomorrow's recommendation plus today's summary
 /// for the "compared to today" line.
 class ForecastTomorrow {
@@ -12,6 +36,7 @@ class ForecastTomorrow {
     required this.recommendations,
     required this.weather,
     required this.todayWeather,
+    required this.upcoming,
   });
 
   factory ForecastTomorrow.fromJson(Map<String, dynamic> json) {
@@ -31,6 +56,9 @@ class ForecastTomorrow {
       todayWeather: WeatherSummary.fromJson(
         json['today_weather'] as Map<String, dynamic>,
       ),
+      upcoming: (json['upcoming'] as List<dynamic>? ?? const [])
+          .map((item) => DailyOutlook.fromJson(item as Map<String, dynamic>))
+          .toList(growable: false),
     );
   }
 
@@ -41,6 +69,7 @@ class ForecastTomorrow {
   final List<RecommendationItem> recommendations;
   final WeatherSummary weather;
   final WeatherSummary todayWeather;
+  final List<DailyOutlook> upcoming;
 }
 
 /// Past-years temperature spread behind a climatology estimate. The averages

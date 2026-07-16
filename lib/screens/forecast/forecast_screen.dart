@@ -27,6 +27,8 @@ class ForecastScreen extends ConsumerWidget {
         _TomorrowCard(),
         SizedBox(height: KisouTheme.gapM),
         _FeedbackNudge(),
+        SizedBox(height: KisouTheme.gapM),
+        _UpcomingStrip(),
       ],
     );
   }
@@ -173,7 +175,85 @@ class _TomorrowContent extends StatelessWidget {
   }
 }
 
-// --- 2. Feedback nudge -------------------------------------------------------
+// --- 2. Upcoming days strip ---------------------------------------------------
+
+/// Plain weather-app style rows for the days after tomorrow (review 3).
+/// Rendered only when the tomorrow call succeeded and brought data.
+class _UpcomingStrip extends ConsumerWidget {
+  const _UpcomingStrip();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final upcoming = ref
+        .watch(forecastTomorrowProvider)
+        .maybeWhen(data: (value) => value.upcoming, orElse: () => null);
+    if (upcoming == null || upcoming.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    final c = context.kisou;
+    final textTheme = Theme.of(context).textTheme;
+    return _card(
+      context,
+      child: Column(
+        children: [
+          for (var i = 0; i < upcoming.length; i++) ...[
+            if (i > 0) Divider(height: KisouTheme.gapL, color: c.hairline),
+            _UpcomingRow(day: upcoming[i], textTheme: textTheme),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _UpcomingRow extends StatelessWidget {
+  const _UpcomingRow({required this.day, required this.textTheme});
+
+  final DailyOutlook day;
+  final TextTheme textTheme;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.kisou;
+    final date = DateTime.parse(day.date);
+    final rain = day.precipitationChanceMax;
+    // No weather-condition code from the source, so the icon is a rain-chance
+    // heuristic: ≥50% rain, ≥30% clouds, otherwise sun.
+    final (icon, iconColor) = switch (rain) {
+      final r? when r >= 50 => (Icons.umbrella_rounded, KisouTheme.cool),
+      final r? when r >= 30 => (Icons.cloud_rounded, c.softInk),
+      _ => (Icons.wb_sunny_rounded, KisouTheme.outerOrange),
+    };
+    return Row(
+      children: [
+        SizedBox(
+          width: 76,
+          child: Text(
+            formatJpDate(date),
+            style: textTheme.bodySmall?.copyWith(
+              fontWeight: FontWeight.w600,
+              color: c.softInk,
+            ),
+          ),
+        ),
+        Icon(icon, size: 20, color: iconColor),
+        const SizedBox(width: KisouTheme.gapS),
+        Text(
+          rain == null ? '' : '$rain%',
+          style: textTheme.bodySmall?.copyWith(color: c.softInk),
+        ),
+        const Spacer(),
+        if (day.tempLow != null && day.tempHigh != null)
+          Text(
+            '${day.tempLow!.round()}° / ${day.tempHigh!.round()}°',
+            style: textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
+          ),
+      ],
+    );
+  }
+}
+
+// --- 3. Feedback nudge -------------------------------------------------------
 
 class _FeedbackNudge extends ConsumerWidget {
   const _FeedbackNudge();
