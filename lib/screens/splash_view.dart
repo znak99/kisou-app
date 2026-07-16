@@ -32,15 +32,15 @@ class SplashView extends StatelessWidget {
           children: [
             Image.asset(
               'assets/brand/image_logo.png',
-              width: 160,
+              width: 144,
               fit: BoxFit.contain,
             ),
-            const SizedBox(height: 24),
-            Image.asset(wordmark, width: 180, fit: BoxFit.contain),
+            const SizedBox(height: 16),
+            Image.asset(wordmark, width: 130, fit: BoxFit.contain),
             // Reserved slot: keeps the logo centred whether or not the message
             // is showing.
             SizedBox(
-              height: 44,
+              height: 56,
               child: AnimatedOpacity(
                 opacity: showMessage ? 1 : 0,
                 duration: const Duration(milliseconds: 350),
