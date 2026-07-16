@@ -39,7 +39,7 @@ class BrandLogo extends StatelessWidget {
       children: [
         mark,
         SizedBox(width: size * 0.2),
-        Image.asset(wordmark, height: size * 0.6, fit: BoxFit.contain),
+        Image.asset(wordmark, height: size * 0.66, fit: BoxFit.contain),
       ],
     );
   }
