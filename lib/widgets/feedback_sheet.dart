@@ -311,15 +311,12 @@ class _SelectableClothingOption extends StatelessWidget {
       onTap: onTap,
       child: Padding(
         padding: const EdgeInsets.all(4),
-        child: AnimatedScale(
-          duration: const Duration(milliseconds: 160),
-          scale: selected ? 1.04 : 1.0,
-          child: ClothingIcon(
-            code: code,
-            type: type,
-            size: 64,
-            selected: selected,
-          ),
+        child: ClothingIcon(
+          code: code,
+          type: type,
+          size: 64,
+          selected: selected,
+          plain: true,
         ),
       ),
     );
