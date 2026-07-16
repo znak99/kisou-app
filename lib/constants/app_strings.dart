@@ -186,6 +186,33 @@ class AppStrings {
 
   /// 스플래시에서 서버 응답이 늦어질 때 노출. 뒤에 애니메이션 점이 붙는다.
   static const splashLoading = '今日のおすすめを考えています';
+
+  // 予報 tab
+  static const tabForecast = '予報';
+  static const forecastTitle = '服装予報';
+  static const forecastTomorrowLabel = '明日';
+  static const forecastSameAsToday = '今日と同じくらいです';
+  static const forecastNudgeTitle = '今日はどうでしたか？';
+  static const forecastNudgeBody = '記録すると明日の予報が賢くなります';
+  static const forecastNudgeAction = '記録する';
+  static const forecastNudgeDone = '記録済み ✓';
+  static const forecastOutlookTitle = '日付で予想する';
+  static const forecastOutlookDateLabel = '日付';
+  static const forecastOutlookPlaceLabel = '場所';
+  static const forecastOutlookSubmit = '予想する';
+  static const forecastOutlookTempHigh = '最高';
+  static const forecastOutlookTempLow = '最低';
+  static const forecastOutlookFailed = '予想できませんでした。もう一度お試しください。';
+
+  static String forecastComparedToToday(int degrees) {
+    final direction = degrees > 0 ? '暖かく' : '涼しく';
+    return '明日は今日より${degrees.abs()}°$directionなります';
+  }
+
+  static String forecastClimateSource(int years) => '過去$years年の気象データによる予想です';
+
+  static String forecastClimateRange(String low, String high) =>
+      '例年 $low°〜$high°';
   static const sensitivitySeparator = ' / ';
   static const timeRangeSeparator = ' 〜 ';
 
