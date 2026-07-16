@@ -64,9 +64,13 @@ class _FeedbackSheetState extends ConsumerState<FeedbackSheet> {
     // First feedback of the day: preselect today's rank-1 recommendation —
     // most users wore (roughly) what the app suggested, so the common case
     // becomes "confirm and rate" instead of picking everything by hand.
-    final home = ref
-        .read(homeProvider)
-        .maybeWhen(data: (value) => value, orElse: () => null);
+    // ref.exists: never INITIALIZE home (and its network fetch) just for
+    // defaults — only borrow it when the home tab already loaded it.
+    final home = !ref.exists(homeProvider)
+        ? null
+        : ref
+              .read(homeProvider)
+              .maybeWhen(data: (value) => value, orElse: () => null);
     if (home == null || home.recommendations.isEmpty) {
       return;
     }
