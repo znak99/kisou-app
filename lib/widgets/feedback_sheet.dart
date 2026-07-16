@@ -8,7 +8,22 @@ import '../models/feedback.dart';
 import '../providers/feedback_provider.dart';
 import '../providers/home_provider.dart';
 import '../utils/api_error.dart';
+import '../utils/jp_date.dart';
 import 'clothing_icon.dart';
+
+/// Display order + labels for the "when were you outside?" multi-select.
+/// Codes match the API's ALLOWED_TIME_SLOTS.
+const _timeSlots = [
+  (code: 'EARLY_MORNING', label: AppStrings.slotEarlyMorning),
+  (code: 'MORNING', label: AppStrings.slotMorning),
+  (code: 'FORENOON', label: AppStrings.slotForenoon),
+  (code: 'AFTERNOON', label: AppStrings.slotAfternoon),
+  (code: 'EVENING', label: AppStrings.slotEvening),
+  (code: 'NIGHT', label: AppStrings.slotNight),
+];
+
+/// The server accepts back-dated feedback up to a week old.
+const _maxBackdateDays = 7;
 
 Future<bool?> showFeedbackSheet({
   required BuildContext context,
@@ -41,6 +56,8 @@ class FeedbackSheet extends ConsumerStatefulWidget {
 
 class _FeedbackSheetState extends ConsumerState<FeedbackSheet> {
   var _step = 0;
+  DateTime _date = jstToday();
+  final Set<String> _selectedSlots = {};
   String? _selectedTop;
   String? _selectedBottom;
   String? _selectedOuter;
@@ -59,6 +76,8 @@ class _FeedbackSheetState extends ConsumerState<FeedbackSheet> {
       _selectedBottom = initialFeedback.actualBottom;
       _selectedOuter = initialFeedback.actualOuter;
       _selectedFeeling = initialFeedback.feedbackValue;
+      _date = DateTime.tryParse(initialFeedback.date) ?? _date;
+      _selectedSlots.addAll(initialFeedback.timeSlots ?? const []);
       return;
     }
     // First feedback of the day: preselect today's rank-1 recommendation —
@@ -104,6 +123,11 @@ class _FeedbackSheetState extends ConsumerState<FeedbackSheet> {
               actualTop: top,
               actualBottom: bottom,
               actualOuter: _selectedOuter,
+              date: formatIsoDate(_date),
+              timeSlots: [
+                for (final slot in _timeSlots)
+                  if (_selectedSlots.contains(slot.code)) slot.code,
+              ],
             ),
           );
       if (mounted) {
@@ -170,6 +194,39 @@ class _FeedbackSheetState extends ConsumerState<FeedbackSheet> {
         Expanded(
           child: ListView(
             children: [
+              // When: date (today by default, back-datable) + which parts of
+              // the day the user was outside (multi-select) — review 5.
+              _DateRow(
+                date: _date,
+                onTap: _isSubmitting ? null : _pickDate,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                AppStrings.feedbackTimeSlotsTitle,
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 6),
+              Wrap(
+                spacing: 8,
+                runSpacing: 0,
+                children: [
+                  for (final slot in _timeSlots)
+                    FilterChip(
+                      label: Text(slot.label),
+                      selected: _selectedSlots.contains(slot.code),
+                      onSelected: (selected) {
+                        setState(() {
+                          if (selected) {
+                            _selectedSlots.add(slot.code);
+                          } else {
+                            _selectedSlots.remove(slot.code);
+                          }
+                        });
+                      },
+                    ),
+                ],
+              ),
+              const SizedBox(height: 18),
               _OptionSection(
                 title: AppStrings.feedbackTops,
                 children: [
@@ -292,6 +349,72 @@ class _FeedbackSheetState extends ConsumerState<FeedbackSheet> {
       return [ClothingBottom.longPants, ClothingBottom.halfPants];
     }
     return ClothingBottom.values;
+  }
+
+  Future<void> _pickDate() async {
+    final today = jstToday();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _date,
+      firstDate: today.subtract(const Duration(days: _maxBackdateDays)),
+      lastDate: today,
+    );
+    if (picked != null) {
+      setState(() => _date = picked);
+    }
+  }
+}
+
+class _DateRow extends StatelessWidget {
+  const _DateRow({required this.date, required this.onTap});
+
+  final DateTime date;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.kisou;
+    final isToday = date == jstToday();
+    return Row(
+      children: [
+        Text(
+          AppStrings.feedbackDateLabel,
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        const Spacer(),
+        InkWell(
+          borderRadius: BorderRadius.circular(100),
+          onTap: onTap,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(100),
+              border: Border.all(color: c.hairline),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.calendar_today_outlined,
+                  size: 15,
+                  color: KisouTheme.accent,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  isToday
+                      ? '${AppStrings.feedbackDateToday}・${formatJpDate(date)}'
+                      : formatJpDate(date),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: c.ink,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
   }
 }
 

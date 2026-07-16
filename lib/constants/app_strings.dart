@@ -151,6 +151,15 @@ class AppStrings {
   static const feedbackChange = '変更する';
   static const feedbackClothingTitle = '今日の服装は？';
   static const feedbackFeelingTitle = '今日の体感は？';
+  static const feedbackDateLabel = '日付';
+  static const feedbackDateToday = '今日';
+  static const feedbackTimeSlotsTitle = '外にいた時間帯（複数選択）';
+  static const slotEarlyMorning = '早朝';
+  static const slotMorning = '朝';
+  static const slotForenoon = '午前';
+  static const slotAfternoon = '午後';
+  static const slotEvening = '夕方';
+  static const slotNight = '夜';
   static const feedbackTops = 'トップス';
   static const feedbackBottoms = 'ボトムス';
   static const feedbackOuter = 'アウター';

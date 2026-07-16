@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/feedback.dart';
 import '../services/feedback_service.dart';
+import '../utils/jp_date.dart';
 import 'api_provider.dart';
 
 final feedbackServiceProvider = Provider<FeedbackService>((ref) {
@@ -30,7 +31,13 @@ class FeedbackController extends AsyncNotifier<FeedbackTodayResponse> {
     final response = await ref
         .read(feedbackServiceProvider)
         .submitFeedback(request);
-    state = AsyncData(FeedbackTodayResponse(exists: true, feedback: response));
+    // This provider represents TODAY's feedback status. A back-dated
+    // submission must not flip today's button to "done".
+    if (response.date == formatIsoDate(jstToday())) {
+      state = AsyncData(
+        FeedbackTodayResponse(exists: true, feedback: response),
+      );
+    }
     return response;
   }
 }
