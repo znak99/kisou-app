@@ -81,15 +81,15 @@ class _HomeContent extends ConsumerWidget {
         children: [
           _Greeting(user: user),
           const SizedBox(height: KisouTheme.gapL),
-          // 1. Today's weather
-          TodayWeatherDetail(today: home.weatherComparison.today),
-          const SizedBox(height: KisouTheme.gapM),
+          // 1. Clothing recommendations (rank 2/3 foldable)
+          _RecommendationSection(primary: primary, secondary: secondary),
+          const SizedBox(height: KisouTheme.gapL),
           // 2. Predicted feeling
           FeelingHeadline(feeling: home.feeling, nickname: user?.nickname),
           const SizedBox(height: KisouTheme.gapL),
-          // 3. Clothing recommendations (rank 2/3 foldable)
-          _RecommendationSection(primary: primary, secondary: secondary),
-          const SizedBox(height: KisouTheme.gapL),
+          // 3. Today's weather
+          TodayWeatherDetail(today: home.weatherComparison.today),
+          const SizedBox(height: KisouTheme.gapM),
           // 4. Weather comparison
           WeatherComparison(comparison: home.weatherComparison),
         ],
