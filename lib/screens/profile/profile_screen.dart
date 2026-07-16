@@ -69,11 +69,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         KisouTheme.gapXl + KisouTheme.gapS,
       ),
       children: [
-        Text(
-          AppStrings.tabProfile,
-          style: Theme.of(context).textTheme.headlineSmall,
-        ),
-        const SizedBox(height: KisouTheme.gapL),
         _ProfileHeader(user: user),
         const SizedBox(height: KisouTheme.gapL),
         if (_isSaving) ...[
