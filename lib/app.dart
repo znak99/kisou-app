@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -110,6 +111,14 @@ class _AuthGateState extends ConsumerState<_AuthGate> {
 
   @override
   Widget build(BuildContext context) {
+    // 디자인 확인용 미리보기: 인증/홈으로 넘어가지 않고 스플래시(안내 문구
+    // 포함)만 계속 표시한다. 릴리스 빌드에서는 define 이 있어도 무시된다.
+    //   ./run dev simulator --dart-define=SPLASH_PREVIEW=true
+    const splashPreview = bool.fromEnvironment('SPLASH_PREVIEW');
+    if (!kReleaseMode && splashPreview) {
+      return const SplashView(showMessage: true);
+    }
+
     final authState = ref.watch(authProvider);
     ref.listen(authRequiredProvider, (previous, next) {
       if (next != true) {
