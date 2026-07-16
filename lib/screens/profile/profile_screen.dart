@@ -192,6 +192,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           ),
           const SizedBox(height: KisouTheme.gapM),
           SegmentedButton<ThemeMode>(
+            style: const ButtonStyle(
+              textStyle: WidgetStatePropertyAll(TextStyle(fontSize: 12)),
+              visualDensity: VisualDensity.compact,
+            ),
             segments: const [
               ButtonSegment(
                 value: ThemeMode.system,
