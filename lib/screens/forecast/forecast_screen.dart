@@ -212,34 +212,53 @@ class _FeedbackNudge extends ConsumerWidget {
             ),
           );
         }
-        return _card(
-          context,
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      AppStrings.forecastNudgeTitle,
-                      style: textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
+        // The whole card is one tap target (review 4) — the trailing label is
+        // purely visual.
+        return Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(KisouTheme.rMd),
+            onTap: () => _openSheet(context, ref, status.feedback),
+            child: _card(
+              context,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          AppStrings.forecastNudgeTitle,
+                          style: textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          AppStrings.forecastNudgeBody,
+                          style: textTheme.bodySmall?.copyWith(
+                            color: c.softInk,
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      AppStrings.forecastNudgeBody,
-                      style: textTheme.bodySmall?.copyWith(color: c.softInk),
+                  ),
+                  const SizedBox(width: KisouTheme.gapS),
+                  Text(
+                    AppStrings.forecastNudgeAction,
+                    style: textTheme.bodySmall?.copyWith(
+                      color: KisouTheme.accent,
+                      fontWeight: FontWeight.w700,
                     ),
-                  ],
-                ),
+                  ),
+                  const Icon(
+                    Icons.chevron_right,
+                    size: 18,
+                    color: KisouTheme.accent,
+                  ),
+                ],
               ),
-              const SizedBox(width: KisouTheme.gapS),
-              TextButton(
-                onPressed: () => _openSheet(context, ref, status.feedback),
-                child: const Text(AppStrings.forecastNudgeAction),
-              ),
-            ],
+            ),
           ),
         );
       },
