@@ -11,7 +11,6 @@ import 'steps/gender_step.dart';
 import 'steps/location_step.dart';
 import 'steps/nickname_step.dart';
 import 'steps/sensitivity_step.dart';
-import 'steps/time_step.dart';
 
 class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({super.key});
@@ -21,9 +20,7 @@ class OnboardingScreen extends ConsumerStatefulWidget {
 }
 
 class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
-  static const _stepCount = 5;
-  static const _defaultDepartureTime = TimeOfDay(hour: 9, minute: 0);
-  static const _defaultReturnTime = TimeOfDay(hour: 18, minute: 0);
+  static const _stepCount = 4;
 
   final _pageController = PageController();
 
@@ -33,8 +30,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   String? _coldSensitivity;
   String? _heatSensitivity;
   LocationValue? _location;
-  TimeOfDay _departureTime = _defaultDepartureTime;
-  TimeOfDay _returnTime = _defaultReturnTime;
   var _isSaving = false;
   String? _errorMessage;
 
@@ -76,29 +71,17 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     );
   }
 
-  Future<void> _finish({required bool useDefaultTimes}) async {
+  Future<void> _finish() async {
     final location = _location;
     final gender = _gender;
     final coldSensitivity = _coldSensitivity;
     final heatSensitivity = _heatSensitivity;
-    if (_nickname.isEmpty ||
+    if (_isSaving ||
+        _nickname.isEmpty ||
         gender == null ||
         coldSensitivity == null ||
         heatSensitivity == null ||
         location == null) {
-      return;
-    }
-
-    final departureTime = useDefaultTimes
-        ? _defaultDepartureTime
-        : _departureTime;
-    final returnTime = useDefaultTimes ? _defaultReturnTime : _returnTime;
-
-    // Departure must be before return (audit B16).
-    final departureMinutes = departureTime.hour * 60 + departureTime.minute;
-    final returnMinutes = returnTime.hour * 60 + returnTime.minute;
-    if (departureMinutes >= returnMinutes) {
-      setState(() => _errorMessage = AppStrings.timeRangeInvalid);
       return;
     }
 
@@ -119,8 +102,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               latitude: location.latitude,
               longitude: location.longitude,
               regionName: location.regionName,
-              departureTime: formatApiTime(departureTime),
-              returnTime: formatApiTime(returnTime),
             ),
           );
 
@@ -242,25 +223,16 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                       },
                       onNext: _goNext,
                     ),
+                    // Last step: picking a region completes onboarding. The
+                    // departure/return schedule was dropped (review 6) — the
+                    // server keeps sane defaults and feedback now records the
+                    // actual hours outside per day.
                     LocationStep(
                       selectedLocation: _location,
                       onLocationSelected: (value) {
                         setState(() => _location = value);
-                        _goNext();
+                        _finish();
                       },
-                    ),
-                    TimeStep(
-                      departureTime: _departureTime,
-                      returnTime: _returnTime,
-                      onDepartureChanged: (value) {
-                        setState(() => _departureTime = value);
-                      },
-                      onReturnChanged: (value) {
-                        setState(() => _returnTime = value);
-                      },
-                      onComplete: () => _finish(useDefaultTimes: false),
-                      onSkip: () => _finish(useDefaultTimes: true),
-                      isSaving: _isSaving,
                     ),
                   ],
                 ),

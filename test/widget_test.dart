@@ -51,7 +51,7 @@ void main() {
       );
       await pumpPastSplash(tester);
 
-      expect(find.text('1/5'), findsOneWidget);
+      expect(find.text('1/4'), findsOneWidget);
       expect(find.text(AppStrings.nicknamePrompt), findsOneWidget);
     },
   );
@@ -303,7 +303,7 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.text('1/5'), findsOneWidget);
+    expect(find.text('1/4'), findsOneWidget);
     expect(find.text(AppStrings.nicknamePrompt), findsOneWidget);
 
     final nextButton = tester.widget<FilledButton>(
@@ -316,7 +316,7 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, AppStrings.next));
     await tester.pumpAndSettle();
 
-    expect(find.text('2/5'), findsOneWidget);
+    expect(find.text('2/4'), findsOneWidget);
     expect(find.text(AppStrings.genderPrompt), findsOneWidget);
   });
 

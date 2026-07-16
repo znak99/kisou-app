@@ -102,15 +102,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               value: _displayValue(user.regionName),
               onTap: _isSaving ? null : () => _editLocation(),
             ),
-            _SettingRow(
-              icon: Icons.schedule_outlined,
-              title: AppStrings.timeSetting,
-              value:
-                  '${_displayTime(user.departureTime)}'
-                  '${AppStrings.timeRangeSeparator}'
-                  '${_displayTime(user.returnTime)}',
-              onTap: _isSaving ? null : () => _editTime(user),
-            ),
           ],
         ),
         const SizedBox(height: KisouTheme.gapL),
@@ -482,89 +473,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
-  Future<void> _editTime(User user) async {
-    final selection = await showDialog<_TimeSelection>(
-      context: context,
-      builder: (context) {
-        var departure = _parseTime(user.departureTime);
-        var returning = _parseTime(user.returnTime);
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return AlertDialog(
-              title: const Text(AppStrings.timeSetting),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _TimePickerTile(
-                    label: AppStrings.departureTime,
-                    time: departure,
-                    onTap: () async {
-                      final selected = await showTimePicker(
-                        context: context,
-                        initialTime: departure,
-                      );
-                      if (selected != null) {
-                        setDialogState(() => departure = selected);
-                      }
-                    },
-                  ),
-                  const SizedBox(height: 8),
-                  _TimePickerTile(
-                    label: AppStrings.returnTime,
-                    time: returning,
-                    onTap: () async {
-                      final selected = await showTimePicker(
-                        context: context,
-                        initialTime: returning,
-                      );
-                      if (selected != null) {
-                        setDialogState(() => returning = selected);
-                      }
-                    },
-                  ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text(AppStrings.cancel),
-                ),
-                FilledButton(
-                  onPressed: () => Navigator.of(context).pop(
-                    _TimeSelection(departure: departure, returning: returning),
-                  ),
-                  child: const Text(AppStrings.save),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-    if (selection == null) {
-      return;
-    }
-    // Departure must be before return (audit B16); an inverted range yields
-    // an empty time window and breaks the recommendation calculation.
-    final departureMinutes =
-        selection.departure.hour * 60 + selection.departure.minute;
-    final returningMinutes =
-        selection.returning.hour * 60 + selection.returning.minute;
-    if (departureMinutes >= returningMinutes) {
-      _showMessage(AppStrings.timeRangeInvalid);
-      return;
-    }
-    final departureTime = _formatTime(selection.departure);
-    final returnTime = _formatTime(selection.returning);
-    if (departureTime == _displayTime(user.departureTime) &&
-        returnTime == _displayTime(user.returnTime)) {
-      return;
-    }
-    await _updateUser(
-      UserUpdate(departureTime: departureTime, returnTime: returnTime),
-    );
-  }
-
   Future<void> _editLocation() async {
     final action = await showModalBottomSheet<_LocationAction>(
       context: context,
@@ -845,22 +753,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     };
   }
 
-  TimeOfDay _parseTime(String value) {
-    final parts = value.split(':');
-    final hour = int.tryParse(parts.first) ?? 9;
-    final minute = parts.length > 1 ? int.tryParse(parts[1]) ?? 0 : 0;
-    return TimeOfDay(hour: hour, minute: minute);
-  }
-
-  String _displayTime(String value) {
-    return _formatTime(_parseTime(value));
-  }
-
-  String _formatTime(TimeOfDay time) {
-    final hour = time.hour.toString().padLeft(2, '0');
-    final minute = time.minute.toString().padLeft(2, '0');
-    return '$hour:$minute';
-  }
 }
 
 class _ProfileHeader extends StatelessWidget {
@@ -1107,30 +999,6 @@ class _ChoiceGroup extends StatelessWidget {
   }
 }
 
-class _TimePickerTile extends StatelessWidget {
-  const _TimePickerTile({
-    required this.label,
-    required this.time,
-    required this.onTap,
-  });
-
-  final String label;
-  final TimeOfDay time;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final hour = time.hour.toString().padLeft(2, '0');
-    final minute = time.minute.toString().padLeft(2, '0');
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      title: Text(label),
-      trailing: Text('$hour:$minute'),
-      onTap: onTap,
-    );
-  }
-}
-
 class _ChoiceOption {
   const _ChoiceOption({required this.value, required this.label});
 
@@ -1143,13 +1011,6 @@ class _SensitivitySelection {
 
   final String cold;
   final String heat;
-}
-
-class _TimeSelection {
-  const _TimeSelection({required this.departure, required this.returning});
-
-  final TimeOfDay departure;
-  final TimeOfDay returning;
 }
 
 enum _LocationAction { current, manual }
