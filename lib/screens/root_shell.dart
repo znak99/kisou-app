@@ -7,7 +7,7 @@ import '../widgets/ad_slot.dart';
 import '../widgets/app_bottom_nav.dart';
 import '../widgets/feedback_action_button.dart';
 import '../widgets/kisou_top_bar.dart';
-import 'analysis/analysis_screen.dart';
+import 'forecast/forecast_screen.dart';
 import 'home/home_screen.dart';
 import 'profile/profile_screen.dart';
 
@@ -21,7 +21,7 @@ class RootShell extends ConsumerStatefulWidget {
 }
 
 class _RootShellState extends ConsumerState<RootShell> {
-  static const _tabs = [HomeScreen(), AnalysisScreen(), ProfileScreen()];
+  static const _tabs = [HomeScreen(), ForecastScreen(), ProfileScreen()];
 
   // Only tabs the user has actually opened are built; others stay as an empty
   // placeholder so their providers don't fire on startup (audit B23). Once

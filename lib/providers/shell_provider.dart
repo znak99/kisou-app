@@ -17,6 +17,6 @@ class ShellTab {
   const ShellTab._();
 
   static const home = 0;
-  static const analysis = 1;
+  static const forecast = 1;
   static const profile = 2;
 }

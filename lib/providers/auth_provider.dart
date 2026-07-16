@@ -2,7 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../services/auth_service.dart';
-import 'analysis_provider.dart';
+import 'forecast_provider.dart';
 import 'api_provider.dart';
 import 'feedback_provider.dart';
 import 'home_provider.dart';
@@ -117,10 +117,11 @@ class AuthController extends AsyncNotifier<AuthState> {
   }
 
   /// Drops all cached per-user data so a subsequent account never sees the
-  /// previous user's home/analysis/feedback/profile — audit B6.
+  /// previous user's home/forecast/feedback/profile — audit B6.
   void _invalidateUserScopedData() {
     ref.invalidate(homeProvider);
-    ref.invalidate(analysisProvider);
+    ref.invalidate(forecastTomorrowProvider);
+    ref.invalidate(forecastOutlookProvider);
     ref.invalidate(feedbackProvider);
     ref.invalidate(userProvider);
   }
