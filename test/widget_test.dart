@@ -86,7 +86,7 @@ void main() {
     expect(find.text('東京'), findsOneWidget);
     expect(find.text(AppStrings.bestRecommendation), findsWidgets);
     await tester.drag(find.byType(ListView), const Offset(0, -500));
-    await tester.pumpAndSettle();
+    await settleBounded(tester);
     expect(find.text(AppStrings.today), findsOneWidget);
     expect(find.text(AppStrings.yesterday), findsOneWidget);
     expect(find.text(AppStrings.twoDaysAgo), findsOneWidget);
@@ -95,7 +95,7 @@ void main() {
     expect(find.text(AppStrings.feedbackButton), findsOneWidget);
 
     await tester.tap(find.text(AppStrings.feedbackButton));
-    await tester.pumpAndSettle();
+    await settleBounded(tester);
 
     expect(find.text(AppStrings.feedbackClothingTitle), findsOneWidget);
   });
@@ -427,7 +427,18 @@ void main() {
 /// 실제 화면을 검증하려면 그 시간을 넘겨야 한다.
 Future<void> pumpPastSplash(WidgetTester tester) async {
   await tester.pump(const Duration(milliseconds: 1600));
-  await tester.pumpAndSettle();
+  await settleBounded(tester);
+}
+
+/// pumpAndSettle 인데 가짜시계 상한 10초. 무한 rebuild 루프가 있으면
+/// 10분(기본값)간 메모리를 쌓는 대신 몇 초 만에 스택트레이스와 함께
+/// 실패한다. (진단용 — 원인 수정 후에도 안전망으로 유지)
+Future<void> settleBounded(WidgetTester tester) {
+  return tester.pumpAndSettle(
+    const Duration(milliseconds: 100),
+    EnginePhase.sendSemanticsUpdate,
+    const Duration(seconds: 10),
+  );
 }
 
 /// 요청을 영원히 붙잡아 두는 Dio — provider 를 loading 상태에 묶어 둔다.
@@ -499,7 +510,7 @@ void _resolveAppRequest(
                 'rank': 3,
                 'top': 'THIN_LONG',
                 'bottom': 'SKIRT',
-                'outer': 'CARDIGAN',
+                'outer': 'JACKET',
               },
             ],
             'weather_comparison': {

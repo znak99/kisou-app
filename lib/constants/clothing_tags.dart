@@ -23,11 +23,6 @@ enum ClothingTop {
     apiCode: 'THICK_LONG',
     displayName: '厚手の長袖',
     iconAssetPath: 'assets/icons/top_thick_long.png',
-  ),
-  knitSweat(
-    apiCode: 'KNIT_SWEAT',
-    displayName: 'ニット・スウェット',
-    iconAssetPath: 'assets/icons/top_knit_sweat.png',
   );
 
   const ClothingTop({
@@ -97,11 +92,6 @@ enum ClothingOuter {
     apiCode: 'LIGHT_OUTER',
     displayName: '薄手の羽織り',
     iconAssetPath: 'assets/icons/outer_light_outer.png',
-  ),
-  cardigan(
-    apiCode: 'CARDIGAN',
-    displayName: 'カーディガン',
-    iconAssetPath: 'assets/icons/outer_cardigan.png',
   ),
   jacket(
     apiCode: 'JACKET',

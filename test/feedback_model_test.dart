@@ -27,7 +27,7 @@ void main() {
         'feedback_value': 'hot',
         'actual_top': 'THIN_LONG',
         'actual_bottom': 'SKIRT',
-        'actual_outer': 'CARDIGAN',
+        'actual_outer': 'JACKET',
         'created_at': '2026-05-07T00:00:00Z',
         'updated_at': '2026-05-07T00:00:00Z',
       },
@@ -35,6 +35,6 @@ void main() {
 
     expect(response.exists, isTrue);
     expect(response.feedback?.feedbackValue, 'hot');
-    expect(response.feedback?.actualOuter, 'CARDIGAN');
+    expect(response.feedback?.actualOuter, 'JACKET');
   });
 }
