@@ -138,4 +138,3 @@ Key docs:
 
 - [docs/DESIGN.md](docs/DESIGN.md)
 - [docs/CONVENTIONS.md](docs/CONVENTIONS.md)
-- [docs/TASK_ORDER.md](docs/TASK_ORDER.md)
