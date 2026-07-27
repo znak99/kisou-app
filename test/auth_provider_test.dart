@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kisou_app/providers/api_provider.dart';
 import 'package:kisou_app/providers/auth_provider.dart';
+import 'package:kisou_app/providers/shell_provider.dart';
 import 'package:kisou_app/services/auth_service.dart';
 
 void main() {
@@ -63,6 +64,27 @@ void main() {
     expect(state.isAuthenticated, isTrue);
     expect(state.isNewUser, isFalse);
     expect(authService.onboardingCompletedValue, isTrue);
+  });
+
+  test('switching accounts resets the selected shell tab', () async {
+    final authService = _LoginFakeAuthService(isNewUser: false);
+    final container = ProviderContainer(
+      overrides: [
+        authServiceProvider.overrideWithValue(authService),
+        apiClientProvider.overrideWithValue(Dio()),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await container.read(authProvider.future);
+    container.read(shellTabProvider.notifier).setTab(ShellTab.profile);
+    expect(container.read(shellTabProvider), ShellTab.profile);
+
+    await container
+        .read(authProvider.notifier)
+        .loginWithDevelopmentExistingUser();
+
+    expect(container.read(shellTabProvider), ShellTab.home);
   });
 }
 

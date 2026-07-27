@@ -367,7 +367,12 @@ class _FeedbackNudge extends ConsumerWidget {
       // right here) because the offset shift changes its recommendation.
       await Future.wait([
         ref.read(homeProvider.notifier).refresh(),
-        ref.read(userProvider.notifier).getMe(),
+        // Feedback itself has already succeeded. Keep a secondary profile
+        // refresh failure from escaping this tap callback.
+        ref
+            .read(userProvider.notifier)
+            .getMe()
+            .then<void>((_) {}, onError: (_) {}),
         ref.read(forecastTomorrowProvider.notifier).refresh(),
       ]);
       if (context.mounted) {

@@ -60,6 +60,9 @@ class _LocationStepState extends State<LocationStep> {
         position.latitude,
         position.longitude,
       );
+      if (!mounted) {
+        return;
+      }
       widget.onLocationSelected(
         LocationValue(
           latitude: position.latitude,

@@ -11,6 +11,9 @@ import '../../constants/major_cities.dart';
 import '../../models/location.dart';
 import '../../models/user.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/feedback_provider.dart';
+import '../../providers/forecast_provider.dart';
+import '../../providers/home_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../providers/user_provider.dart';
 import '../../utils/api_error.dart';
@@ -37,7 +40,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           .read(userProvider)
           .maybeWhen(data: (value) => value, orElse: () => null);
       if (user == null) {
-        ref.read(userProvider.notifier).getMe();
+        ref
+            .read(userProvider.notifier)
+            .getMe()
+            .then<void>((_) {}, onError: (_) {});
       }
     });
   }
@@ -305,6 +311,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     setState(() => _isSaving = true);
     try {
       await ref.read(userProvider.notifier).resetData();
+      _invalidateRecommendationData(includeFeedback: true);
       _showMessage(AppStrings.dataResetDone);
     } catch (_) {
       _showMessage(AppStrings.dataResetFailed);
@@ -316,7 +323,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 
   Future<void> _loadUser() async {
-    await ref.read(userProvider.notifier).getMe();
+    try {
+      await ref.read(userProvider.notifier).getMe();
+    } catch (_) {
+      // The provider already holds the error rendered by _SettingsError.
+    }
   }
 
   Future<void> _editNickname(User user) async {
@@ -379,7 +390,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     if (gender == null || gender == user.gender) {
       return;
     }
-    await _updateUser(UserUpdate(gender: gender));
+    await _updateUser(UserUpdate(gender: gender), recommendationChanged: true);
   }
 
   Future<void> _editSensitivity(User user) async {
@@ -469,6 +480,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         coldSensitivity: selection.cold,
         heatSensitivity: selection.heat,
       ),
+      recommendationChanged: true,
     );
   }
 
@@ -511,6 +523,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         longitude: location.longitude,
         regionName: location.regionName,
       ),
+      recommendationChanged: true,
     );
   }
 
@@ -580,11 +593,18 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 
   Future<void> _openPrivacyPolicy() async {
-    final opened = await launchUrl(
-      _privacyPolicyUri,
-      mode: LaunchMode.externalApplication,
-    );
-    if (!opened) {
+    try {
+      final opened = await launchUrl(
+        _privacyPolicyUri,
+        mode: LaunchMode.externalApplication,
+      );
+      if (opened) {
+        return;
+      }
+    } catch (_) {
+      // Fall through to the same user-facing failure message as a false result.
+    }
+    if (mounted) {
       _showMessage(AppStrings.privacyPolicyOpenFailed);
     }
   }
@@ -697,10 +717,16 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     return result ?? false;
   }
 
-  Future<void> _updateUser(UserUpdate update) async {
+  Future<void> _updateUser(
+    UserUpdate update, {
+    bool recommendationChanged = false,
+  }) async {
     setState(() => _isSaving = true);
     try {
       await ref.read(userProvider.notifier).updateMe(update);
+      if (recommendationChanged) {
+        _invalidateRecommendationData();
+      }
     } catch (error) {
       _showMessage(
         classifyApiError(error) == ApiErrorKind.unknown
@@ -711,6 +737,15 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       if (mounted) {
         setState(() => _isSaving = false);
       }
+    }
+  }
+
+  void _invalidateRecommendationData({bool includeFeedback = false}) {
+    ref.invalidate(homeProvider);
+    ref.invalidate(forecastTomorrowProvider);
+    ref.invalidate(forecastOutlookProvider);
+    if (includeFeedback) {
+      ref.invalidate(feedbackProvider);
     }
   }
 
@@ -751,7 +786,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       _ => AppStrings.normal,
     };
   }
-
 }
 
 class _ProfileHeader extends StatelessWidget {
@@ -791,9 +825,13 @@ class _ProfileHeader extends StatelessWidget {
                     children: [
                       Icon(Icons.place_rounded, size: 15, color: c.softInk),
                       const SizedBox(width: KisouTheme.gapXs),
-                      Text(
-                        region,
-                        style: Theme.of(context).textTheme.bodySmall,
+                      Expanded(
+                        child: Text(
+                          region,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
                       ),
                     ],
                   ),

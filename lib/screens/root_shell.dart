@@ -65,11 +65,9 @@ class _RootShellState extends ConsumerState<RootShell>
 
   void _scheduleMidnightRollover() {
     _midnightTimer?.cancel();
-    final nowJst = DateTime.now().toUtc().add(const Duration(hours: 9));
-    final nextMidnight = DateTime(nowJst.year, nowJst.month, nowJst.day + 1);
     _midnightTimer = Timer(
       // +1s so the timer never lands a hair BEFORE midnight.
-      nextMidnight.difference(nowJst) + const Duration(seconds: 1),
+      durationUntilNextJstDay(DateTime.now()) + const Duration(seconds: 1),
       _rolloverIfNewDay,
     );
   }

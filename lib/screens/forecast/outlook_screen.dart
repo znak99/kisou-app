@@ -41,6 +41,8 @@ class _OutlookScreenState extends ConsumerState<OutlookScreen> {
   /// changing the picker afterwards doesn't relabel an old result).
   LocationValue? _lookedUpCity;
 
+  bool _isLookupInFlight = false;
+
   @override
   void initState() {
     super.initState();
@@ -74,15 +76,14 @@ class _OutlookScreenState extends ConsumerState<OutlookScreen> {
   }
 
   Future<void> _pickDate() async {
-    final now = DateTime.now();
-    final tomorrow = DateTime(now.year, now.month, now.day + 1);
+    final tomorrow = jstToday().add(const Duration(days: 1));
     final picked = await showDatePicker(
       context: context,
       initialDate: _date ?? tomorrow,
       firstDate: tomorrow,
       lastDate: tomorrow.add(const Duration(days: 329)),
     );
-    if (picked != null) {
+    if (picked != null && mounted) {
       setState(() => _date = picked);
     }
   }
@@ -98,10 +99,7 @@ class _OutlookScreenState extends ConsumerState<OutlookScreen> {
               ListTile(
                 title: Text(city.regionName),
                 trailing: city.regionName == _city.regionName
-                    ? const Icon(
-                        Icons.check_rounded,
-                        color: KisouTheme.accent,
-                      )
+                    ? const Icon(Icons.check_rounded, color: KisouTheme.accent)
                     : null,
                 onTap: () => Navigator.of(sheetContext).pop(city),
               ),
@@ -109,28 +107,38 @@ class _OutlookScreenState extends ConsumerState<OutlookScreen> {
         );
       },
     );
-    if (picked != null) {
+    if (picked != null && mounted) {
       setState(() => _city = picked);
     }
   }
 
   Future<void> _lookup() async {
     final date = _date;
-    if (date == null || (_remaining ?? 0) <= 0) {
+    if (date == null || (_remaining ?? 0) <= 0 || _isLookupInFlight) {
       return;
     }
-    _lookedUpCity = _city;
-    final succeeded = await ref
-        .read(forecastOutlookProvider.notifier)
-        .lookup(
-          date: formatIsoDate(date),
-          latitude: _city.latitude,
-          longitude: _city.longitude,
-        );
-    // Only a successful estimate consumes the daily count — failures retry
-    // for free.
-    if (succeeded) {
-      await _consumeQuota();
+    final city = _city;
+    setState(() {
+      _isLookupInFlight = true;
+      _lookedUpCity = city;
+    });
+    try {
+      final succeeded = await ref
+          .read(forecastOutlookProvider.notifier)
+          .lookup(
+            date: formatIsoDate(date),
+            latitude: city.latitude,
+            longitude: city.longitude,
+          );
+      // Only a successful estimate consumes the daily count — failures retry
+      // for free.
+      if (succeeded) {
+        await _consumeQuota();
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLookupInFlight = false);
+      }
     }
   }
 
@@ -230,7 +238,10 @@ class _OutlookScreenState extends ConsumerState<OutlookScreen> {
                 SizedBox(
                   width: double.infinity,
                   child: FilledButton(
-                    onPressed: _date == null || (_remaining ?? 0) <= 0
+                    onPressed:
+                        _date == null ||
+                            (_remaining ?? 0) <= 0 ||
+                            _isLookupInFlight
                         ? null
                         : _lookup,
                     child: const Text(AppStrings.forecastOutlookSubmit),

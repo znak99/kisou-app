@@ -118,7 +118,12 @@ class FeedbackActionButton extends ConsumerWidget {
       ref.invalidate(forecastTomorrowProvider);
       await Future.wait([
         ref.read(homeProvider.notifier).refresh(),
-        ref.read(userProvider.notifier).getMe(),
+        // Feedback itself has already succeeded. A secondary profile refresh
+        // failure must not suppress the success message or escape unhandled.
+        ref
+            .read(userProvider.notifier)
+            .getMe()
+            .then<void>((_) {}, onError: (_) {}),
       ]);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

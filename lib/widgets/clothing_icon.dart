@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../config/theme.dart';
+import '../constants/app_strings.dart';
 import '../constants/clothing_tags.dart';
 
 enum ClothingIconType { top, bottom, outer }
@@ -51,7 +52,9 @@ class ClothingIcon extends StatelessWidget {
               boxShadow: plain ? null : KisouTheme.tileShadow,
               border: plain
                   ? Border.all(
-                      color: selected ? KisouTheme.accent : context.kisou.hairline,
+                      color: selected
+                          ? KisouTheme.accent
+                          : context.kisou.hairline,
                       width: selected ? 2 : 1,
                     )
                   : (selected
@@ -110,11 +113,15 @@ class ClothingIcon extends StatelessWidget {
   String get _displayName {
     return switch (type) {
       ClothingIconType.top =>
-        ClothingTop.fromCode(code)?.displayName ?? code ?? '',
+        ClothingTop.fromCode(code)?.displayName ?? AppStrings.unknownClothing,
       ClothingIconType.bottom =>
-        ClothingBottom.fromCode(code)?.displayName ?? code ?? '',
+        ClothingBottom.fromCode(code)?.displayName ??
+            AppStrings.unknownClothing,
       ClothingIconType.outer =>
-        ClothingOuter.fromCode(code)?.displayName ?? 'なし',
+        code == null
+            ? AppStrings.noOuter
+            : ClothingOuter.fromCode(code)?.displayName ??
+                  AppStrings.unknownClothing,
     };
   }
 
@@ -122,7 +129,10 @@ class ClothingIcon extends StatelessWidget {
     return switch (type) {
       ClothingIconType.top => ClothingTop.fromCode(code)?.iconAssetPath,
       ClothingIconType.bottom => ClothingBottom.fromCode(code)?.iconAssetPath,
-      ClothingIconType.outer => ClothingOuter.fromCode(code).iconAssetPath,
+      ClothingIconType.outer =>
+        code == null
+            ? outerNoneIconAssetPath
+            : ClothingOuter.fromCode(code)?.iconAssetPath,
     };
   }
 }

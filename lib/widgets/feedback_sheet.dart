@@ -359,7 +359,7 @@ class _FeedbackSheetState extends ConsumerState<FeedbackSheet> {
       firstDate: today.subtract(const Duration(days: _maxBackdateDays)),
       lastDate: today,
     );
-    if (picked != null) {
+    if (picked != null && mounted) {
       setState(() => _date = picked);
     }
   }

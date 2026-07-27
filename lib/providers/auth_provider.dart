@@ -6,6 +6,7 @@ import 'forecast_provider.dart';
 import 'api_provider.dart';
 import 'feedback_provider.dart';
 import 'home_provider.dart';
+import 'shell_provider.dart';
 import 'user_provider.dart';
 
 enum AuthStatus { unauthenticated, authenticated }
@@ -124,6 +125,7 @@ class AuthController extends AsyncNotifier<AuthState> {
     ref.invalidate(forecastOutlookProvider);
     ref.invalidate(feedbackProvider);
     ref.invalidate(userProvider);
+    ref.invalidate(shellTabProvider);
   }
 
   Future<void> completeOnboarding() async {

@@ -42,59 +42,71 @@ class _NicknameStepState extends State<NicknameStep> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(KisouTheme.pagePad),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const SizedBox(height: KisouTheme.gapXl),
-          const _StepHeader(
-            icon: Icons.person_rounded,
-            title: AppStrings.nicknamePrompt,
-          ),
-          const SizedBox(height: KisouTheme.gapXl),
-          TextField(
-            controller: _controller,
-            maxLength: 10,
-            inputFormatters: [LengthLimitingTextInputFormatter(10)],
-            textInputAction: TextInputAction.done,
-            decoration: const InputDecoration(
-              hintText: AppStrings.nicknameHint,
-              prefixIcon: Icon(Icons.badge_rounded),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(KisouTheme.pagePad),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: constraints.maxHeight - KisouTheme.pagePad * 2,
             ),
-            onChanged: (_) => setState(() {}),
-          ),
-          if (_showMinLengthHint) ...[
-            const SizedBox(height: KisouTheme.gapXs),
-            Row(
-              children: [
-                Icon(
-                  Icons.info_outline_rounded,
-                  size: 16,
-                  color: Theme.of(context).colorScheme.error,
-                ),
-                const SizedBox(width: KisouTheme.gapXs),
-                Expanded(
-                  child: Text(
-                    AppStrings.nicknameMinLength,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).colorScheme.error,
-                    ),
+            child: IntrinsicHeight(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const SizedBox(height: KisouTheme.gapXl),
+                  const _StepHeader(
+                    icon: Icons.person_rounded,
+                    title: AppStrings.nicknamePrompt,
                   ),
-                ),
-              ],
+                  const SizedBox(height: KisouTheme.gapXl),
+                  TextField(
+                    controller: _controller,
+                    maxLength: 10,
+                    inputFormatters: [LengthLimitingTextInputFormatter(10)],
+                    textInputAction: TextInputAction.done,
+                    decoration: const InputDecoration(
+                      hintText: AppStrings.nicknameHint,
+                      prefixIcon: Icon(Icons.badge_rounded),
+                    ),
+                    onChanged: (_) => setState(() {}),
+                  ),
+                  if (_showMinLengthHint) ...[
+                    const SizedBox(height: KisouTheme.gapXs),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.info_outline_rounded,
+                          size: 16,
+                          color: Theme.of(context).colorScheme.error,
+                        ),
+                        const SizedBox(width: KisouTheme.gapXs),
+                        Expanded(
+                          child: Text(
+                            AppStrings.nicknameMinLength,
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(
+                                  color: Theme.of(context).colorScheme.error,
+                                ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                  const Spacer(),
+                  FilledButton.icon(
+                    onPressed: _canContinue
+                        ? () => widget.onNext(_controller.text.trim())
+                        : null,
+                    icon: const Icon(Icons.arrow_forward_rounded, size: 20),
+                    label: const Text(AppStrings.next),
+                  ),
+                ],
+              ),
             ),
-          ],
-          const Spacer(),
-          FilledButton.icon(
-            onPressed: _canContinue
-                ? () => widget.onNext(_controller.text.trim())
-                : null,
-            icon: const Icon(Icons.arrow_forward_rounded, size: 20),
-            label: const Text(AppStrings.next),
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

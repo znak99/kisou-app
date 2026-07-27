@@ -43,34 +43,45 @@ class GenderStep extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(KisouTheme.pagePad),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const SizedBox(height: KisouTheme.gapXl),
-          const _StepHeader(
-            icon: Icons.wc_rounded,
-            title: AppStrings.genderPrompt,
-          ),
-          const SizedBox(height: KisouTheme.gapXl),
-          for (final option in options) ...[
-            _SelectionButton(
-              label: option.label,
-              icon: option.icon,
-              isSelected: option.value == selectedValue,
-              onTap: () => onSelected(option.value),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(KisouTheme.pagePad),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: constraints.maxHeight - KisouTheme.pagePad * 2,
             ),
-            const SizedBox(height: KisouTheme.gapM),
-          ],
-          const Spacer(),
-          FilledButton.icon(
-            onPressed: selectedValue == null ? null : onNext,
-            icon: const Icon(Icons.arrow_forward_rounded, size: 20),
-            label: const Text(AppStrings.next),
+            child: IntrinsicHeight(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const SizedBox(height: KisouTheme.gapXl),
+                  const _StepHeader(
+                    icon: Icons.wc_rounded,
+                    title: AppStrings.genderPrompt,
+                  ),
+                  const SizedBox(height: KisouTheme.gapXl),
+                  for (final option in options) ...[
+                    _SelectionButton(
+                      label: option.label,
+                      icon: option.icon,
+                      isSelected: option.value == selectedValue,
+                      onTap: () => onSelected(option.value),
+                    ),
+                    const SizedBox(height: KisouTheme.gapM),
+                  ],
+                  const Spacer(),
+                  FilledButton.icon(
+                    onPressed: selectedValue == null ? null : onNext,
+                    icon: const Icon(Icons.arrow_forward_rounded, size: 20),
+                    label: const Text(AppStrings.next),
+                  ),
+                ],
+              ),
+            ),
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

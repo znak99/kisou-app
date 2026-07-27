@@ -113,6 +113,7 @@ class AppStrings {
   static const yesterday = '昨日';
   static const twoDaysAgo = '一昨日';
   static const noOuter = 'なし';
+  static const unknownClothing = '不明な服装';
   static const next = '次へ';
   static const back = '戻る';
   static const saveFailed = '設定の保存に失敗しました。もう一度お試しください。';
