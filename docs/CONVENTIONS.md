@@ -52,8 +52,12 @@ lib/
 │   │   └── steps/         # Individual onboarding step widgets
 │   ├── home/
 │   │   └── home_screen.dart
-│   └── settings/
-│       └── settings_screen.dart
+│   ├── forecast/
+│   │   ├── forecast_screen.dart
+│   │   └── outlook_screen.dart
+│   ├── profile/
+│   │   └── profile_screen.dart
+│   └── root_shell.dart
 ├── widgets/               # Reusable components
 │   ├── clothing_icon.dart
 │   ├── recommendation_card.dart
@@ -80,7 +84,6 @@ Clothing tags are always handled as codes internally. Display names and icons ar
 enum ClothingTop {
   sleeveless,   // タンクトップ
   shortSleeve,  // 半袖
-  shirt,        // シャツ
   thinLong,     // 薄手の長袖
   longSleeve,   // 長袖
   thickLong,    // 厚手の長袖
@@ -88,12 +91,14 @@ enum ClothingTop {
 }
 ```
 
-The mapping from API code (`"SHIRT"`) → enum → Japanese display name → icon asset is centralized in `constants/clothing_tags.dart`. This is the single source of truth.
+The mapping from API code (`"THIN_LONG"`) → enum → Japanese display name → icon asset is centralized in `constants/clothing_tags.dart`. This is the single source of truth.
 
 ## API Communication
 
 - Use `dio` as HTTP client
 - Auth interceptor adds `Authorization: Bearer <token>` to all requests
+- On a 401, refresh once with the stored rotating refresh token and retry the request; simultaneous 401s share one refresh operation
+- Store access/refresh tokens and `device_secret` only in `flutter_secure_storage`
 - API base URL loaded from config (different for dev/prod)
 - All API responses are parsed into model classes
 - Never use raw `Map<String, dynamic>` beyond the parsing layer
@@ -101,21 +106,21 @@ The mapping from API code (`"SHIRT"`) → enum → Japanese display name → ico
 ## Theming & Design
 
 - Simple, clean design — NOT a fashion app aesthetic
-- Clothing icons: simple line-art illustrations (16 total)
+- Clothing icons: simple line-art illustrations (15 clothing tags + the no-outer icon)
 - Do not use flashy colors or fashion-oriented design language
 - Consistent padding, spacing, and font sizes via theme
 
 ## Icon Assets
 
-16 clothing icons required (simple line-art, monochrome or minimal color):
+16 UI icon assets are used (15 clothing tags plus the no-outer choice):
 
-**Top (7):** sleeveless, short_sleeve, shirt, thin_long, long_sleeve, thick_long, knit_sweat
+**Top (6):** sleeveless, short_sleeve, thin_long, long_sleeve, thick_long, knit_sweat
 
 **Bottom (4):** long_pants, half_pants, short_pants, skirt
 
-**Outer (5):** light_outer, cardigan, jacket, coat, padding
+**Outer (5 + none):** light_outer, cardigan, jacket, coat, padding, none
 
-File naming: `assets/icons/top_shirt.svg` or `assets/icons/top_shirt.png`
+File naming: `assets/icons/top_thin_long.png`, `assets/icons/outer_none.png`
 
 ## Error Handling
 

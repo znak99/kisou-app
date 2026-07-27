@@ -18,7 +18,7 @@ This is NOT a fashion app. We do not handle colors, brands, styles, or outfit co
 - **Flutter 3.x** / Dart
 - **Riverpod** for state management (the only state management solution)
 - **dio** for HTTP client
-- **flutter_secure_storage** for JWT token storage
+- **flutter_secure_storage** for access/refresh tokens and the anonymous credential
 - Apple Sign-In + Google Sign-In
 
 ## API Backend
@@ -29,13 +29,20 @@ This app communicates with `kisou-api` (separate repository). All business logic
 
 | Method | Path | Used By |
 |--------|------|---------|
-| POST | /auth/login | Onboarding (login) |
+| POST | /auth/anonymous | Automatic first-launch account creation/restoration |
+| POST | /auth/login | Apple/Google direct login |
+| POST | /auth/refresh | Automatic access-token renewal |
+| POST | /auth/logout | Server-side session revocation |
+| POST | /auth/link | Link an anonymous account to Apple/Google |
 | GET | /users/me | Settings, profile display |
 | PUT | /users/me | Onboarding completion, settings changes |
+| POST | /users/me/reset-data | Clear feedback and reset personalization |
+| DELETE | /users/me | Account deletion |
 | GET | /home | Home screen (recommendations + weather) |
 | POST | /feedback | Feedback submission |
 | GET | /feedback/today | Feedback status check |
-| DELETE | /users/me | Account deletion |
+| GET | /forecast/tomorrow | Tomorrow tab and D+2 through D+4 rows |
+| GET | /forecast/outlook | Future date/place estimate |
 
 ### API Base URL
 
@@ -59,10 +66,11 @@ Full tag list — **Top (6):** SLEEVELESS, SHORT_SLEEVE, THIN_LONG, LONG_SLEEVE,
 
 ### Screens
 
-1. **Onboarding** (6 steps): login → nickname → gender → sensitivity → location → time
-2. **Home**: greeting + 3 recommendation combos (icons) + weather comparison (today/yesterday/2 days ago)
-3. **Feedback** (bottom sheet): select actual clothing worn → select comfort feeling
-4. **Settings**: profile edits, logout, account deletion
+1. **Onboarding** (4 steps after automatic anonymous login): nickname → gender → sensitivity → location
+2. **Home**: greeting + 3 recommendation combos + weather comparison
+3. **Forecast**: tomorrow recommendation, D+2 through D+4 weather, future date/place estimate
+4. **Feedback** (bottom sheet): date/time slots + actual clothing → comfort feeling
+5. **Menu**: account linking, profile, comfort data, theme, privacy, logout, deletion
 
 ### All UI Text in Japanese
 

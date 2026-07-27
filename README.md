@@ -6,16 +6,18 @@ Flutter mobile app for **キソウ**, a weather-based personalized clothing reco
 
 ## Current Features
 
-- Apple / Google login flow, plus development login buttons for local testing
+- Automatic anonymous account creation/restoration without a login gate
+- Apple / Google account linking, plus development-only auth controls for local testing
 - First-launch keychain cleanup for iOS reinstall behavior
-- New-user onboarding: nickname, gender, cold/heat sensitivity, location, and departure/return time
+- Four-step onboarding: nickname, gender, cold/heat sensitivity, and location
 - Home screen with three API-provided recommendation combinations
 - Weather comparison for today, yesterday, and two days ago
-- Feedback bottom sheet for actual clothing and comfort feedback
+- Forecast tab with tomorrow recommendation, D+2 through D+4 weather, and future date/place estimates
+- Feedback bottom sheet for a recent date, outside time slots, actual clothing, and comfort feedback
 - Feedback submitted/edit state for today
-- Settings screen for nickname, gender, sensitivity, time, location, privacy policy, logout, and account deletion
-- JWT storage with `flutter_secure_storage`
-- 401 session-expiration handling back to the login screen
+- Menu screen for account linking, profile, sensitivity, location, data reset, theme, privacy, logout, and account deletion
+- Access/refresh tokens and the anonymous credential stored with `flutter_secure_storage`
+- Automatic refresh-token rotation on 401, then session-expiration handling if renewal fails
 - Network, timeout, and missing-location error messages with retry or settings actions
 
 ## Tech Stack
@@ -26,7 +28,7 @@ Flutter mobile app for **キソウ**, a weather-based personalized clothing reco
 | Language | Dart |
 | State management | Riverpod |
 | HTTP client | dio |
-| Auth | Apple Sign-In / Google Sign-In |
+| Auth | Anonymous account + Apple/Google linking |
 | Token storage | flutter_secure_storage |
 | Local flags | shared_preferences |
 | Location | geolocator |
@@ -75,7 +77,7 @@ The Mac's LAN IP changes per network, so keep it out of git — copy the dev con
 
 ```bash
 cp config/dev.json config/dev.local.json
-# edit API_BASE_URL to e.g. http://192.168.0.242:8000  (find it with: ipconfig getifaddr en0)
+# edit API_BASE_URL to e.g. http://192.168.0.242:8000  (find it on Ubuntu with: hostname -I)
 flutter run --dart-define-from-file=config/dev.local.json
 ```
 
@@ -125,7 +127,7 @@ lib/
   models/
   providers/
   screens/
-    analysis/
+    forecast/
     home/
     onboarding/
     profile/
