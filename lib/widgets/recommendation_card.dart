@@ -23,12 +23,11 @@ class RecommendationCard extends StatelessWidget {
     final iconSize = isLarge ? 84.0 : 40.0;
     final largeText = usesLargeText(context);
     final clothingIcons = <Widget>[
-      if (recommendation.outer != null)
-        ClothingIcon(
-          code: recommendation.outer,
-          type: ClothingIconType.outer,
-          size: iconSize,
-        ),
+      ClothingIcon(
+        code: recommendation.outer,
+        type: ClothingIconType.outer,
+        size: iconSize,
+      ),
       ClothingIcon(
         code: recommendation.top,
         type: ClothingIconType.top,

@@ -29,6 +29,17 @@ class FeedbackService {
     }
     return FeedbackTodayResponse.fromJson(data);
   }
+
+  Future<FeedbackRecentResponse> getRecentFeedback() async {
+    final response = await _dio.get<Map<String, dynamic>>('/feedback/recent');
+    final data = response.data;
+    if (data == null) {
+      throw const FeedbackServiceException(
+        'Recent feedback response is empty.',
+      );
+    }
+    return FeedbackRecentResponse.fromJson(data);
+  }
 }
 
 class FeedbackServiceException implements Exception {

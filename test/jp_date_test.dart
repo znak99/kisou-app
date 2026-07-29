@@ -2,6 +2,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:kisou_app/utils/jp_date.dart';
 
 void main() {
+  test('formats a Japanese date in compact and screen-reader forms', () {
+    final date = DateTime(2026, 7, 29);
+
+    expect(formatJpDate(date), '7/29（水）');
+    expect(formatJpDateSpoken(date), '7月29日、水曜日');
+  });
+
   test('JST date conversion does not depend on the input timezone', () {
     expect(
       jstDateAt(DateTime.parse('2026-07-27T15:00:00Z')),

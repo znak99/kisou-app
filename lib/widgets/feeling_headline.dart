@@ -6,10 +6,9 @@ import '../constants/app_strings.dart';
 /// Hero card on the home screen: a 7-step comfort prediction phrase colored by
 /// the feeling level, e.g. "今日の◯◯さんは / とても暑く感じるでしょう".
 class FeelingHeadline extends StatelessWidget {
-  const FeelingHeadline({super.key, required this.feeling, this.nickname});
+  const FeelingHeadline({super.key, required this.feeling});
 
   final String feeling;
-  final String? nickname;
 
   static const _phrases = {
     'VERY_HOT': AppStrings.feelingVeryHot,
@@ -36,10 +35,7 @@ class FeelingHeadline extends StatelessWidget {
     final color = KisouTheme.feelingColor(feeling);
     final phrase = _phrases[feeling] ?? AppStrings.feelingPerfect;
     final icon = _icons[feeling] ?? Icons.sentiment_satisfied_rounded;
-    final name = nickname?.trim() ?? '';
-    final lead = name.isEmpty
-        ? AppStrings.feelingLead
-        : AppStrings.feelingLeadNamed(name);
+    const lead = AppStrings.feelingLead;
     return Semantics(
       container: true,
       label: '$lead $phrase',

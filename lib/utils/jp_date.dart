@@ -1,8 +1,14 @@
 const _weekdayJp = ['月', '火', '水', '木', '金', '土', '日'];
+const _weekdaySpokenJp = ['月曜日', '火曜日', '水曜日', '木曜日', '金曜日', '土曜日', '日曜日'];
 
 /// `7/17（金）` — compact Japanese date used across the 予報 surfaces.
 String formatJpDate(DateTime date) {
   return '${date.month}/${date.day}（${_weekdayJp[date.weekday - 1]}）';
+}
+
+/// `7月29日、水曜日` — expanded form for screen readers.
+String formatJpDateSpoken(DateTime date) {
+  return '${date.month}月${date.day}日、${_weekdaySpokenJp[date.weekday - 1]}';
 }
 
 /// Today's date in JST regardless of the device timezone — the server keys

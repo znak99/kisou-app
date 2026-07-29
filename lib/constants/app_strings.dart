@@ -5,6 +5,7 @@ class AppStrings {
 
   // Display / theme
   static const profileCategoryDisplay = '表示設定';
+  static const profileCategorySupport = '法務・サポート';
   static const themeSetting = 'テーマ';
   static const themeSystem = 'システム';
   static const themeLight = 'ライト';
@@ -20,14 +21,14 @@ class AppStrings {
   static const adLabel = '広告';
 
   // Feeling headline (7 levels)
-  static const feelingLead = '今日のあなたは';
-  static const feelingVeryHot = 'とても暑く感じるでしょう';
-  static const feelingHot = '暑く感じるでしょう';
-  static const feelingWarm = '暖かく感じるでしょう';
-  static const feelingPerfect = 'ちょうど良く感じるでしょう';
-  static const feelingCool = '涼しく感じるでしょう';
-  static const feelingCold = '寒く感じるでしょう';
-  static const feelingVeryCold = 'とても寒く感じるでしょう';
+  static const feelingLead = '体感予想';
+  static const feelingVeryHot = 'とても暑く感じそうです';
+  static const feelingHot = '暑く感じそうです';
+  static const feelingWarm = '暖かく感じそうです';
+  static const feelingPerfect = 'ちょうど良く感じそうです';
+  static const feelingCool = '涼しく感じそうです';
+  static const feelingCold = '寒く感じそうです';
+  static const feelingVeryCold = 'とても寒く感じそうです';
 
   // Today weather detail
   static const todayWeatherTitle = '今日の天気';
@@ -102,7 +103,7 @@ class AppStrings {
   static const sessionExpired = 'セッションが切れました。再度ログインしてください。';
   static const locationMissing = '位置情報が設定されていません';
   static const openSettings = '設定を開く';
-  static const todayClothing = '今日の服装は';
+  static const todayClothing = '今日の服装はこちら';
   static const recommendationSection = 'おすすめ';
   static const weatherComparisonSection = '天気の比較';
   static const bestRecommendation = 'おすすめ';
@@ -113,7 +114,7 @@ class AppStrings {
   static const today = '今日';
   static const yesterday = '昨日';
   static const twoDaysAgo = '一昨日';
-  static const noOuter = 'なし';
+  static const noOuter = 'アウターなし';
   static const unknownClothing = '不明な服装';
   static const next = '次へ';
   static const back = '戻る';
@@ -155,13 +156,26 @@ class AppStrings {
   static const feedbackFeelingTitle = '今日の体感は？';
   static const feedbackDateLabel = '日付';
   static const feedbackDateToday = '今日';
-  static const feedbackTimeSlotsTitle = '外にいた時間帯（複数選択）';
+  static const feedbackDateYesterday = '昨日';
+  static const feedbackDateSelectTitle = '日付を選択';
+  static const feedbackDateSelectHelp = '過去7日間まで選択できます';
+  static const feedbackRecorded = '記録あり';
+  static const feedbackEditingSaved = '保存済みの記録を編集中';
+  static const feedbackNotRecorded = 'この日の記録はまだありません';
+  static const feedbackDiscardTitle = '入力内容を破棄して日付を変更しますか？';
+  static const feedbackChangeDate = '日付を変更';
+  static const feedbackRecentLoading = '最近の記録を読み込んでいます';
+  static const feedbackRecentFailed = '記録を読み込めませんでした';
+  static const feedbackTimeSlotsTitle = '外出時間帯';
+  static const feedbackRequired = '必須';
+  static const feedbackTimeSlotsHelp = '外出していた時間帯をすべて選んでください';
+  static const feedbackTimeSlotsRequired = '外出時間帯を1つ以上選択してください';
   static const slotEarlyMorning = '早朝';
-  static const slotMorning = '朝';
-  static const slotForenoon = '午前';
+  static const slotMorning = '午前';
   static const slotAfternoon = '午後';
   static const slotEvening = '夕方';
   static const slotNight = '夜';
+  static const slotLateNight = '深夜';
   static const feedbackTops = 'トップス';
   static const feedbackBottoms = 'ボトムス';
   static const feedbackOuter = 'アウター';
@@ -205,7 +219,9 @@ class AppStrings {
   static const forecastNudgeTitle = '今日はどうでしたか？';
   static const forecastNudgeBody = '記録すると明日の予報が賢くなります';
   static const forecastNudgeAction = '記録する';
-  static const forecastNudgeDone = '記録済み ✓';
+  static const forecastNudgeDone = '記録済み';
+  static const forecastNudgeEdit = '記録を編集';
+  static const feedbackUpdated = '記録を更新しました';
   static const forecastOutlookTitle = '日付で予想する';
   static const forecastOutlookEntry = '日付で予想';
   static const forecastOutlookIntro = '旅行や予定の日を選ぶと、その日の気温とおすすめの服装をKISOUが予想します。';
@@ -269,8 +285,8 @@ class AppStrings {
 
   static String comparedToYesterday(int degrees) => '昨日より$degrees°';
 
-  static String feelingLeadNamed(String name) => '今日の$nameさんは';
-
   static String greetingWithNickname(String nickname) =>
       '$nicknameさん、$todayClothing';
+
+  static String feedbackClothingForDate(String date) => '$dateの服装は？';
 }

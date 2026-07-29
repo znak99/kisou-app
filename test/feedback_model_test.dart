@@ -37,4 +37,30 @@ void main() {
     expect(response.feedback?.feedbackValue, 'hot');
     expect(response.feedback?.actualOuter, 'CARDIGAN');
   });
+
+  test('parses recent feedback and maps legacy forenoon slot', () {
+    final response = FeedbackRecentResponse.fromJson({
+      'days': [
+        {'date': '2026-07-29', 'feedback': null},
+        {
+          'date': '2026-07-28',
+          'feedback': {
+            'id': 'feedback-id',
+            'date': '2026-07-28',
+            'feedback_value': 'perfect',
+            'actual_top': 'SHORT_SLEEVE',
+            'actual_bottom': 'LONG_PANTS',
+            'actual_outer': null,
+            'time_slots': ['FORENOON'],
+            'created_at': '2026-07-28T00:00:00Z',
+            'updated_at': '2026-07-28T00:00:00Z',
+          },
+        },
+      ],
+    });
+
+    expect(response.days, hasLength(2));
+    expect(response.days.first.feedback, isNull);
+    expect(response.days.last.feedback?.timeSlots, ['MORNING']);
+  });
 }

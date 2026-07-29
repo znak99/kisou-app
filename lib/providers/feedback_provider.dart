@@ -40,4 +40,8 @@ class FeedbackController extends AsyncNotifier<FeedbackTodayResponse> {
     }
     return response;
   }
+
+  Future<FeedbackRecentResponse> getRecentFeedback() {
+    return ref.read(feedbackServiceProvider).getRecentFeedback();
+  }
 }

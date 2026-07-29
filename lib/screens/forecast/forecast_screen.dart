@@ -330,20 +330,86 @@ class _FeedbackNudge extends ConsumerWidget {
         final c = context.kisou;
         final textTheme = Theme.of(context).textTheme;
         if (submitted) {
-          return _card(
-            context,
-            child: Row(
-              children: [
-                Icon(Icons.check_circle_rounded, size: 18, color: c.accent),
-                const SizedBox(width: KisouTheme.gapS),
-                Text(
-                  AppStrings.forecastNudgeDone,
-                  style: textTheme.bodyMedium?.copyWith(
-                    color: c.softInk,
-                    fontWeight: FontWeight.w600,
+          final label =
+              '${AppStrings.forecastNudgeDone}、${AppStrings.forecastNudgeEdit}';
+          return Semantics(
+            button: true,
+            label: label,
+            onTap: () => _openSheet(context, ref, status.feedback),
+            child: ExcludeSemantics(
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(KisouTheme.rMd),
+                  onTap: () => _openSheet(context, ref, status.feedback),
+                  child: _card(
+                    context,
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(minHeight: 32),
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          final largeText = usesLargeText(context);
+                          final statusLabel = Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.check_circle_rounded,
+                                size: 18,
+                                color: c.accent,
+                              ),
+                              const SizedBox(width: KisouTheme.gapS),
+                              Text(
+                                AppStrings.forecastNudgeDone,
+                                style: textTheme.bodyMedium?.copyWith(
+                                  color: c.softInk,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          );
+                          final editLabel = Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.edit_outlined,
+                                size: 16,
+                                color: c.accent,
+                              ),
+                              const SizedBox(width: KisouTheme.gapXs),
+                              Text(
+                                AppStrings.forecastNudgeEdit,
+                                style: textTheme.bodySmall?.copyWith(
+                                  color: c.accent,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
+                          );
+                          if (largeText) {
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: statusLabel,
+                                ),
+                                const SizedBox(height: KisouTheme.gapS),
+                                Align(
+                                  alignment: Alignment.centerRight,
+                                  child: editLabel,
+                                ),
+                              ],
+                            );
+                          }
+                          return Row(
+                            children: [statusLabel, const Spacer(), editLabel],
+                          );
+                        },
+                      ),
+                    ),
                   ),
                 ),
-              ],
+              ),
             ),
           );
         }
@@ -419,6 +485,7 @@ class _FeedbackNudge extends ConsumerWidget {
     WidgetRef ref,
     FeedbackResponse? initialFeedback,
   ) async {
+    final wasEditing = initialFeedback != null;
     final user = ref
         .read(userProvider)
         .when(
@@ -446,7 +513,13 @@ class _FeedbackNudge extends ConsumerWidget {
       ]);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text(AppStrings.feedbackApplied)),
+          SnackBar(
+            content: Text(
+              wasEditing
+                  ? AppStrings.feedbackUpdated
+                  : AppStrings.feedbackApplied,
+            ),
+          ),
         );
       }
     }

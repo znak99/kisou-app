@@ -88,7 +88,7 @@ class _HomeContent extends ConsumerWidget {
           _RecommendationSection(primary: primary, secondary: secondary),
           const SizedBox(height: KisouTheme.gapL),
           // 2. Predicted feeling
-          FeelingHeadline(feeling: home.feeling, nickname: user?.nickname),
+          FeelingHeadline(feeling: home.feeling),
           const SizedBox(height: KisouTheme.gapL),
           // 3. Today's weather
           TodayWeatherDetail(today: home.weatherComparison.today),

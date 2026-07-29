@@ -25,8 +25,8 @@ class ClothingIcon extends StatelessWidget {
   final bool showLabel;
   final bool selected;
 
-  /// Picker style (feedback sheet): neutral tile, no shadow — selection is
-  /// communicated by the accent border alone.
+  /// Picker style (feedback sheet): neutral tile, no shadow. The parent picker
+  /// tile communicates selection without clipping the image.
   final bool plain;
 
   Color get _tileColor => switch (type) {
@@ -57,12 +57,7 @@ class ClothingIcon extends StatelessWidget {
               borderRadius: BorderRadius.circular(radius),
               boxShadow: plain ? null : KisouTheme.tileShadow,
               border: plain
-                  ? Border.all(
-                      color: selected
-                          ? context.kisou.accent
-                          : context.kisou.hairline,
-                      width: selected ? 2 : 1,
-                    )
+                  ? null
                   : (selected
                         ? Border.all(color: context.kisou.accent, width: 3)
                         : null),
@@ -88,8 +83,8 @@ class ClothingIcon extends StatelessWidget {
                   : TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 fontSize: size >= 72 ? 13 : 12,
-                fontWeight: FontWeight.w600,
-                color: context.kisou.softInk,
+                fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
+                color: selected ? context.kisou.accent : context.kisou.softInk,
                 height: 1.25,
               ),
             ),

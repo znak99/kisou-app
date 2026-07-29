@@ -41,6 +41,7 @@ This app communicates with `kisou-api` (separate repository). All business logic
 | GET | /home | Home screen (recommendations + weather) |
 | POST | /feedback | Feedback submission |
 | GET | /feedback/today | Feedback status check |
+| GET | /feedback/recent | Recent 8-day feedback status and saved records |
 | GET | /forecast/tomorrow | Tomorrow tab and D+2 through D+4 rows |
 | GET | /forecast/outlook | Future date/place estimate |
 

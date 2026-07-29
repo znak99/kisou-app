@@ -31,6 +31,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   static final _privacyPolicyUri = Uri.parse('https://example.com/privacy');
 
   var _isSaving = false;
+  var _menuHasOverflow = false;
+  var _menuScrollProgress = 1.0;
 
   @override
   void initState() {
@@ -67,102 +69,171 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 
   Widget _buildProfile(User user) {
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(
-        KisouTheme.pagePad,
-        KisouTheme.gapM,
-        KisouTheme.pagePad,
-        KisouTheme.gapXl + KisouTheme.gapS,
-      ),
+    return Column(
       children: [
-        _ProfileHeader(user: user),
-        const SizedBox(height: KisouTheme.gapL),
-        if (_isSaving) ...[
-          const LinearProgressIndicator(),
-          const SizedBox(height: KisouTheme.gapM),
-        ],
-        // --- 個人情報設定 ---
-        _CategorySection(
-          title: AppStrings.profileCategoryPersonal,
-          children: [
-            _SettingRow(
-              icon: Icons.person_outline,
-              title: AppStrings.nicknameSetting,
-              value: _displayValue(user.nickname),
-              onTap: _isSaving ? null : () => _editNickname(user),
+        ExcludeSemantics(
+          child: AnimatedOpacity(
+            duration: MediaQuery.disableAnimationsOf(context)
+                ? Duration.zero
+                : const Duration(milliseconds: 120),
+            opacity: _menuHasOverflow ? 1 : 0,
+            child: SizedBox(
+              height: 2,
+              child: LinearProgressIndicator(
+                value: _menuScrollProgress,
+                backgroundColor: context.kisou.hairline.withValues(alpha: 0.3),
+                valueColor: AlwaysStoppedAnimation(
+                  context.kisou.accent.withValues(alpha: 0.35),
+                ),
+              ),
             ),
-            _SettingRow(
-              icon: Icons.wc_outlined,
-              title: AppStrings.genderSetting,
-              value: _genderLabel(user.gender),
-              onTap: _isSaving ? null : () => _editGender(user),
-            ),
-            _SettingRow(
-              icon: Icons.location_on_outlined,
-              title: AppStrings.locationSetting,
-              value: _displayValue(user.regionName),
-              onTap: _isSaving ? null : () => _editLocation(),
-            ),
-          ],
-        ),
-        const SizedBox(height: KisouTheme.gapL),
-        // --- アカウント設定 ---
-        const _SectionLabel(title: AppStrings.profileCategoryAccount),
-        const SizedBox(height: KisouTheme.gapS),
-        _buildAccountLink(user),
-        const SizedBox(height: KisouTheme.gapS),
-        _TileCard(
-          children: [
-            _SettingRow(
-              icon: Icons.logout,
-              title: AppStrings.logout,
-              onTap: _isSaving ? null : _confirmLogout,
-            ),
-            _SettingRow(
-              icon: Icons.delete_outline,
-              title: AppStrings.accountDelete,
-              destructive: true,
-              onTap: _isSaving ? null : _confirmDeleteAccount,
-            ),
-          ],
-        ),
-        const SizedBox(height: KisouTheme.gapS),
-        Center(
-          child: TextButton.icon(
-            onPressed: _isSaving ? null : _openPrivacyPolicy,
-            icon: const Icon(Icons.privacy_tip_outlined, size: 16),
-            label: const Text(AppStrings.privacyPolicy),
           ),
         ),
-        const SizedBox(height: KisouTheme.gapL),
-        // --- 体感設定 ---
-        _CategorySection(
-          title: AppStrings.profileCategoryComfort,
-          children: [
-            _SettingRow(
-              icon: Icons.thermostat_outlined,
-              title: AppStrings.sensitivitySetting,
-              value:
-                  '${_coldSensitivityLabel(user.coldSensitivity)}'
-                  '${AppStrings.sensitivitySeparator}'
-                  '${_heatSensitivityLabel(user.heatSensitivity)}',
-              onTap: _isSaving ? null : () => _editSensitivity(user),
+        Expanded(
+          child: NotificationListener<ScrollNotification>(
+            onNotification: (notification) {
+              _updateMenuScrollProgress(notification.metrics);
+              return false;
+            },
+            child: NotificationListener<ScrollMetricsNotification>(
+              onNotification: (notification) {
+                _updateMenuScrollProgress(notification.metrics);
+                return false;
+              },
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(
+                  KisouTheme.pagePad,
+                  KisouTheme.gapM,
+                  KisouTheme.pagePad,
+                  24,
+                ),
+                children: _profileSections(user),
+              ),
             ),
-            _SettingRow(
-              icon: Icons.restart_alt_rounded,
-              title: AppStrings.dataReset,
-              iconColor: context.kisou.warm,
-              onTap: _isSaving ? null : _resetData,
-            ),
-          ],
+          ),
         ),
-        const SizedBox(height: KisouTheme.gapL),
-        // --- 表示設定 ---
-        const _SectionLabel(title: AppStrings.profileCategoryDisplay),
-        const SizedBox(height: KisouTheme.gapS),
-        _buildThemeSelector(),
       ],
     );
+  }
+
+  List<Widget> _profileSections(User user) {
+    return [
+      _ProfileHeader(user: user),
+      const SizedBox(height: KisouTheme.gapL),
+      if (_isSaving) ...[
+        const LinearProgressIndicator(),
+        const SizedBox(height: KisouTheme.gapM),
+      ],
+      // --- 個人情報設定 ---
+      _CategorySection(
+        title: AppStrings.profileCategoryPersonal,
+        children: [
+          _SettingRow(
+            icon: Icons.person_outline,
+            title: AppStrings.nicknameSetting,
+            value: _displayValue(user.nickname),
+            onTap: _isSaving ? null : () => _editNickname(user),
+          ),
+          _SettingRow(
+            icon: Icons.wc_outlined,
+            title: AppStrings.genderSetting,
+            value: _genderLabel(user.gender),
+            onTap: _isSaving ? null : () => _editGender(user),
+          ),
+          _SettingRow(
+            icon: Icons.location_on_outlined,
+            title: AppStrings.locationSetting,
+            value: _displayValue(user.regionName),
+            onTap: _isSaving ? null : () => _editLocation(),
+          ),
+        ],
+      ),
+      const SizedBox(height: KisouTheme.gapL),
+      // --- 体感設定 ---
+      _CategorySection(
+        title: AppStrings.profileCategoryComfort,
+        children: [
+          _SettingRow(
+            icon: Icons.thermostat_outlined,
+            title: AppStrings.sensitivitySetting,
+            value:
+                '${_coldSensitivityLabel(user.coldSensitivity)}'
+                '${AppStrings.sensitivitySeparator}'
+                '${_heatSensitivityLabel(user.heatSensitivity)}',
+            onTap: _isSaving ? null : () => _editSensitivity(user),
+          ),
+          _SettingRow(
+            icon: Icons.restart_alt_rounded,
+            title: AppStrings.dataReset,
+            iconColor: context.kisou.warm,
+            onTap: _isSaving ? null : _resetData,
+          ),
+        ],
+      ),
+      const SizedBox(height: KisouTheme.gapL),
+      // --- 表示設定 ---
+      const _SectionLabel(title: AppStrings.profileCategoryDisplay),
+      const SizedBox(height: KisouTheme.gapS),
+      _buildThemeSelector(),
+      const SizedBox(height: KisouTheme.gapL),
+      // --- アカウント設定 ---
+      const _SectionLabel(title: AppStrings.profileCategoryAccount),
+      const SizedBox(height: KisouTheme.gapS),
+      _buildAccountLink(user),
+      const SizedBox(height: KisouTheme.gapS),
+      _TileCard(
+        children: [
+          _SettingRow(
+            icon: Icons.logout,
+            title: AppStrings.logout,
+            onTap: _isSaving ? null : _confirmLogout,
+          ),
+          _SettingRow(
+            icon: Icons.delete_outline,
+            title: AppStrings.accountDelete,
+            destructive: true,
+            onTap: _isSaving ? null : _confirmDeleteAccount,
+          ),
+        ],
+      ),
+      const SizedBox(height: KisouTheme.gapL),
+      // --- 法務・サポート ---
+      const _SectionLabel(title: AppStrings.profileCategorySupport),
+      const SizedBox(height: KisouTheme.gapS),
+      _TileCard(
+        children: [
+          _SettingRow(
+            icon: Icons.privacy_tip_outlined,
+            title: AppStrings.privacyPolicy,
+            onTap: _isSaving ? null : _openPrivacyPolicy,
+          ),
+        ],
+      ),
+    ];
+  }
+
+  void _updateMenuScrollProgress(ScrollMetrics metrics) {
+    final hasOverflow = metrics.maxScrollExtent > 0;
+    final totalExtent = metrics.maxScrollExtent + metrics.viewportDimension;
+    final progress = !hasOverflow || totalExtent <= 0
+        ? 1.0
+        : ((metrics.pixels + metrics.viewportDimension) / totalExtent).clamp(
+            0.0,
+            1.0,
+          );
+    if (hasOverflow == _menuHasOverflow &&
+        (progress - _menuScrollProgress).abs() < 0.001) {
+      return;
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _menuHasOverflow = hasOverflow;
+        _menuScrollProgress = progress;
+      });
+    });
   }
 
   Widget _buildThemeSelector() {
@@ -256,9 +327,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             children: [
               Icon(Icons.person_outline_rounded, color: c.softInk, size: 20),
               const SizedBox(width: KisouTheme.gapS),
-              Text(
-                AppStrings.anonymousAccount,
-                style: Theme.of(context).textTheme.titleMedium,
+              Expanded(
+                child: Text(
+                  AppStrings.anonymousAccount,
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
               ),
             ],
           ),

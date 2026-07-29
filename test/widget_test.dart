@@ -10,6 +10,7 @@ import 'package:kisou_app/constants/app_strings.dart';
 import 'package:kisou_app/providers/api_provider.dart';
 import 'package:kisou_app/screens/onboarding/onboarding_screen.dart';
 import 'package:kisou_app/services/auth_service.dart';
+import 'package:kisou_app/utils/jp_date.dart';
 
 void main() {
   setUp(() {
@@ -100,9 +101,7 @@ void main() {
     expect(find.text(AppStrings.feedbackClothingTitle), findsOneWidget);
   });
 
-  testWidgets('予報 탭: 내일 카드·피드백 유도·날짜 예상 입구가 보인다', (
-    WidgetTester tester,
-  ) async {
+  testWidgets('予報 탭: 내일 카드·피드백 유도·날짜 예상 입구가 보인다', (WidgetTester tester) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -133,9 +132,38 @@ void main() {
     expect(find.text(AppStrings.forecastOutlookEntry), findsOneWidget);
   });
 
-  testWidgets('予報 탭: 날짜를 골라 예상하면 예년 범위와 각주가 나온다', (
-    WidgetTester tester,
-  ) async {
+  testWidgets('予報 탭: 기록 완료 카드 전체에서 수정 시트를 연다', (WidgetTester tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authServiceProvider.overrideWithValue(
+            _FakeAuthService(
+              hasTokenValue: true,
+              onboardingCompletedValue: true,
+            ),
+          ),
+          apiClientProvider.overrideWithValue(_createRecordedAppDio()),
+        ],
+        child: const KisouApp(),
+      ),
+    );
+    await pumpPastSplash(tester);
+
+    await tester.tap(find.text(AppStrings.tabForecast));
+    await tester.pumpAndSettle();
+
+    expect(find.text(AppStrings.forecastNudgeDone), findsOneWidget);
+    expect(find.text(AppStrings.forecastNudgeEdit), findsOneWidget);
+    expect(find.byIcon(Icons.check_circle_rounded), findsOneWidget);
+    expect(find.byIcon(Icons.edit_outlined), findsOneWidget);
+
+    await tester.tap(find.text(AppStrings.forecastNudgeDone));
+    await tester.pumpAndSettle();
+
+    expect(find.text(AppStrings.feedbackEditingSaved), findsOneWidget);
+  });
+
+  testWidgets('予報 탭: 날짜를 골라 예상하면 예년 범위와 각주가 나온다', (WidgetTester tester) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -175,7 +203,10 @@ void main() {
 
     // climatology 목 응답: 평균이 메인 숫자(15°〜24°), 근거 템플릿(과거
     // 5년·표본 35일), 개인 체감 문구, 기본 도시(東京)가 결과에 붙는다.
-    expect(find.text(AppStrings.forecastClimateRange('15', '24')), findsOneWidget);
+    expect(
+      find.text(AppStrings.forecastClimateRange('15', '24')),
+      findsOneWidget,
+    );
     expect(
       find.text(
         AppStrings.forecastExplainClimatology(
@@ -194,6 +225,13 @@ void main() {
   testWidgets('shows complete settings list from home', (
     WidgetTester tester,
   ) async {
+    tester.view.physicalSize = const Size(320, 480);
+    tester.view.devicePixelRatio = 1;
+    tester.platformDispatcher.textScaleFactorTestValue = 2;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -217,15 +255,27 @@ void main() {
     // Top of the list is visible immediately.
     expect(find.text(AppStrings.nicknameSetting), findsOneWidget);
     expect(find.text(AppStrings.genderSetting), findsOneWidget);
+    expect(find.text(AppStrings.profileCategoryPersonal), findsOneWidget);
+    final progress = tester.widget<LinearProgressIndicator>(
+      find.byType(LinearProgressIndicator),
+    );
+    expect(progress.value, isNotNull);
+    expect(progress.value!, greaterThan(0));
+    expect(progress.value!, lessThan(1));
 
     // The account actions sit at the bottom of the (lazy) list.
     await tester.scrollUntilVisible(
-      find.text(AppStrings.accountDelete),
+      find.text(AppStrings.privacyPolicy),
       300,
-      scrollable: find.byType(Scrollable).first,
+      scrollable: find.descendant(
+        of: find.byType(ListView),
+        matching: find.byType(Scrollable),
+      ),
     );
     expect(find.text(AppStrings.logout), findsOneWidget);
     expect(find.text(AppStrings.accountDelete), findsOneWidget);
+    expect(find.text(AppStrings.profileCategorySupport), findsOneWidget);
+    expect(find.text(AppStrings.privacyPolicy), findsOneWidget);
   });
 
   testWidgets('shows timeout error on home load failure', (
@@ -446,6 +496,40 @@ Dio _createHangingDio() {
 Dio _createAppDio() {
   final dio = Dio();
   dio.interceptors.add(InterceptorsWrapper(onRequest: _resolveAppRequest));
+  return dio;
+}
+
+Dio _createRecordedAppDio() {
+  final dio = Dio();
+  dio.interceptors.add(
+    InterceptorsWrapper(
+      onRequest: (options, handler) {
+        if (options.path == '/feedback/today') {
+          handler.resolve(
+            Response<Map<String, dynamic>>(
+              requestOptions: options,
+              data: {
+                'exists': true,
+                'feedback': {
+                  'id': 'saved-feedback',
+                  'date': formatIsoDate(jstToday()),
+                  'feedback_value': 'perfect',
+                  'actual_top': 'SHORT_SLEEVE',
+                  'actual_bottom': 'LONG_PANTS',
+                  'actual_outer': null,
+                  'time_slots': ['MORNING'],
+                  'created_at': '2026-07-29T00:00:00Z',
+                  'updated_at': '2026-07-29T00:00:00Z',
+                },
+              },
+            ),
+          );
+          return;
+        }
+        _resolveAppRequest(options, handler);
+      },
+    ),
+  );
   return dio;
 }
 
