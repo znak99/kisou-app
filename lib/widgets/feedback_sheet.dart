@@ -92,6 +92,7 @@ class _FeedbackSheetState extends ConsumerState<FeedbackSheet> {
   Object? _recentError;
   List<FeedbackRecentDay>? _recentDays;
   FeedbackResponse? _loadedFeedback;
+  final ScrollController _clothingScrollController = ScrollController();
   final Set<String> _selectedSlots = {};
   String? _selectedTop;
   String? _selectedBottom;
@@ -99,12 +100,11 @@ class _FeedbackSheetState extends ConsumerState<FeedbackSheet> {
   String? _selectedFeeling;
   var _isSubmitting = false;
   var _isDirty = false;
+  var _showTimeSlotError = false;
   String? _errorMessage;
 
-  bool get _canContinue =>
-      _selectedSlots.isNotEmpty &&
-      _selectedTop != null &&
-      _selectedBottom != null;
+  bool get _hasRequiredClothing =>
+      _selectedTop != null && _selectedBottom != null;
 
   @override
   void initState() {
@@ -128,6 +128,7 @@ class _FeedbackSheetState extends ConsumerState<FeedbackSheet> {
       ..clear()
       ..addAll(feedback.timeSlots ?? const []);
     _isDirty = false;
+    _showTimeSlotError = false;
   }
 
   void _applyTodayRecommendation() {
@@ -202,6 +203,37 @@ class _FeedbackSheetState extends ConsumerState<FeedbackSheet> {
     }
   }
 
+  void _continueToFeeling() {
+    if (_selectedSlots.isEmpty) {
+      setState(() => _showTimeSlotError = true);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || !_clothingScrollController.hasClients) {
+          return;
+        }
+        if (MediaQuery.disableAnimationsOf(context)) {
+          _clothingScrollController.jumpTo(0);
+        } else {
+          _clothingScrollController.animateTo(
+            0,
+            duration: const Duration(milliseconds: 180),
+            curve: Curves.easeOutCubic,
+          );
+        }
+      });
+      return;
+    }
+    setState(() {
+      _showTimeSlotError = false;
+      _step = 1;
+    });
+  }
+
+  @override
+  void dispose() {
+    _clothingScrollController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return FractionallySizedBox(
@@ -260,6 +292,7 @@ class _FeedbackSheetState extends ConsumerState<FeedbackSheet> {
         const SizedBox(height: 16),
         Expanded(
           child: ListView(
+            controller: _clothingScrollController,
             children: [
               // When: date (today by default, back-datable) + which parts of
               // the day the user was outside (multi-select) — review 5.
@@ -281,21 +314,22 @@ class _FeedbackSheetState extends ConsumerState<FeedbackSheet> {
                 ],
               ),
               const SizedBox(height: 4),
-              Text(
-                _selectedSlots.isEmpty &&
-                        _selectedTop != null &&
-                        _selectedBottom != null
-                    ? AppStrings.feedbackTimeSlotsRequired
-                    : AppStrings.feedbackTimeSlotsHelp,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color:
-                      _selectedSlots.isEmpty &&
-                          _selectedTop != null &&
-                          _selectedBottom != null
-                      ? Theme.of(context).colorScheme.error
-                      : context.kisou.softInk,
+              if (_showTimeSlotError)
+                Text(
+                  AppStrings.feedbackTimeSlotsRequired,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: Theme.of(context).colorScheme.error,
+                    fontSize: 11,
+                    height: 1.35,
+                  ),
+                )
+              else
+                Text(
+                  AppStrings.feedbackTimeSlotsHelp,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: context.kisou.softInk),
                 ),
-              ),
               const SizedBox(height: KisouTheme.gapS),
               LayoutBuilder(
                 builder: (context, constraints) {
@@ -320,6 +354,9 @@ class _FeedbackSheetState extends ConsumerState<FeedbackSheet> {
                                   _selectedSlots.remove(slot.code);
                                 } else {
                                   _selectedSlots.add(slot.code);
+                                }
+                                if (_selectedSlots.isNotEmpty) {
+                                  _showTimeSlotError = false;
                                 }
                               });
                             },
@@ -395,7 +432,7 @@ class _FeedbackSheetState extends ConsumerState<FeedbackSheet> {
         ),
         const SizedBox(height: 12),
         FilledButton(
-          onPressed: _canContinue ? () => setState(() => _step = 1) : null,
+          onPressed: _hasRequiredClothing ? _continueToFeeling : null,
           child: const Text(AppStrings.next),
         ),
       ],
@@ -594,6 +631,7 @@ class _FeedbackSheetState extends ConsumerState<FeedbackSheet> {
       _selectedFeeling = null;
       _loadedFeedback = null;
       _errorMessage = null;
+      _showTimeSlotError = false;
       if (day.feedback != null) {
         _applyFeedback(day.feedback!);
       } else if (_isSameDate(day.date, jstToday())) {

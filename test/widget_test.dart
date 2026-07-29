@@ -260,8 +260,7 @@ void main() {
       find.byType(LinearProgressIndicator),
     );
     expect(progress.value, isNotNull);
-    expect(progress.value!, greaterThan(0));
-    expect(progress.value!, lessThan(1));
+    expect(progress.value!, closeTo(0.1, 0.001));
 
     // The account actions sit at the bottom of the (lazy) list.
     await tester.scrollUntilVisible(
@@ -276,6 +275,12 @@ void main() {
     expect(find.text(AppStrings.accountDelete), findsOneWidget);
     expect(find.text(AppStrings.profileCategorySupport), findsOneWidget);
     expect(find.text(AppStrings.privacyPolicy), findsOneWidget);
+    await tester.drag(find.byType(ListView), const Offset(0, -300));
+    await tester.pumpAndSettle();
+    final completedProgress = tester.widget<LinearProgressIndicator>(
+      find.byType(LinearProgressIndicator),
+    );
+    expect(completedProgress.value!, closeTo(1, 0.001));
   });
 
   testWidgets('shows timeout error on home load failure', (

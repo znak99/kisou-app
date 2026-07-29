@@ -214,10 +214,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   void _updateMenuScrollProgress(ScrollMetrics metrics) {
     final hasOverflow = metrics.maxScrollExtent > 0;
-    final totalExtent = metrics.maxScrollExtent + metrics.viewportDimension;
-    final progress = !hasOverflow || totalExtent <= 0
+    final progress = !hasOverflow
         ? 1.0
-        : ((metrics.pixels + metrics.viewportDimension) / totalExtent).clamp(
+        : (0.1 + 0.9 * (metrics.pixels / metrics.maxScrollExtent)).clamp(
             0.0,
             1.0,
           );

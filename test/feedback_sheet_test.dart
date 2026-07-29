@@ -8,7 +8,7 @@ import 'package:kisou_app/utils/jp_date.dart';
 import 'package:kisou_app/widgets/feedback_sheet.dart';
 
 void main() {
-  testWidgets('requires a time slot and clothing before enabling next', (
+  testWidgets('shows the smaller time-slot error only after tapping next', (
     WidgetTester tester,
   ) async {
     await tester.pumpWidget(
@@ -32,8 +32,9 @@ void main() {
     expect(find.text('ハーフパンツ'), findsNothing);
     expect(find.text('ショートパンツ'), findsNothing);
     expect(find.text('スカート'), findsNothing);
-    await tester.tap(find.text(AppStrings.slotMorning));
-    await tester.pump();
+    expect(find.text(AppStrings.feedbackTimeSlotsRequired), findsNothing);
+    expect(find.text(AppStrings.feedbackTimeSlotsHelp), findsOneWidget);
+
     // 하의·아우터 섹션은 접혀 내려갔으니 스크롤해서 확인.
     await tester.drag(
       find.text(AppStrings.feedbackTops),
@@ -57,10 +58,34 @@ void main() {
     await tester.tap(find.text('長ズボン').first);
     await tester.pump();
 
-    final enabledNextButton = tester.widget<FilledButton>(
+    final timeValidationButton = tester.widget<FilledButton>(
       find.widgetWithText(FilledButton, AppStrings.next),
     );
-    expect(enabledNextButton.onPressed, isNotNull);
+    expect(timeValidationButton.onPressed, isNotNull);
+    await tester.ensureVisible(
+      find.widgetWithText(FilledButton, AppStrings.next),
+    );
+    await tester.tap(find.widgetWithText(FilledButton, AppStrings.next));
+    await tester.pumpAndSettle();
+
+    final timeError = tester.widget<Text>(
+      find.text(AppStrings.feedbackTimeSlotsRequired),
+    );
+    expect(timeError.style?.fontSize, 11);
+    expect(find.text(AppStrings.feedbackTimeSlotsHelp), findsNothing);
+    expect(find.text(AppStrings.feedbackFeelingTitle), findsNothing);
+
+    await tester.ensureVisible(find.text(AppStrings.slotMorning));
+    await tester.tap(find.text(AppStrings.slotMorning));
+    await tester.pump();
+    expect(find.text(AppStrings.feedbackTimeSlotsRequired), findsNothing);
+
+    await tester.ensureVisible(
+      find.widgetWithText(FilledButton, AppStrings.next),
+    );
+    await tester.tap(find.widgetWithText(FilledButton, AppStrings.next));
+    await tester.pump();
+    expect(find.text(AppStrings.feedbackFeelingTitle), findsOneWidget);
   });
 
   testWidgets('switches within the sheet and restores a recent saved record', (
