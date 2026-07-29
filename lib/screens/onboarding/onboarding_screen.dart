@@ -168,8 +168,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                           value: (_currentStep + 1) / _stepCount,
                           minHeight: 6,
                           backgroundColor: context.kisou.hairline,
-                          valueColor: const AlwaysStoppedAnimation<Color>(
-                            KisouTheme.accent,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            context.kisou.accent,
                           ),
                         ),
                       ),

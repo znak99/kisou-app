@@ -16,6 +16,29 @@ void main() {
     SharedPreferences.setMockInitialValues({});
   });
 
+  testWidgets('shows the approved illustrated empty state before lookup', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      const ProviderScope(child: MaterialApp(home: OutlookScreen())),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text(AppStrings.forecastOutlookEmptyTitle), findsOneWidget);
+    expect(find.text(AppStrings.forecastOutlookEmptyBody), findsOneWidget);
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is Image &&
+            widget.image is AssetImage &&
+            (widget.image as AssetImage).assetName ==
+                'assets/illustrations/outlook_empty_state.png',
+      ),
+      findsOneWidget,
+    );
+    expect(find.text(AppStrings.forecastOutlookIntro), findsNothing);
+  });
+
   testWidgets('rapid taps start one lookup and consume one quota', (
     WidgetTester tester,
   ) async {

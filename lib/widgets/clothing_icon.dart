@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../config/theme.dart';
@@ -38,8 +40,12 @@ class ClothingIcon extends StatelessWidget {
     final label = _displayName;
     final assetPath = _iconAssetPath;
     final radius = size * 0.30;
+    final largeText = usesLargeText(context);
+    final effectiveWidth = largeText && showLabel
+        ? math.max(size, 132).toDouble()
+        : size;
     return SizedBox(
-      width: size,
+      width: effectiveWidth,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -53,12 +59,12 @@ class ClothingIcon extends StatelessWidget {
               border: plain
                   ? Border.all(
                       color: selected
-                          ? KisouTheme.accent
+                          ? context.kisou.accent
                           : context.kisou.hairline,
                       width: selected ? 2 : 1,
                     )
                   : (selected
-                        ? Border.all(color: KisouTheme.deepSky, width: 3)
+                        ? Border.all(color: context.kisou.accent, width: 3)
                         : null),
             ),
             clipBehavior: Clip.antiAlias,
@@ -76,8 +82,10 @@ class ClothingIcon extends StatelessWidget {
             Text(
               label,
               textAlign: TextAlign.center,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
+              maxLines: largeText ? null : 2,
+              overflow: largeText
+                  ? TextOverflow.visible
+                  : TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 fontSize: size >= 72 ? 13 : 12,
                 fontWeight: FontWeight.w600,

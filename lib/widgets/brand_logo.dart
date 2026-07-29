@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../constants/app_strings.dart';
+
 enum BrandLogoVariant { mark, lockup }
 
 /// The KISOU brand logo.
@@ -29,18 +31,30 @@ class BrandLogo extends StatelessWidget {
       'assets/brand/image_logo.png',
       height: size,
       fit: BoxFit.contain,
+      excludeFromSemantics: true,
     );
     if (variant == BrandLogoVariant.mark) {
-      return mark;
+      return Semantics(image: true, label: AppStrings.appName, child: mark);
     }
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        mark,
-        SizedBox(width: size * 0.2),
-        Image.asset(wordmark, height: size * 0.66, fit: BoxFit.contain),
-      ],
+    return Semantics(
+      image: true,
+      label: AppStrings.appName,
+      child: ExcludeSemantics(
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            mark,
+            SizedBox(width: size * 0.2),
+            Image.asset(
+              wordmark,
+              height: size * 0.66,
+              fit: BoxFit.contain,
+              excludeFromSemantics: true,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

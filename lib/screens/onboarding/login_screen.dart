@@ -127,22 +127,19 @@ class _DevLoginButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.kisou;
-    return SizedBox(
-      height: 38,
-      child: OutlinedButton(
-        onPressed: onPressed,
-        style: OutlinedButton.styleFrom(
-          foregroundColor: c.softInk,
-          backgroundColor: Colors.transparent,
-          minimumSize: const Size.fromHeight(38),
-          side: BorderSide(color: c.hairline),
-          shape: const StadiumBorder(),
-          textStyle: Theme.of(
-            context,
-          ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
-        ),
-        child: Text(label),
+    return OutlinedButton(
+      onPressed: onPressed,
+      style: OutlinedButton.styleFrom(
+        foregroundColor: c.softInk,
+        backgroundColor: Colors.transparent,
+        minimumSize: const Size.fromHeight(48),
+        side: BorderSide(color: c.hairline),
+        shape: const StadiumBorder(),
+        textStyle: Theme.of(
+          context,
+        ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
       ),
+      child: Text(label, textAlign: TextAlign.center),
     );
   }
 }

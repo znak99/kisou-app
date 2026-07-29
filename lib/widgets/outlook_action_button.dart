@@ -12,39 +12,65 @@ class OutlookActionButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.kisou;
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(100),
-        onTap: () {
-          Navigator.of(context).push(
-            MaterialPageRoute<void>(builder: (_) => const OutlookScreen()),
-          );
-        },
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-          decoration: BoxDecoration(
-            color: c.surface,
-            borderRadius: BorderRadius.circular(100),
-            border: Border.all(color: c.hairline),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(
-                Icons.calendar_month_rounded,
-                size: 16,
-                color: KisouTheme.accent,
-              ),
-              const SizedBox(width: KisouTheme.gapXs),
-              Text(
-                AppStrings.forecastOutlookEntry,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: c.ink,
+    final compact = usesLargeText(context);
+    void openOutlook() {
+      Navigator.of(
+        context,
+      ).push(MaterialPageRoute<void>(builder: (_) => const OutlookScreen()));
+    }
+
+    return Semantics(
+      button: true,
+      label: AppStrings.forecastOutlookEntry,
+      onTap: openOutlook,
+      child: ExcludeSemantics(
+        child: Tooltip(
+          message: AppStrings.forecastOutlookEntry,
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(100),
+              onTap: openOutlook,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  minWidth: compact ? 48 : 0,
+                  minHeight: 48,
+                ),
+                child: Container(
+                  alignment: Alignment.center,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: compact ? 12 : 14,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: c.surface,
+                    borderRadius: BorderRadius.circular(100),
+                    border: Border.all(color: c.hairline),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.calendar_month_rounded,
+                        size: 18,
+                        color: c.accent,
+                      ),
+                      if (!compact) ...[
+                        const SizedBox(width: KisouTheme.gapXs),
+                        Text(
+                          AppStrings.forecastOutlookEntry,
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                fontWeight: FontWeight.w700,
+                                color: c.ink,
+                              ),
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
               ),
-            ],
+            ),
           ),
         ),
       ),

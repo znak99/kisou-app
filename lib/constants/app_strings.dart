@@ -14,6 +14,7 @@ class AppStrings {
   static const tabHome = 'ホーム';
   static const tabAnalysis = '分析';
   static const tabProfile = 'メニュー';
+  static String selectedTab(String label) => '$label、選択中';
 
   // Ad slot
   static const adLabel = '広告';
@@ -218,6 +219,10 @@ class AppStrings {
   static const forecastOutlookTempHigh = '最高';
   static const forecastOutlookTempLow = '最低';
   static const forecastOutlookFailed = '予想できませんでした。もう一度お試しください。';
+  static const forecastOutlookLoading = '予想結果を読み込んでいます';
+  static const forecastOutlookEmptyTitle = '旅行の日付と場所を選びましょう';
+  static const forecastOutlookEmptyBody = 'その日の気温とおすすめの服装を予想します';
+  static const tryAgain = 'もう一度試す';
 
   static String forecastComparedToToday(int degrees) {
     final direction = degrees > 0 ? '暖かく' : '涼しく';
@@ -255,6 +260,7 @@ class AppStrings {
     };
     return 'この日のあなたは、$sentence';
   }
+
   static const sensitivitySeparator = ' / ';
   static const timeRangeSeparator = ' 〜 ';
 

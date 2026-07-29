@@ -110,6 +110,31 @@ The mapping from API code (`"THIN_LONG"`) → enum → Japanese display name →
 - Do not use flashy colors or fashion-oriented design language
 - Consistent padding, spacing, and font sizes via theme
 
+## Accessibility completion criteria
+
+These criteria apply to every current screen and every future UI change. A UI
+change is not complete until the affected screen has been checked against all
+applicable items.
+
+- At 200% text scaling, text and controls must not clip, overlap, or overflow.
+  Content that no longer fits the viewport must remain reachable by scrolling.
+- Do not shrink text to make a fixed layout fit. Reflow rows into columns,
+  allow wrapping, or make the content scrollable instead.
+- Interactive targets must be at least 48 × 48 logical pixels on Android and
+  44 × 44 points on iOS.
+- Text contrast must be at least 4.5:1 for normal text and 3:1 for large text.
+- Selection, status, errors, and other meaningful state must not rely on color
+  alone. Pair color with a border, icon, label, shape, or semantics state.
+- VoiceOver and TalkBack must announce meaningful names, selected/enabled
+  state, and the current tab. Decorative images must be excluded from
+  semantics.
+- Focus order must follow the visual and task order. Verify it manually on both
+  VoiceOver and TalkBack for each changed flow.
+
+The root `TODO.md` accessibility automation task tracks regression coverage for
+these criteria; manual checks remain required where platform assistive
+technology behavior cannot be represented by widget tests.
+
 ## Icon Assets
 
 16 UI icon assets are used (15 clothing tags plus the no-outer choice):

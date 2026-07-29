@@ -40,57 +40,59 @@ class FeelingHeadline extends StatelessWidget {
     final lead = name.isEmpty
         ? AppStrings.feelingLead
         : AppStrings.feelingLeadNamed(name);
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        // Subtle top→bottom same-hue gradient (small difference between ends).
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            Color.lerp(color, Colors.white, 0.08)!,
-            Color.lerp(color, Colors.black, 0.08)!,
-          ],
-        ),
-        borderRadius: BorderRadius.circular(KisouTheme.rLg),
-        boxShadow: [
-          BoxShadow(
-            color: color.withValues(alpha: 0.30),
-            blurRadius: 24,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      // ~15% more compact than before.
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  lead,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Colors.white.withValues(alpha: 0.92),
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  phrase,
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    color: Colors.white,
-                    fontSize: 19,
-                    height: 1.25,
-                  ),
-                ),
-              ],
+    return Semantics(
+      container: true,
+      label: '$lead $phrase',
+      child: ExcludeSemantics(
+        child: Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [Color.lerp(color, Colors.white, 0.12)!, color],
             ),
+            borderRadius: BorderRadius.circular(KisouTheme.rLg),
+            boxShadow: [
+              BoxShadow(
+                color: color.withValues(alpha: 0.30),
+                blurRadius: 24,
+                offset: const Offset(0, 10),
+              ),
+            ],
           ),
-          const SizedBox(width: KisouTheme.gapM),
-          Icon(icon, color: Colors.white, size: 34),
-        ],
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      lead,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: KisouTheme.feelingForeground,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      phrase,
+                      style: Theme.of(context).textTheme.headlineSmall
+                          ?.copyWith(
+                            color: KisouTheme.feelingForeground,
+                            fontSize: 19,
+                            height: 1.25,
+                          ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: KisouTheme.gapM),
+              Icon(icon, color: KisouTheme.feelingForeground, size: 34),
+            ],
+          ),
+        ),
       ),
     );
   }

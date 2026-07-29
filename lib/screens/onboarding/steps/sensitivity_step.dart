@@ -62,9 +62,8 @@ class SensitivityStep extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final textScale = MediaQuery.textScalerOf(context).scale(1);
         final contentWidth = constraints.maxWidth - KisouTheme.pagePad * 2;
-        final useVertical = contentWidth < 340 || textScale > 1.3;
+        final useVertical = contentWidth < 340 || usesLargeText(context);
         return SingleChildScrollView(
           padding: const EdgeInsets.all(KisouTheme.pagePad),
           child: ConstrainedBox(

@@ -2,6 +2,18 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 
+/// Whether the platform's effective body-text scale needs a reflow layout.
+///
+/// Android 14+ uses nonlinear font scaling, so measuring `scale(1)` can report
+/// 1.0 even when the user selected 200%. A representative 14sp body size
+/// correctly reflects the effective scale on both linear and nonlinear
+/// platforms.
+bool usesLargeText(BuildContext context, {double threshold = 1.3}) {
+  const referenceFontSize = 14.0;
+  final scaled = MediaQuery.textScalerOf(context).scale(referenceFontSize);
+  return scaled / referenceFontSize > threshold;
+}
+
 /// キソウ v2 design system.
 ///
 /// Modern light/dark theme: near-white off-white canvas, an indigo→violet
@@ -12,8 +24,10 @@ class KisouTheme {
   const KisouTheme._();
 
   // --- Modern accent (shared across light/dark) ---
-  static const Color accent = Color(0xFF5B6CF0); // indigo
-  static const Color accentAlt = Color(0xFF9B6DEA); // violet
+  // Light-mode primary: 5.7:1 against white, so it is safe for small text.
+  // Dark surfaces use the brighter theme-dependent `context.kisou.accent`.
+  static const Color accent = Color(0xFF4C5BCC); // indigo
+  static const Color accentAlt = Color(0xFF7551B9); // violet
   static const LinearGradient accentGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
@@ -27,8 +41,8 @@ class KisouTheme {
   static const Color topBlue = Color(0xFF6BB7EC);
   static const Color bottomSand = Color(0xFFF4E3BE);
   static const Color outerOrange = Color(0xFFF39950);
-  static const Color warm = Color(0xFFF07A4B);
-  static const Color cool = Color(0xFF4F86E8);
+  static const Color warm = Color(0xFFC24A1A);
+  static const Color cool = Color(0xFF2F67B2);
 
   // Light-mode neutral aliases (kept for un-migrated call sites).
   static const Color sand = Color(0xFFF8F9FA);
@@ -74,20 +88,33 @@ class KisouTheme {
 
   static Color feelingColor(String code) => feelingColors[code] ?? accent;
 
+  /// All current feeling colors have at least 4.5:1 contrast against black.
+  /// Keeping the foreground independent from hue also prevents color-only
+  /// status communication.
+  static const Color feelingForeground = Colors.black;
+
   static ThemeData light() => _build(Brightness.light, KisouColors.light);
   static ThemeData dark() => _build(Brightness.dark, KisouColors.dark);
 
   static ThemeData _build(Brightness brightness, KisouColors colors) {
     final textTheme = _textTheme(colors.ink, colors.softInk);
-    final colorScheme = ColorScheme.fromSeed(
-      seedColor: accent,
-      brightness: brightness,
-    ).copyWith(primary: accent, surface: colors.surface, onSurface: colors.ink);
+    final colorScheme =
+        ColorScheme.fromSeed(
+          seedColor: colors.accent,
+          brightness: brightness,
+        ).copyWith(
+          primary: colors.accent,
+          onPrimary: colors.onAccent,
+          surface: colors.surface,
+          onSurface: colors.ink,
+        );
 
     return ThemeData(
       useMaterial3: true,
       brightness: brightness,
       colorScheme: colorScheme,
+      materialTapTargetSize: MaterialTapTargetSize.padded,
+      visualDensity: VisualDensity.standard,
       scaffoldBackgroundColor: colors.bg,
       textTheme: textTheme,
       splashFactory: InkRipple.splashFactory,
@@ -107,9 +134,10 @@ class KisouTheme {
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          backgroundColor: accent,
-          foregroundColor: Colors.white,
+          backgroundColor: colors.accent,
+          foregroundColor: colors.onAccent,
           minimumSize: const Size.fromHeight(48),
+          tapTargetSize: MaterialTapTargetSize.padded,
           elevation: 0,
           shape: const StadiumBorder(),
           textStyle: textTheme.labelLarge,
@@ -120,6 +148,7 @@ class KisouTheme {
           foregroundColor: colors.ink,
           backgroundColor: colors.surface,
           minimumSize: const Size.fromHeight(48),
+          tapTargetSize: MaterialTapTargetSize.padded,
           side: BorderSide(color: colors.hairline),
           shape: const StadiumBorder(),
           textStyle: textTheme.labelLarge,
@@ -127,8 +156,16 @@ class KisouTheme {
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
-          foregroundColor: accent,
+          foregroundColor: colors.accent,
+          minimumSize: const Size(48, 48),
+          tapTargetSize: MaterialTapTargetSize.padded,
           textStyle: textTheme.labelLarge,
+        ),
+      ),
+      iconButtonTheme: const IconButtonThemeData(
+        style: ButtonStyle(
+          minimumSize: WidgetStatePropertyAll(Size.square(48)),
+          tapTargetSize: MaterialTapTargetSize.padded,
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
@@ -254,8 +291,16 @@ class KisouColors extends ThemeExtension<KisouColors> {
   final Color softInk;
   final Color hairline;
 
-  Color get accent => KisouTheme.accent;
-  Color get accentAlt => KisouTheme.accentAlt;
+  bool get _isDark => bg.computeLuminance() < 0.2;
+
+  Color get accent => _isDark ? const Color(0xFF98A2FF) : KisouTheme.accent;
+  Color get accentAlt =>
+      _isDark ? const Color(0xFFB8A2FF) : KisouTheme.accentAlt;
+  Color get onAccent => _isDark ? Colors.black : Colors.white;
+  Color get warm => _isDark ? const Color(0xFFFF9B73) : KisouTheme.warm;
+  Color get cool => _isDark ? const Color(0xFF84B6FF) : KisouTheme.cool;
+  Color get success =>
+      _isDark ? const Color(0xFF6DD6A4) : const Color(0xFF287A55);
   LinearGradient get accentGradient => KisouTheme.accentGradient;
 
   List<BoxShadow> get softShadow => KisouTheme.softShadow;

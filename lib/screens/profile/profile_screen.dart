@@ -151,7 +151,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             _SettingRow(
               icon: Icons.restart_alt_rounded,
               title: AppStrings.dataReset,
-              iconColor: const Color(0xFFF3A64C),
+              iconColor: context.kisou.warm,
               onTap: _isSaving ? null : _resetData,
             ),
           ],
@@ -167,6 +167,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   Widget _buildThemeSelector() {
     final mode = ref.watch(themeModeProvider);
+    final largeText = usesLargeText(context);
     return ClayCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -193,9 +194,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           ),
           const SizedBox(height: KisouTheme.gapM),
           SegmentedButton<ThemeMode>(
-            style: const ButtonStyle(
-              textStyle: WidgetStatePropertyAll(TextStyle(fontSize: 12)),
-              visualDensity: VisualDensity.compact,
+            direction: largeText ? Axis.vertical : Axis.horizontal,
+            style: ButtonStyle(
+              minimumSize: const WidgetStatePropertyAll(Size(48, 48)),
+              textStyle: const WidgetStatePropertyAll(TextStyle(fontSize: 12)),
+              visualDensity: largeText
+                  ? VisualDensity.standard
+                  : VisualDensity.compact,
             ),
             segments: const [
               ButtonSegment(
@@ -238,11 +243,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 style: Theme.of(context).textTheme.titleMedium,
               ),
             ),
-            const Icon(
-              Icons.check_circle_rounded,
-              color: Color(0xFF4FC08A),
-              size: 22,
-            ),
+            Icon(Icons.check_circle_rounded, color: c.success, size: 22),
           ],
         ),
       );
@@ -403,7 +404,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         return StatefulBuilder(
           builder: (context, setSheetState) {
             return SafeArea(
-              child: Padding(
+              child: SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -942,42 +943,57 @@ class _SettingRow extends StatelessWidget {
     final resolvedIconColor = destructive
         ? Theme.of(context).colorScheme.error
         : (iconColor ?? c.accent);
-    return InkWell(
+    return Semantics(
+      button: true,
+      enabled: !disabled,
+      label: title,
+      value: value,
       onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: KisouTheme.gapL,
-          vertical: KisouTheme.gapM,
-        ),
-        child: Row(
-          children: [
-            Icon(
-              icon,
-              size: 22,
-              color: disabled ? c.softInk : resolvedIconColor,
-            ),
-            const SizedBox(width: KisouTheme.gapM),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+      child: ExcludeSemantics(
+        child: InkWell(
+          onTap: onTap,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 56),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: KisouTheme.gapL,
+                vertical: KisouTheme.gapM,
+              ),
+              child: Row(
                 children: [
-                  Text(
-                    title,
-                    style: TextStyle(
-                      color: titleColor,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
+                  Icon(
+                    icon,
+                    size: 22,
+                    color: disabled ? c.softInk : resolvedIconColor,
+                  ),
+                  const SizedBox(width: KisouTheme.gapM),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: TextStyle(
+                            color: titleColor,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        if (value != null && value!.isNotEmpty) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            value!,
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ],
+                      ],
                     ),
                   ),
-                  if (value != null && value!.isNotEmpty) ...[
-                    const SizedBox(height: 2),
-                    Text(value!, style: Theme.of(context).textTheme.bodySmall),
-                  ],
+                  Icon(Icons.chevron_right, size: 20, color: c.softInk),
                 ],
               ),
             ),
-            Icon(Icons.chevron_right, size: 20, color: c.softInk),
-          ],
+          ),
         ),
       ),
     );
@@ -1015,12 +1031,14 @@ class _ChoiceGroup extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final largeText = usesLargeText(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(title, style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 8),
         SegmentedButton<String>(
+          direction: largeText ? Axis.vertical : Axis.horizontal,
           segments: [
             for (final option in options)
               ButtonSegment<String>(

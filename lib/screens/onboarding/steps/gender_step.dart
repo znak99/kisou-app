@@ -102,41 +102,56 @@ class _SelectionButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.kisou;
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(KisouTheme.rSm),
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: KisouTheme.gapL,
-            vertical: KisouTheme.gapL,
-          ),
-          decoration: BoxDecoration(
-            color: isSelected ? c.accent.withValues(alpha: 0.10) : c.surface,
-            border: Border.all(
-              color: isSelected ? c.accent : c.hairline,
-              width: isSelected ? 1.5 : 1,
-            ),
+    return Semantics(
+      button: true,
+      selected: isSelected,
+      label: label,
+      onTap: onTap,
+      child: ExcludeSemantics(
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
             borderRadius: BorderRadius.circular(KisouTheme.rSm),
-          ),
-          child: Row(
-            children: [
-              if (icon != null) ...[
-                Icon(icon, size: 22, color: isSelected ? c.accent : c.softInk),
-                const SizedBox(width: KisouTheme.gapM),
-              ],
-              Expanded(
-                child: Text(
-                  label,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: isSelected ? c.accent : c.ink,
-                  ),
-                ),
+            onTap: onTap,
+            child: Container(
+              constraints: const BoxConstraints(minHeight: 48),
+              padding: const EdgeInsets.symmetric(
+                horizontal: KisouTheme.gapL,
+                vertical: KisouTheme.gapL,
               ),
-              if (isSelected)
-                Icon(Icons.check_circle_rounded, size: 20, color: c.accent),
-            ],
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? c.accent.withValues(alpha: 0.10)
+                    : c.surface,
+                border: Border.all(
+                  color: isSelected ? c.accent : c.hairline,
+                  width: isSelected ? 1.5 : 1,
+                ),
+                borderRadius: BorderRadius.circular(KisouTheme.rSm),
+              ),
+              child: Row(
+                children: [
+                  if (icon != null) ...[
+                    Icon(
+                      icon,
+                      size: 22,
+                      color: isSelected ? c.accent : c.softInk,
+                    ),
+                    const SizedBox(width: KisouTheme.gapM),
+                  ],
+                  Expanded(
+                    child: Text(
+                      label,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: isSelected ? c.accent : c.ink,
+                      ),
+                    ),
+                  ),
+                  if (isSelected)
+                    Icon(Icons.check_circle_rounded, size: 20, color: c.accent),
+                ],
+              ),
+            ),
           ),
         ),
       ),

@@ -21,6 +21,25 @@ class RecommendationCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isLarge = size == RecommendationCardSize.large;
     final iconSize = isLarge ? 84.0 : 40.0;
+    final largeText = usesLargeText(context);
+    final clothingIcons = <Widget>[
+      if (recommendation.outer != null)
+        ClothingIcon(
+          code: recommendation.outer,
+          type: ClothingIconType.outer,
+          size: iconSize,
+        ),
+      ClothingIcon(
+        code: recommendation.top,
+        type: ClothingIconType.top,
+        size: iconSize,
+      ),
+      ClothingIcon(
+        code: recommendation.bottom,
+        type: ClothingIconType.bottom,
+        size: iconSize,
+      ),
+    ];
     return ClayCard(
       padding: EdgeInsets.all(isLarge ? KisouTheme.gapL : KisouTheme.gapM),
       child: Column(
@@ -28,30 +47,20 @@ class RecommendationCard extends StatelessWidget {
         children: [
           _RankBadge(rank: recommendation.rank, isLarge: isLarge),
           SizedBox(height: isLarge ? KisouTheme.gapL : KisouTheme.gapM),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Ordering is a hard requirement: outer → top → bottom.
-              // When there is no outer, skip it (start with top).
-              if (recommendation.outer != null)
-                ClothingIcon(
-                  code: recommendation.outer,
-                  type: ClothingIconType.outer,
-                  size: iconSize,
-                ),
-              ClothingIcon(
-                code: recommendation.top,
-                type: ClothingIconType.top,
-                size: iconSize,
-              ),
-              ClothingIcon(
-                code: recommendation.bottom,
-                type: ClothingIconType.bottom,
-                size: iconSize,
-              ),
-            ],
-          ),
+          if (largeText)
+            Wrap(
+              alignment: WrapAlignment.spaceEvenly,
+              runAlignment: WrapAlignment.start,
+              spacing: KisouTheme.gapS,
+              runSpacing: KisouTheme.gapL,
+              children: clothingIcons,
+            )
+          else
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: clothingIcons,
+            ),
         ],
       ),
     );
@@ -66,6 +75,7 @@ class _RankBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.kisou;
     if (rank == 1) {
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -97,7 +107,7 @@ class _RankBadge extends StatelessWidget {
         Icon(
           isWarmer ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded,
           size: 15,
-          color: isWarmer ? KisouTheme.warm : KisouTheme.cool,
+          color: isWarmer ? c.warm : c.cool,
         ),
         const SizedBox(width: 4),
         Flexible(

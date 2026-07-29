@@ -31,6 +31,9 @@ class OutlookScreen extends ConsumerStatefulWidget {
 }
 
 class _OutlookScreenState extends ConsumerState<OutlookScreen> {
+  final _scrollController = ScrollController();
+  final _resultKey = GlobalKey();
+
   DateTime? _date;
   LocationValue _city = majorCities.first;
 
@@ -42,6 +45,12 @@ class _OutlookScreenState extends ConsumerState<OutlookScreen> {
   LocationValue? _lookedUpCity;
 
   bool _isLookupInFlight = false;
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -98,8 +107,12 @@ class _OutlookScreenState extends ConsumerState<OutlookScreen> {
             for (final city in majorCities)
               ListTile(
                 title: Text(city.regionName),
+                selected: city.regionName == _city.regionName,
                 trailing: city.regionName == _city.regionName
-                    ? const Icon(Icons.check_rounded, color: KisouTheme.accent)
+                    ? Icon(
+                        Icons.check_rounded,
+                        color: sheetContext.kisou.accent,
+                      )
                     : null,
                 onTap: () => Navigator.of(sheetContext).pop(city),
               ),
@@ -134,6 +147,20 @@ class _OutlookScreenState extends ConsumerState<OutlookScreen> {
       // for free.
       if (succeeded) {
         await _consumeQuota();
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          final resultContext = _resultKey.currentContext;
+          if (!mounted || resultContext == null) {
+            return;
+          }
+          Scrollable.ensureVisible(
+            resultContext,
+            duration: MediaQuery.disableAnimationsOf(context)
+                ? Duration.zero
+                : const Duration(milliseconds: 240),
+            curve: Curves.easeOut,
+            alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtEnd,
+          );
+        });
       }
     } finally {
       if (mounted) {
@@ -161,6 +188,7 @@ class _OutlookScreenState extends ConsumerState<OutlookScreen> {
         ),
       ),
       body: ListView(
+        controller: _scrollController,
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
         children: [
           Container(
@@ -173,32 +201,24 @@ class _OutlookScreenState extends ConsumerState<OutlookScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // What this does + how many estimates are left today +
-                // rewarded-ad note (review 1).
-                Text(
-                  AppStrings.forecastOutlookIntro,
-                  style: textTheme.bodySmall?.copyWith(
-                    color: c.softInk,
-                    height: 1.5,
-                  ),
-                ),
-                const SizedBox(height: KisouTheme.gapS),
                 Row(
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.confirmation_number_outlined,
                       size: 15,
-                      color: KisouTheme.accent,
+                      color: c.accent,
                     ),
                     const SizedBox(width: KisouTheme.gapXs),
-                    Text(
-                      switch (_remaining) {
-                        null => '',
-                        0 => AppStrings.forecastOutlookQuotaEmpty,
-                        final n => AppStrings.forecastOutlookQuota(n),
-                      },
-                      style: textTheme.bodySmall?.copyWith(
-                        fontWeight: FontWeight.w700,
+                    Expanded(
+                      child: Text(
+                        switch (_remaining) {
+                          null => '',
+                          0 => AppStrings.forecastOutlookQuotaEmpty,
+                          final n => AppStrings.forecastOutlookQuota(n),
+                        },
+                        style: textTheme.bodySmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ),
                   ],
@@ -215,24 +235,38 @@ class _OutlookScreenState extends ConsumerState<OutlookScreen> {
                   ),
                 ),
                 const SizedBox(height: KisouTheme.gapL),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _PickerField(
-                        label: AppStrings.forecastOutlookDateLabel,
-                        value: _date == null ? null : formatJpDate(_date!),
-                        onTap: _pickDate,
-                      ),
-                    ),
-                    const SizedBox(width: KisouTheme.gapS),
-                    Expanded(
-                      child: _PickerField(
-                        label: AppStrings.forecastOutlookPlaceLabel,
-                        value: _city.regionName,
-                        onTap: _pickCity,
-                      ),
-                    ),
-                  ],
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final useVertical =
+                        usesLargeText(context) || constraints.maxWidth < 320;
+                    final dateField = _PickerField(
+                      label: AppStrings.forecastOutlookDateLabel,
+                      value: _date == null ? null : formatJpDate(_date!),
+                      onTap: _pickDate,
+                    );
+                    final cityField = _PickerField(
+                      label: AppStrings.forecastOutlookPlaceLabel,
+                      value: _city.regionName,
+                      onTap: _pickCity,
+                    );
+                    if (useVertical) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          dateField,
+                          const SizedBox(height: KisouTheme.gapS),
+                          cityField,
+                        ],
+                      );
+                    }
+                    return Row(
+                      children: [
+                        Expanded(child: dateField),
+                        const SizedBox(width: KisouTheme.gapS),
+                        Expanded(child: cityField),
+                      ],
+                    );
+                  },
                 ),
                 const SizedBox(height: KisouTheme.gapM),
                 SizedBox(
@@ -247,31 +281,197 @@ class _OutlookScreenState extends ConsumerState<OutlookScreen> {
                     child: const Text(AppStrings.forecastOutlookSubmit),
                   ),
                 ),
-                if (outlookState != null) ...[
-                  const SizedBox(height: KisouTheme.gapM),
-                  Divider(height: 1, color: c.hairline),
-                  const SizedBox(height: KisouTheme.gapM),
-                  outlookState.when(
-                    loading: () => const Center(
-                      child: Padding(
-                        padding: EdgeInsets.all(KisouTheme.gapS),
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      ),
-                    ),
-                    error: (_, _) => Text(
-                      AppStrings.forecastOutlookFailed,
-                      style: textTheme.bodySmall?.copyWith(color: c.softInk),
-                    ),
-                    data: (outlook) => _OutlookResult(
-                      outlook: outlook,
-                      cityName: _lookedUpCity?.regionName ?? _city.regionName,
-                    ),
-                  ),
-                ],
               ],
             ),
           ),
+          const SizedBox(height: 32),
+          KeyedSubtree(
+            key: _resultKey,
+            child: switch (outlookState) {
+              null => const _OutlookEmptyState(),
+              final state => state.when(
+                loading: () => const _OutlookLoadingCard(),
+                error: (_, _) => _OutlookErrorCard(
+                  onRetry: _isLookupInFlight ? null : _lookup,
+                ),
+                data: (outlook) => _OutlookSurface(
+                  child: _OutlookResult(
+                    outlook: outlook,
+                    cityName: _lookedUpCity?.regionName ?? _city.regionName,
+                  ),
+                ),
+              ),
+            },
+          ),
         ],
+      ),
+    );
+  }
+}
+
+class _OutlookEmptyState extends StatelessWidget {
+  const _OutlookEmptyState();
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    return Semantics(
+      container: true,
+      label:
+          '${AppStrings.forecastOutlookEmptyTitle}。'
+          '${AppStrings.forecastOutlookEmptyBody}',
+      child: ExcludeSemantics(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 300),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ConstrainedBox(
+                  constraints: const BoxConstraints(
+                    maxWidth: 144,
+                    maxHeight: 120,
+                  ),
+                  child: Image.asset(
+                    'assets/illustrations/outlook_empty_state.png',
+                    fit: BoxFit.contain,
+                    excludeFromSemantics: true,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  AppStrings.forecastOutlookEmptyTitle,
+                  textAlign: TextAlign.center,
+                  style: textTheme.bodyMedium?.copyWith(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    height: 1.4,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  AppStrings.forecastOutlookEmptyBody,
+                  textAlign: TextAlign.center,
+                  style: textTheme.bodySmall?.copyWith(
+                    color: context.kisou.softInk,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w400,
+                    height: 1.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _OutlookSurface extends StatelessWidget {
+  const _OutlookSurface({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.kisou;
+    return Container(
+      padding: const EdgeInsets.all(KisouTheme.cardPad),
+      decoration: BoxDecoration(
+        color: c.surface,
+        borderRadius: BorderRadius.circular(KisouTheme.rMd),
+        border: Border.all(color: c.hairline),
+      ),
+      child: child,
+    );
+  }
+}
+
+class _OutlookLoadingCard extends StatelessWidget {
+  const _OutlookLoadingCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.kisou;
+    Widget bar(double width, double height) => Container(
+      width: width,
+      height: height,
+      decoration: BoxDecoration(
+        color: c.surfaceAlt,
+        borderRadius: BorderRadius.circular(999),
+      ),
+    );
+    return Semantics(
+      container: true,
+      liveRegion: true,
+      label: AppStrings.forecastOutlookLoading,
+      child: ExcludeSemantics(
+        child: _OutlookSurface(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(child: bar(double.infinity, 16)),
+                  const SizedBox(width: KisouTheme.gapL),
+                  bar(72, 20),
+                ],
+              ),
+              const SizedBox(height: KisouTheme.gapM),
+              bar(190, 22),
+              const SizedBox(height: KisouTheme.gapL),
+              Container(
+                height: 150,
+                decoration: BoxDecoration(
+                  color: c.surfaceAlt,
+                  borderRadius: BorderRadius.circular(KisouTheme.rMd),
+                ),
+              ),
+              const SizedBox(height: KisouTheme.gapM),
+              bar(double.infinity, 14),
+              const SizedBox(height: KisouTheme.gapS),
+              bar(220, 14),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _OutlookErrorCard extends StatelessWidget {
+  const _OutlookErrorCard({required this.onRetry});
+
+  final VoidCallback? onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      container: true,
+      liveRegion: true,
+      child: _OutlookSurface(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Icon(
+              Icons.cloud_off_rounded,
+              size: 36,
+              color: Theme.of(context).colorScheme.error,
+            ),
+            const SizedBox(height: KisouTheme.gapM),
+            Text(
+              AppStrings.forecastOutlookFailed,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+            const SizedBox(height: KisouTheme.gapM),
+            FilledButton(
+              onPressed: onRetry,
+              child: const Text(AppStrings.tryAgain),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -292,34 +492,46 @@ class _PickerField extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.kisou;
     final textTheme = Theme.of(context).textTheme;
-    return InkWell(
+    final displayValue = value ?? '--';
+    return Semantics(
+      button: true,
+      label: label,
+      value: displayValue,
       onTap: onTap,
-      borderRadius: BorderRadius.circular(KisouTheme.rSm),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: BoxDecoration(
+      child: ExcludeSemantics(
+        child: InkWell(
+          onTap: onTap,
           borderRadius: BorderRadius.circular(KisouTheme.rSm),
-          border: Border.all(color: c.hairline),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              label,
-              style: textTheme.bodySmall?.copyWith(
-                color: c.softInk,
-                fontSize: 11,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 56),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(KisouTheme.rSm),
+                border: Border.all(color: c.hairline),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: textTheme.bodySmall?.copyWith(
+                      color: c.softInk,
+                      fontSize: 11,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    displayValue,
+                    style: textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: value == null ? c.softInk : c.ink,
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 2),
-            Text(
-              value ?? '--',
-              style: textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-                color: value == null ? c.softInk : c.ink,
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -361,24 +573,47 @@ class _OutlookResult extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Text(
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final useVertical =
+                usesLargeText(context) || constraints.maxWidth < 300;
+            final dateText = Text(
               '$cityName・${formatJpDate(date)}',
               style: textTheme.bodySmall?.copyWith(
                 color: c.softInk,
                 fontWeight: FontWeight.w600,
               ),
-            ),
-            const Spacer(),
-            if (headline != null)
-              Text(
-                headline,
-                style: textTheme.bodyLarge?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-          ],
+            );
+            final headlineText = headline == null
+                ? null
+                : Text(
+                    headline,
+                    style: textTheme.bodyLarge?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  );
+            if (useVertical) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  dateText,
+                  if (headlineText != null) ...[
+                    const SizedBox(height: KisouTheme.gapXs),
+                    headlineText,
+                  ],
+                ],
+              );
+            }
+            return Row(
+              children: [
+                Expanded(child: dateText),
+                if (headlineText != null) ...[
+                  const SizedBox(width: KisouTheme.gapM),
+                  headlineText,
+                ],
+              ],
+            );
+          },
         ),
         // Personalized felt-temperature line: the estimate runs through the
         // same comfort engine as home, offset included (review 15).

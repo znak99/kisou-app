@@ -164,7 +164,7 @@
 | 코드 | 일본어 표시명 |
 |---|---|
 | LONG_PANTS | 長ズボン |
-| HALF_PANTS | ハーフパンツ |
+| HALF_PANTS | 半ズボン |
 | SHORT_PANTS | ショートパンツ |
 | SKIRT | スカート |
 

@@ -102,6 +102,7 @@ class _TomorrowContent extends StatelessWidget {
     final high = forecast.weather.tempHigh;
     final todayHigh = forecast.todayWeather.tempHigh;
     final rain = forecast.weather.precipitationChanceMax;
+    final largeText = usesLargeText(context);
 
     String? comparison;
     if (high != null && todayHigh != null) {
@@ -119,31 +120,61 @@ class _TomorrowContent extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              const Icon(
-                Icons.wb_twilight_rounded,
-                size: 16,
-                color: KisouTheme.accent,
-              ),
-              const SizedBox(width: KisouTheme.gapXs),
-              Text(
-                '${AppStrings.forecastTomorrowLabel} ${formatJpDate(date)}',
-                style: textTheme.bodySmall?.copyWith(
-                  color: c.softInk,
-                  fontWeight: FontWeight.w600,
+          if (largeText)
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.wb_twilight_rounded, size: 16, color: c.accent),
+                    const SizedBox(width: KisouTheme.gapXs),
+                    Expanded(
+                      child: Text(
+                        '${AppStrings.forecastTomorrowLabel} ${formatJpDate(date)}',
+                        style: textTheme.bodySmall?.copyWith(
+                          color: c.softInk,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-              const Spacer(),
-              if (low != null && high != null)
-                Text(
-                  '${low.round()}° / ${high.round()}°',
-                  style: textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
+                if (low != null && high != null) ...[
+                  const SizedBox(height: KisouTheme.gapXs),
+                  Text(
+                    '${low.round()}° / ${high.round()}°',
+                    style: textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ],
+            )
+          else
+            Row(
+              children: [
+                Icon(Icons.wb_twilight_rounded, size: 16, color: c.accent),
+                const SizedBox(width: KisouTheme.gapXs),
+                Expanded(
+                  child: Text(
+                    '${AppStrings.forecastTomorrowLabel} ${formatJpDate(date)}',
+                    style: textTheme.bodySmall?.copyWith(
+                      color: c.softInk,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
-            ],
-          ),
+                if (low != null && high != null) ...[
+                  const SizedBox(width: KisouTheme.gapM),
+                  Text(
+                    '${low.round()}° / ${high.round()}°',
+                    style: textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ],
+            ),
           if (comparison != null) ...[
             const SizedBox(height: KisouTheme.gapM),
             Text(
@@ -215,39 +246,67 @@ class _UpcomingRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.kisou;
+    final largeText = usesLargeText(context);
     final date = DateTime.parse(day.date);
     final rain = day.precipitationChanceMax;
     // No weather-condition code from the source, so the icon is a rain-chance
     // heuristic: ≥50% rain, ≥30% clouds, otherwise sun.
     final (icon, iconColor) = switch (rain) {
-      final r? when r >= 50 => (Icons.umbrella_rounded, KisouTheme.cool),
+      final r? when r >= 50 => (Icons.umbrella_rounded, c.cool),
       final r? when r >= 30 => (Icons.cloud_rounded, c.softInk),
-      _ => (Icons.wb_sunny_rounded, KisouTheme.outerOrange),
+      _ => (Icons.wb_sunny_rounded, c.warm),
     };
-    return Row(
+    final weatherLine = Row(
+      mainAxisSize: largeText ? MainAxisSize.min : MainAxisSize.max,
       children: [
-        SizedBox(
-          width: 76,
-          child: Text(
+        if (!largeText)
+          SizedBox(
+            width: 76,
+            child: Text(
+              formatJpDate(date),
+              style: textTheme.bodySmall?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: c.softInk,
+              ),
+            ),
+          )
+        else
+          Text(
             formatJpDate(date),
             style: textTheme.bodySmall?.copyWith(
               fontWeight: FontWeight.w600,
               color: c.softInk,
             ),
           ),
-        ),
+        const SizedBox(width: KisouTheme.gapS),
         Icon(icon, size: 20, color: iconColor),
         const SizedBox(width: KisouTheme.gapS),
         Text(
           rain == null ? '' : '$rain%',
           style: textTheme.bodySmall?.copyWith(color: c.softInk),
         ),
-        const Spacer(),
-        if (day.tempLow != null && day.tempHigh != null)
+        if (!largeText) const Spacer(),
+        if (!largeText && day.tempLow != null && day.tempHigh != null)
           Text(
             '${day.tempLow!.round()}° / ${day.tempHigh!.round()}°',
             style: textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
           ),
+      ],
+    );
+    if (!largeText) {
+      return weatherLine;
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        weatherLine,
+        if (day.tempLow != null && day.tempHigh != null) ...[
+          const SizedBox(height: KisouTheme.gapXs),
+          Text(
+            '${day.tempLow!.round()}° / ${day.tempHigh!.round()}°',
+            style: textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
+          ),
+        ],
       ],
     );
   }
@@ -275,11 +334,7 @@ class _FeedbackNudge extends ConsumerWidget {
             context,
             child: Row(
               children: [
-                const Icon(
-                  Icons.check_circle_rounded,
-                  size: 18,
-                  color: KisouTheme.accent,
-                ),
+                Icon(Icons.check_circle_rounded, size: 18, color: c.accent),
                 const SizedBox(width: KisouTheme.gapS),
                 Text(
                   AppStrings.forecastNudgeDone,
@@ -301,42 +356,56 @@ class _FeedbackNudge extends ConsumerWidget {
             onTap: () => _openSheet(context, ref, status.feedback),
             child: _card(
               context,
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final largeText = usesLargeText(context);
+                  final message = Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        AppStrings.forecastNudgeTitle,
+                        style: textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        AppStrings.forecastNudgeBody,
+                        style: textTheme.bodySmall?.copyWith(color: c.softInk),
+                      ),
+                    ],
+                  );
+                  final action = Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        AppStrings.forecastNudgeAction,
+                        style: textTheme.bodySmall?.copyWith(
+                          color: c.accent,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      Icon(Icons.chevron_right, size: 18, color: c.accent),
+                    ],
+                  );
+                  if (largeText) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Text(
-                          AppStrings.forecastNudgeTitle,
-                          style: textTheme.bodyMedium?.copyWith(
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          AppStrings.forecastNudgeBody,
-                          style: textTheme.bodySmall?.copyWith(
-                            color: c.softInk,
-                          ),
-                        ),
+                        message,
+                        const SizedBox(height: KisouTheme.gapS),
+                        Align(alignment: Alignment.centerRight, child: action),
                       ],
-                    ),
-                  ),
-                  const SizedBox(width: KisouTheme.gapS),
-                  Text(
-                    AppStrings.forecastNudgeAction,
-                    style: textTheme.bodySmall?.copyWith(
-                      color: KisouTheme.accent,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const Icon(
-                    Icons.chevron_right,
-                    size: 18,
-                    color: KisouTheme.accent,
-                  ),
-                ],
+                    );
+                  }
+                  return Row(
+                    children: [
+                      Expanded(child: message),
+                      const SizedBox(width: KisouTheme.gapS),
+                      action,
+                    ],
+                  );
+                },
               ),
             ),
           ),

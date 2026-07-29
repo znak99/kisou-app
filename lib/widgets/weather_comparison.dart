@@ -13,6 +13,7 @@ class WeatherComparison extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final largeText = usesLargeText(context);
     final todayHigh = comparison.today.tempHigh;
     final yesterdayHigh = comparison.yesterday.tempHigh;
     final highDiff = (todayHigh != null && yesterdayHigh != null)
@@ -22,46 +23,81 @@ class WeatherComparison extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
+          if (largeText)
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
                   AppStrings.weatherComparisonSection,
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
-              ),
-              _DiffPill(diff: highDiff),
-            ],
-          ),
-          const SizedBox(height: KisouTheme.gapL),
-          IntrinsicHeight(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+                const SizedBox(height: KisouTheme.gapS),
+                _DiffPill(diff: highDiff),
+              ],
+            )
+          else
+            Row(
               children: [
                 Expanded(
-                  child: _WeatherColumn(
-                    label: AppStrings.today,
-                    summary: comparison.today,
-                    emphasized: true,
+                  child: Text(
+                    AppStrings.weatherComparisonSection,
+                    style: Theme.of(context).textTheme.titleMedium,
                   ),
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _WeatherColumn(
-                    label: AppStrings.yesterday,
-                    summary: comparison.yesterday,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _WeatherColumn(
-                    label: AppStrings.twoDaysAgo,
-                    summary: comparison.twoDaysAgo,
-                  ),
-                ),
+                _DiffPill(diff: highDiff),
               ],
             ),
-          ),
+          const SizedBox(height: KisouTheme.gapL),
+          if (largeText)
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _WeatherColumn(
+                  label: AppStrings.today,
+                  summary: comparison.today,
+                  emphasized: true,
+                ),
+                const SizedBox(height: KisouTheme.gapS),
+                _WeatherColumn(
+                  label: AppStrings.yesterday,
+                  summary: comparison.yesterday,
+                ),
+                const SizedBox(height: KisouTheme.gapS),
+                _WeatherColumn(
+                  label: AppStrings.twoDaysAgo,
+                  summary: comparison.twoDaysAgo,
+                ),
+              ],
+            )
+          else
+            IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(
+                    child: _WeatherColumn(
+                      label: AppStrings.today,
+                      summary: comparison.today,
+                      emphasized: true,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _WeatherColumn(
+                      label: AppStrings.yesterday,
+                      summary: comparison.yesterday,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _WeatherColumn(
+                      label: AppStrings.twoDaysAgo,
+                      summary: comparison.twoDaysAgo,
+                    ),
+                  ),
+                ],
+              ),
+            ),
         ],
       ),
     );
@@ -76,11 +112,12 @@ class _DiffPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final d = diff;
+    final c = context.kisou;
     final color = (d == null || d == 0)
-        ? context.kisou.softInk
+        ? c.softInk
         : d > 0
-        ? KisouTheme.warm
-        : KisouTheme.cool;
+        ? c.warm
+        : c.cool;
     final icon = (d == null || d == 0)
         ? Icons.remove_rounded
         : d > 0
@@ -133,6 +170,7 @@ class _WeatherColumn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.kisou;
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
       decoration: BoxDecoration(
@@ -152,7 +190,7 @@ class _WeatherColumn extends StatelessWidget {
           Text(
             _fmtTemp(summary.tempHigh),
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: KisouTheme.warm,
+              color: c.warm,
               fontWeight: FontWeight.w800,
             ),
           ),
@@ -160,7 +198,7 @@ class _WeatherColumn extends StatelessWidget {
           Text(
             _fmtTemp(summary.tempLow),
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: KisouTheme.cool,
+              color: c.cool,
               fontWeight: FontWeight.w700,
             ),
           ),

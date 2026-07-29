@@ -196,10 +196,7 @@ class _FeedbackSheetState extends ConsumerState<FeedbackSheet> {
             children: [
               // When: date (today by default, back-datable) + which parts of
               // the day the user was outside (multi-select) — review 5.
-              _DateRow(
-                date: _date,
-                onTap: _isSubmitting ? null : _pickDate,
-              ),
+              _DateRow(date: _date, onTap: _isSubmitting ? null : _pickDate),
               const SizedBox(height: 12),
               Text(
                 AppStrings.feedbackTimeSlotsTitle,
@@ -375,43 +372,73 @@ class _DateRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.kisou;
     final isToday = date == jstToday();
-    return Row(
-      children: [
-        Text(
-          AppStrings.feedbackDateLabel,
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
-        const Spacer(),
-        InkWell(
+    final largeText = usesLargeText(context);
+    final value = isToday
+        ? '${AppStrings.feedbackDateToday}・${formatJpDate(date)}'
+        : formatJpDate(date);
+    final picker = Semantics(
+      button: true,
+      enabled: onTap != null,
+      label: AppStrings.feedbackDateLabel,
+      value: value,
+      onTap: onTap,
+      child: ExcludeSemantics(
+        child: InkWell(
           borderRadius: BorderRadius.circular(100),
           onTap: onTap,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(100),
-              border: Border.all(color: c.hairline),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(
-                  Icons.calendar_today_outlined,
-                  size: 15,
-                  color: KisouTheme.accent,
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  isToday
-                      ? '${AppStrings.feedbackDateToday}・${formatJpDate(date)}'
-                      : formatJpDate(date),
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: c.ink,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 48),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(100),
+                border: Border.all(color: c.hairline),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.calendar_today_outlined,
+                    size: 15,
+                    color: c.accent,
                   ),
-                ),
-              ],
+                  const SizedBox(width: 6),
+                  Flexible(
+                    child: Text(
+                      value,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: c.ink,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
+        ),
+      ),
+    );
+    final label = Text(
+      AppStrings.feedbackDateLabel,
+      style: Theme.of(context).textTheme.titleMedium,
+    );
+    if (largeText) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          label,
+          const SizedBox(height: KisouTheme.gapS),
+          Align(alignment: Alignment.centerRight, child: picker),
+        ],
+      );
+    }
+    return Row(
+      children: [
+        label,
+        const SizedBox(width: KisouTheme.gapM),
+        Expanded(
+          child: Align(alignment: Alignment.centerRight, child: picker),
         ),
       ],
     );
@@ -452,17 +479,37 @@ class _SelectableClothingOption extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(20),
+    final label = switch (type) {
+      ClothingIconType.top =>
+        ClothingTop.fromCode(code)?.displayName ?? AppStrings.unknownClothing,
+      ClothingIconType.bottom =>
+        ClothingBottom.fromCode(code)?.displayName ??
+            AppStrings.unknownClothing,
+      ClothingIconType.outer =>
+        code == null
+            ? AppStrings.noOuter
+            : ClothingOuter.fromCode(code)?.displayName ??
+                  AppStrings.unknownClothing,
+    };
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: label,
       onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.all(4),
-        child: ClothingIcon(
-          code: code,
-          type: type,
-          size: 64,
-          selected: selected,
-          plain: true,
+      child: ExcludeSemantics(
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(4),
+            child: ClothingIcon(
+              code: code,
+              type: type,
+              size: 64,
+              selected: selected,
+              plain: true,
+            ),
+          ),
         ),
       ),
     );
@@ -491,33 +538,36 @@ class _FeelingButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final showSpinner = isSubmitting && selected;
-    return OutlinedButton(
-      onPressed: isSubmitting ? null : () => onTap(value),
-      style: OutlinedButton.styleFrom(
-        backgroundColor: selected
-            ? color.withValues(alpha: 0.12)
-            : context.kisou.surface,
-        foregroundColor: color,
-        minimumSize: const Size.fromHeight(64),
-        side: BorderSide(
-          color: selected ? color : context.kisou.hairline,
-          width: selected ? 2 : 1,
+    return Semantics(
+      selected: selected,
+      child: OutlinedButton(
+        onPressed: isSubmitting ? null : () => onTap(value),
+        style: OutlinedButton.styleFrom(
+          backgroundColor: selected
+              ? color.withValues(alpha: 0.12)
+              : context.kisou.surface,
+          foregroundColor: color,
+          minimumSize: const Size.fromHeight(64),
+          side: BorderSide(
+            color: selected ? color : context.kisou.hairline,
+            width: selected ? 2 : 1,
+          ),
+          shape: const StadiumBorder(),
         ),
-        shape: const StadiumBorder(),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          if (showSpinner)
-            const SizedBox.square(
-              dimension: 18,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            )
-          else
-            Icon(icon),
-          const SizedBox(width: 10),
-          Text(label),
-        ],
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            if (showSpinner)
+              const SizedBox.square(
+                dimension: 18,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            else
+              Icon(icon),
+            const SizedBox(width: 10),
+            Flexible(child: Text(label, textAlign: TextAlign.center)),
+          ],
+        ),
       ),
     );
   }

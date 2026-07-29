@@ -75,10 +75,7 @@ class _HomeContent extends ConsumerWidget {
           ref.read(feedbackProvider.notifier).refresh(),
           // Profile too (offset drives the recommendation the user is looking
           // at) — quietly, a failed profile fetch must not break the pull.
-          ref
-              .read(userProvider.notifier)
-              .getMe()
-              .then((_) {}, onError: (_) {}),
+          ref.read(userProvider.notifier).getMe().then((_) {}, onError: (_) {}),
         ]);
       },
       child: ListView(
@@ -134,10 +131,10 @@ class _Greeting extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(
+                Icon(
                   Icons.place_rounded,
                   size: 16,
-                  color: KisouTheme.accent,
+                  color: context.kisou.accent,
                 ),
                 const SizedBox(width: KisouTheme.gapXs),
                 Text(
@@ -212,6 +209,7 @@ class _RecommendationSectionState extends State<_RecommendationSection> {
   Widget build(BuildContext context) {
     final primary = widget.primary;
     final secondary = widget.secondary;
+    final largeText = usesLargeText(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -228,24 +226,33 @@ class _RecommendationSectionState extends State<_RecommendationSection> {
             child: _expanded
                 ? Padding(
                     padding: const EdgeInsets.only(top: KisouTheme.gapM),
-                    child: IntrinsicHeight(
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Expanded(
-                            child: RecommendationCard(
-                              recommendation: secondary[0],
+                    child: largeText
+                        ? Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              RecommendationCard(recommendation: secondary[0]),
+                              const SizedBox(height: KisouTheme.gapM),
+                              RecommendationCard(recommendation: secondary[1]),
+                            ],
+                          )
+                        : IntrinsicHeight(
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Expanded(
+                                  child: RecommendationCard(
+                                    recommendation: secondary[0],
+                                  ),
+                                ),
+                                const SizedBox(width: KisouTheme.gapM),
+                                Expanded(
+                                  child: RecommendationCard(
+                                    recommendation: secondary[1],
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                          const SizedBox(width: KisouTheme.gapM),
-                          Expanded(
-                            child: RecommendationCard(
-                              recommendation: secondary[1],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
                   )
                 : const SizedBox(width: double.infinity),
           ),

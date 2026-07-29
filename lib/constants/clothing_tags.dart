@@ -58,7 +58,7 @@ enum ClothingBottom {
   ),
   halfPants(
     apiCode: 'HALF_PANTS',
-    displayName: 'ハーフパンツ',
+    displayName: '半ズボン',
     iconAssetPath: 'assets/icons/bottom_half_pants.png',
   ),
   shortPants(

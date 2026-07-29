@@ -25,6 +25,8 @@ void main() {
     expect(find.text(AppStrings.feedbackTimeSlotsTitle), findsOneWidget);
     expect(find.text(AppStrings.slotMorning), findsOneWidget);
     expect(find.text('シャツ'), findsNothing);
+    expect(find.text('半ズボン'), findsOneWidget);
+    expect(find.text('ハーフパンツ'), findsNothing);
     expect(find.text('ショートパンツ'), findsNothing);
     expect(find.text('スカート'), findsNothing);
     // 아우터 섹션은 접혀 내려갔으니 스크롤해서 확인.

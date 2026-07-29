@@ -8,6 +8,11 @@ void main() {
     expect(ClothingTop.fromCode('SHIRT'), isNull);
   });
 
+  test('keeps the half-pants API code while using the everyday label', () {
+    expect(ClothingBottom.fromCode('HALF_PANTS'), ClothingBottom.halfPants);
+    expect(ClothingBottom.halfPants.displayName, '半ズボン');
+  });
+
   test('converts outer clothing codes', () {
     expect(ClothingOuter.fromCode('LIGHT_OUTER'), ClothingOuter.lightOuter);
     expect(ClothingOuter.lightOuter.displayName, '薄手の羽織り');

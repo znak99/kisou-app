@@ -94,113 +94,110 @@ class _LocationStepState extends State<LocationStep> {
   Widget build(BuildContext context) {
     final c = context.kisou;
     final selectedLocation = widget.selectedLocation;
-    return Padding(
+    return ListView(
       padding: const EdgeInsets.all(KisouTheme.pagePad),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const SizedBox(height: KisouTheme.gapXl),
-          const _StepHeader(
-            icon: Icons.place_rounded,
-            title: AppStrings.locationPrompt,
+      children: [
+        const SizedBox(height: KisouTheme.gapXl),
+        const _StepHeader(
+          icon: Icons.place_rounded,
+          title: AppStrings.locationPrompt,
+        ),
+        const SizedBox(height: KisouTheme.gapXl),
+        FilledButton.icon(
+          onPressed: _isLoading ? null : _requestCurrentLocation,
+          icon: _isLoading
+              ? const SizedBox.square(
+                  dimension: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.my_location_rounded, size: 20),
+          label: const Text(AppStrings.allowLocation),
+        ),
+        const SizedBox(height: KisouTheme.gapM),
+        OutlinedButton.icon(
+          onPressed: _isLoading
+              ? null
+              : () => setState(() => _showManualList = true),
+          icon: const Icon(Icons.map_rounded, size: 20),
+          label: const Text(AppStrings.manualLocation),
+        ),
+        if (_message != null) ...[
+          const SizedBox(height: KisouTheme.gapL),
+          Row(
+            children: [
+              Icon(Icons.info_outline_rounded, size: 16, color: c.softInk),
+              const SizedBox(width: KisouTheme.gapXs),
+              Expanded(
+                child: Text(
+                  _message!,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: KisouTheme.gapXl),
-          FilledButton.icon(
-            onPressed: _isLoading ? null : _requestCurrentLocation,
-            icon: _isLoading
-                ? const SizedBox.square(
-                    dimension: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.my_location_rounded, size: 20),
-            label: const Text(AppStrings.allowLocation),
-          ),
-          const SizedBox(height: KisouTheme.gapM),
-          OutlinedButton.icon(
-            onPressed: _isLoading
-                ? null
-                : () => setState(() => _showManualList = true),
-            icon: const Icon(Icons.map_rounded, size: 20),
-            label: const Text(AppStrings.manualLocation),
-          ),
-          if (_message != null) ...[
-            const SizedBox(height: KisouTheme.gapL),
-            Row(
+        ],
+        if (selectedLocation != null) ...[
+          const SizedBox(height: KisouTheme.gapL),
+          ClayCard(
+            padding: const EdgeInsets.symmetric(
+              horizontal: KisouTheme.gapL,
+              vertical: KisouTheme.gapM,
+            ),
+            radius: KisouTheme.rSm,
+            child: Row(
               children: [
-                Icon(Icons.info_outline_rounded, size: 16, color: c.softInk),
-                const SizedBox(width: KisouTheme.gapXs),
+                Icon(Icons.check_circle_rounded, size: 20, color: c.accent),
+                const SizedBox(width: KisouTheme.gapM),
                 Expanded(
                   child: Text(
-                    _message!,
-                    style: Theme.of(context).textTheme.bodySmall,
+                    selectedLocation.regionName,
+                    style: Theme.of(context).textTheme.titleMedium,
                   ),
                 ),
               ],
             ),
-          ],
-          if (selectedLocation != null) ...[
-            const SizedBox(height: KisouTheme.gapL),
-            ClayCard(
-              padding: const EdgeInsets.symmetric(
-                horizontal: KisouTheme.gapL,
-                vertical: KisouTheme.gapM,
-              ),
-              radius: KisouTheme.rSm,
-              child: Row(
-                children: [
-                  Icon(Icons.check_circle_rounded, size: 20, color: c.accent),
-                  const SizedBox(width: KisouTheme.gapM),
-                  Expanded(
-                    child: Text(
-                      selectedLocation.regionName,
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-          const SizedBox(height: KisouTheme.gapL),
-          if (_showManualList) ...[
-            Row(
-              children: [
-                Icon(Icons.list_rounded, size: 20, color: c.accent),
-                const SizedBox(width: KisouTheme.gapS),
-                Text(
-                  AppStrings.selectRegion,
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-              ],
-            ),
-            const SizedBox(height: KisouTheme.gapS),
-            Expanded(
-              child: ListView.separated(
-                itemCount: majorCities.length,
-                separatorBuilder: (_, _) => const Divider(height: 1),
-                itemBuilder: (context, index) {
-                  final city = majorCities[index];
-                  final isSelected =
-                      city.regionName == selectedLocation?.regionName;
-                  return ListTile(
-                    leading: Icon(
-                      Icons.location_city_rounded,
-                      size: 20,
-                      color: isSelected ? c.accent : c.softInk,
-                    ),
-                    title: Text(city.regionName),
-                    selected: isSelected,
-                    trailing: isSelected
-                        ? Icon(Icons.check_rounded, size: 20, color: c.accent)
-                        : null,
-                    onTap: () => widget.onLocationSelected(city),
-                  );
-                },
-              ),
-            ),
-          ] else
-            const Spacer(),
+          ),
         ],
-      ),
+        const SizedBox(height: KisouTheme.gapL),
+        if (_showManualList) ...[
+          Row(
+            children: [
+              Icon(Icons.list_rounded, size: 20, color: c.accent),
+              const SizedBox(width: KisouTheme.gapS),
+              Text(
+                AppStrings.selectRegion,
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+            ],
+          ),
+          const SizedBox(height: KisouTheme.gapS),
+          ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: majorCities.length,
+            separatorBuilder: (_, _) => const Divider(height: 1),
+            itemBuilder: (context, index) {
+              final city = majorCities[index];
+              final isSelected =
+                  city.regionName == selectedLocation?.regionName;
+              return ListTile(
+                leading: Icon(
+                  Icons.location_city_rounded,
+                  size: 20,
+                  color: isSelected ? c.accent : c.softInk,
+                ),
+                title: Text(city.regionName),
+                selected: isSelected,
+                trailing: isSelected
+                    ? Icon(Icons.check_rounded, size: 20, color: c.accent)
+                    : null,
+                onTap: () => widget.onLocationSelected(city),
+              );
+            },
+          ),
+        ],
+        const SizedBox(height: KisouTheme.gapXl),
+      ],
     );
   }
 }

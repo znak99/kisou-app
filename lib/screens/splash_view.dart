@@ -40,7 +40,7 @@ class SplashView extends StatelessWidget {
             // Reserved slot: keeps the logo centred whether or not the message
             // is showing.
             SizedBox(
-              height: 56,
+              height: usesLargeText(context) ? 88 : 56,
               child: AnimatedOpacity(
                 opacity: showMessage ? 1 : 0,
                 duration: const Duration(milliseconds: 350),
@@ -97,18 +97,20 @@ class _LoadingMessageState extends State<_LoadingMessage> {
     final style = Theme.of(
       context,
     ).textTheme.bodySmall?.copyWith(color: context.kisou.softInk);
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(AppStrings.splashLoading, style: style),
-        SizedBox(
-          width: 18,
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: Text('.' * _cycle[_index], style: style),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: KisouTheme.pagePad),
+      child: Wrap(
+        alignment: WrapAlignment.center,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          Text(
+            AppStrings.splashLoading,
+            textAlign: TextAlign.center,
+            style: style,
           ),
-        ),
-      ],
+          SizedBox(width: 18, child: Text('.' * _cycle[_index], style: style)),
+        ],
+      ),
     );
   }
 }

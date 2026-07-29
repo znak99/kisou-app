@@ -15,6 +15,8 @@ class TodayWeatherDetail extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.kisou;
+    final largeText = usesLargeText(context);
     final metrics = <(IconData, String, String)>[
       (
         Icons.water_drop_rounded,
@@ -55,59 +57,50 @@ class TodayWeatherDetail extends StatelessWidget {
             style: Theme.of(context).textTheme.titleMedium,
           ),
           const SizedBox(height: 11),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Text(
-                _fmtTemp(today.tempHigh),
-                style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                  color: KisouTheme.warm,
-                  fontSize: 30,
-                ),
-              ),
-              const SizedBox(width: 5),
-              Padding(
-                padding: const EdgeInsets.only(bottom: 5),
-                child: Text(
-                  '/ ${_fmtTemp(today.tempLow)}',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: KisouTheme.cool,
-                    fontSize: 15,
-                  ),
-                ),
-              ),
-              const Spacer(),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    AppStrings.weatherFeelsLike,
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                  Text(
-                    '${_fmtTemp(today.feelsLikeHigh)} / ${_fmtTemp(today.feelsLikeLow)}',
-                    style: Theme.of(
-                      context,
-                    ).textTheme.titleMedium?.copyWith(fontSize: 15),
-                  ),
-                ],
-              ),
-            ],
-          ),
+          if (largeText)
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _TemperatureRange(today: today),
+                const SizedBox(height: KisouTheme.gapS),
+                _FeelsLike(today: today, alignEnd: false),
+              ],
+            )
+          else
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                _TemperatureRange(today: today),
+                const Spacer(),
+                _FeelsLike(today: today, alignEnd: true),
+              ],
+            ),
           const SizedBox(height: 15),
           const Divider(height: 1),
           const SizedBox(height: 11),
-          Row(
-            children: [
-              for (final metric in metrics)
-                Expanded(
-                  child: _Metric(
-                    icon: metric.$1,
-                    label: metric.$2,
-                    value: metric.$3,
-                  ),
-                ),
-            ],
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final columns = largeText ? 2 : metrics.length;
+              final spacing = KisouTheme.gapS;
+              final itemWidth =
+                  (constraints.maxWidth - spacing * (columns - 1)) / columns;
+              return Wrap(
+                spacing: spacing,
+                runSpacing: KisouTheme.gapL,
+                children: [
+                  for (final metric in metrics)
+                    SizedBox(
+                      width: itemWidth,
+                      child: _Metric(
+                        icon: metric.$1,
+                        label: metric.$2,
+                        value: metric.$3,
+                        color: c.accent,
+                      ),
+                    ),
+                ],
+              );
+            },
           ),
         ],
       ),
@@ -115,30 +108,99 @@ class TodayWeatherDetail extends StatelessWidget {
   }
 }
 
+class _TemperatureRange extends StatelessWidget {
+  const _TemperatureRange({required this.today});
+
+  final weather_model.WeatherSummary today;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.kisou;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Text(
+          _fmtTemp(today.tempHigh),
+          style: Theme.of(
+            context,
+          ).textTheme.displaySmall?.copyWith(color: c.warm, fontSize: 30),
+        ),
+        const SizedBox(width: 5),
+        Padding(
+          padding: const EdgeInsets.only(bottom: 5),
+          child: Text(
+            '/ ${_fmtTemp(today.tempLow)}',
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(color: c.cool, fontSize: 15),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _FeelsLike extends StatelessWidget {
+  const _FeelsLike({required this.today, required this.alignEnd});
+
+  final weather_model.WeatherSummary today;
+  final bool alignEnd;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: alignEnd
+          ? CrossAxisAlignment.end
+          : CrossAxisAlignment.start,
+      children: [
+        Text(
+          AppStrings.weatherFeelsLike,
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+        Text(
+          '${_fmtTemp(today.feelsLikeHigh)} / ${_fmtTemp(today.feelsLikeLow)}',
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontSize: 15),
+        ),
+      ],
+    );
+  }
+}
+
 class _Metric extends StatelessWidget {
-  const _Metric({required this.icon, required this.label, required this.value});
+  const _Metric({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.color,
+  });
 
   final IconData icon;
   final String label;
   final String value;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Icon(icon, size: 19, color: KisouTheme.deepSky),
+        Icon(icon, size: 19, color: color),
         const SizedBox(height: 5),
-        FittedBox(
-          fit: BoxFit.scaleDown,
-          child: Text(
-            value,
-            style: Theme.of(
-              context,
-            ).textTheme.titleMedium?.copyWith(fontSize: 15),
-          ),
+        Text(
+          value,
+          textAlign: TextAlign.center,
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontSize: 15),
         ),
         const SizedBox(height: 2),
-        Text(label, style: Theme.of(context).textTheme.bodySmall),
+        Text(
+          label,
+          textAlign: TextAlign.center,
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
       ],
     );
   }
