@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../services/auth_service.dart';
+import '../utils/api_error.dart';
 import 'forecast_provider.dart';
 import 'api_provider.dart';
 import 'feedback_provider.dart';
@@ -12,16 +13,25 @@ import 'user_provider.dart';
 enum AuthStatus { unauthenticated, authenticated }
 
 class AuthState {
-  const AuthState._({required this.status, required this.isNewUser});
+  const AuthState._({
+    required this.status,
+    required this.isNewUser,
+    this.startupErrorKind,
+  });
 
-  const AuthState.unauthenticated()
-    : this._(status: AuthStatus.unauthenticated, isNewUser: false);
+  const AuthState.unauthenticated({ApiErrorKind? startupErrorKind})
+    : this._(
+        status: AuthStatus.unauthenticated,
+        isNewUser: false,
+        startupErrorKind: startupErrorKind,
+      );
 
   const AuthState.authenticated({required bool isNewUser})
     : this._(status: AuthStatus.authenticated, isNewUser: isNewUser);
 
   final AuthStatus status;
   final bool isNewUser;
+  final ApiErrorKind? startupErrorKind;
 
   bool get isAuthenticated => status == AuthStatus.authenticated;
 }
@@ -49,8 +59,10 @@ class AuthController extends AsyncNotifier<AuthState> {
       );
       await authService.setOnboardingCompleted(!isNewUser);
       return AuthState.authenticated(isNewUser: isNewUser);
-    } catch (_) {
-      return const AuthState.unauthenticated();
+    } catch (error) {
+      return AuthState.unauthenticated(
+        startupErrorKind: classifyApiError(error),
+      );
     }
   }
 

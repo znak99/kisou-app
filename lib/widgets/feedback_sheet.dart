@@ -85,6 +85,8 @@ class FeedbackSheet extends ConsumerStatefulWidget {
 }
 
 class _FeedbackSheetState extends ConsumerState<FeedbackSheet> {
+  static const _stepCount = 3;
+
   var _step = 0;
   DateTime _date = jstToday();
   var _showDateSelection = false;
@@ -97,6 +99,7 @@ class _FeedbackSheetState extends ConsumerState<FeedbackSheet> {
   String? _selectedTop;
   String? _selectedBottom;
   String? _selectedOuter;
+  var _outerSelectionMade = false;
   String? _selectedFeeling;
   var _isSubmitting = false;
   var _isDirty = false;
@@ -104,7 +107,7 @@ class _FeedbackSheetState extends ConsumerState<FeedbackSheet> {
   String? _errorMessage;
 
   bool get _hasRequiredClothing =>
-      _selectedTop != null && _selectedBottom != null;
+      _selectedTop != null && _selectedBottom != null && _outerSelectionMade;
 
   @override
   void initState() {
@@ -112,9 +115,7 @@ class _FeedbackSheetState extends ConsumerState<FeedbackSheet> {
     final initialFeedback = widget.initialFeedback;
     if (initialFeedback != null) {
       _applyFeedback(initialFeedback);
-      return;
     }
-    _applyTodayRecommendation();
   }
 
   void _applyFeedback(FeedbackResponse feedback) {
@@ -122,6 +123,7 @@ class _FeedbackSheetState extends ConsumerState<FeedbackSheet> {
     _selectedTop = feedback.actualTop;
     _selectedBottom = feedback.actualBottom;
     _selectedOuter = feedback.actualOuter;
+    _outerSelectionMade = true;
     _selectedFeeling = feedback.feedbackValue;
     _date = DateTime.tryParse(feedback.date) ?? _date;
     _selectedSlots
@@ -132,11 +134,9 @@ class _FeedbackSheetState extends ConsumerState<FeedbackSheet> {
   }
 
   void _applyTodayRecommendation() {
-    // First feedback of the day: preselect today's rank-1 recommendation —
-    // most users wore (roughly) what the app suggested, so the common case
-    // becomes "confirm and rate" instead of picking everything by hand.
-    // ref.exists: never INITIALIZE home (and its network fetch) just for
-    // defaults — only borrow it when the home tab already loaded it.
+    // Recommendation values are applied only after an explicit user action.
+    // Silent defaults would bias feedback toward what KISOU suggested rather
+    // than what the user actually wore.
     final home = !ref.exists(homeProvider)
         ? null
         : ref
@@ -151,20 +151,24 @@ class _FeedbackSheetState extends ConsumerState<FeedbackSheet> {
     _selectedTop = primary.top;
     _selectedBottom = primary.bottom;
     _selectedOuter = primary.outer;
+    _outerSelectionMade = true;
+    _isDirty = true;
   }
 
-  Future<void> _submit(String feedbackValue) async {
+  Future<void> _submit() async {
     final top = _selectedTop;
     final bottom = _selectedBottom;
+    final feedbackValue = _selectedFeeling;
     if (top == null ||
         bottom == null ||
+        feedbackValue == null ||
+        !_outerSelectionMade ||
         _selectedSlots.isEmpty ||
         _isSubmitting) {
       return;
     }
 
     setState(() {
-      _selectedFeeling = feedbackValue;
       _isSubmitting = true;
       _errorMessage = null;
     });
@@ -204,6 +208,13 @@ class _FeedbackSheetState extends ConsumerState<FeedbackSheet> {
   }
 
   void _continueToFeeling() {
+    if (!_hasRequiredClothing) {
+      return;
+    }
+    setState(() => _step = 2);
+  }
+
+  void _continueToClothing() {
     if (_selectedSlots.isEmpty) {
       setState(() => _showTimeSlotError = true);
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -259,6 +270,35 @@ class _FeedbackSheetState extends ConsumerState<FeedbackSheet> {
               ),
             ),
             const SizedBox(height: 20),
+            if (!_showDateSelection) ...[
+              Semantics(
+                label: '${_step + 1}/$_stepCount',
+                value: '${_step + 1}/$_stepCount',
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(999),
+                        child: LinearProgressIndicator(
+                          value: (_step + 1) / _stepCount,
+                          minHeight: 4,
+                          backgroundColor: context.kisou.hairline,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            context.kisou.accent,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: KisouTheme.gapM),
+                    Text(
+                      '${_step + 1}/$_stepCount',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: KisouTheme.gapM),
+            ],
             Expanded(
               child: AnimatedSwitcher(
                 duration: MediaQuery.disableAnimationsOf(context)
@@ -267,6 +307,8 @@ class _FeedbackSheetState extends ConsumerState<FeedbackSheet> {
                 child: _showDateSelection
                     ? _buildDateSelection()
                     : _step == 0
+                    ? _buildWhenStep()
+                    : _step == 1
                     ? _buildClothingStep()
                     : _buildFeelingStep(),
               ),
@@ -277,16 +319,13 @@ class _FeedbackSheetState extends ConsumerState<FeedbackSheet> {
     );
   }
 
-  Widget _buildClothingStep() {
-    final isToday = _isSameDate(_date, jstToday());
+  Widget _buildWhenStep() {
     return Column(
-      key: const ValueKey('clothing-step'),
+      key: const ValueKey('when-step'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          isToday
-              ? AppStrings.feedbackClothingTitle
-              : AppStrings.feedbackClothingForDate(formatJpDate(_date)),
+          AppStrings.feedbackWhenTitle,
           style: Theme.of(context).textTheme.headlineSmall,
         ),
         const SizedBox(height: 16),
@@ -294,8 +333,6 @@ class _FeedbackSheetState extends ConsumerState<FeedbackSheet> {
           child: ListView(
             controller: _clothingScrollController,
             children: [
-              // When: date (today by default, back-datable) + which parts of
-              // the day the user was outside (multi-select) — review 5.
               _DateRow(
                 date: _date,
                 onTap: _isSubmitting ? null : _openDateSelection,
@@ -366,6 +403,81 @@ class _FeedbackSheetState extends ConsumerState<FeedbackSheet> {
                   );
                 },
               ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        FilledButton(
+          onPressed: _continueToClothing,
+          child: const Text(AppStrings.next),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildClothingStep() {
+    return Column(
+      key: const ValueKey('clothing-step'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          AppStrings.feedbackClothingTitle,
+          style: Theme.of(context).textTheme.headlineSmall,
+        ),
+        const SizedBox(height: KisouTheme.gapXs),
+        Text(
+          AppStrings.feedbackClothingHelp,
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: context.kisou.softInk),
+        ),
+        const SizedBox(height: 16),
+        Expanded(
+          child: ListView(
+            controller: _clothingScrollController,
+            children: [
+              if (_isSameDate(_date, jstToday()) &&
+                  _loadedFeedback == null) ...[
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: OutlinedButton.icon(
+                    onPressed: () => setState(_applyTodayRecommendation),
+                    icon: const Icon(Icons.auto_awesome_rounded, size: 18),
+                    label: const Text(AppStrings.feedbackUseRecommendation),
+                  ),
+                ),
+                const SizedBox(height: 18),
+              ],
+              _OptionSection(
+                title: AppStrings.feedbackOuter,
+                children: [
+                  _SelectableClothingOption(
+                    code: null,
+                    type: ClothingIconType.outer,
+                    selected: _outerSelectionMade && _selectedOuter == null,
+                    onTap: () => setState(() {
+                      _isDirty = true;
+                      _outerSelectionMade = true;
+                      _selectedOuter = null;
+                    }),
+                  ),
+                  for (final outer in ClothingOuter.values)
+                    _SelectableClothingOption(
+                      code: outer.apiCode,
+                      type: ClothingIconType.outer,
+                      selected:
+                          _outerSelectionMade &&
+                          _selectedOuter == outer.apiCode,
+                      onTap: () {
+                        setState(() {
+                          _isDirty = true;
+                          _outerSelectionMade = true;
+                          _selectedOuter = outer.apiCode;
+                        });
+                      },
+                    ),
+                ],
+              ),
               const SizedBox(height: 18),
               _OptionSection(
                 title: AppStrings.feedbackTops,
@@ -386,7 +498,7 @@ class _FeedbackSheetState extends ConsumerState<FeedbackSheet> {
               _OptionSection(
                 title: AppStrings.feedbackBottoms,
                 children: [
-                  for (final bottom in _bottomOptions)
+                  for (final bottom in ClothingBottom.values)
                     _SelectableClothingOption(
                       code: bottom.apiCode,
                       type: ClothingIconType.bottom,
@@ -400,33 +512,6 @@ class _FeedbackSheetState extends ConsumerState<FeedbackSheet> {
                     ),
                 ],
               ),
-              const SizedBox(height: 18),
-              _OptionSection(
-                title: AppStrings.feedbackOuter,
-                children: [
-                  _SelectableClothingOption(
-                    code: null,
-                    type: ClothingIconType.outer,
-                    selected: _selectedOuter == null,
-                    onTap: () => setState(() {
-                      _isDirty = true;
-                      _selectedOuter = null;
-                    }),
-                  ),
-                  for (final outer in ClothingOuter.values)
-                    _SelectableClothingOption(
-                      code: outer.apiCode,
-                      type: ClothingIconType.outer,
-                      selected: _selectedOuter == outer.apiCode,
-                      onTap: () {
-                        setState(() {
-                          _isDirty = true;
-                          _selectedOuter = outer.apiCode;
-                        });
-                      },
-                    ),
-                ],
-              ),
             ],
           ),
         ),
@@ -434,6 +519,10 @@ class _FeedbackSheetState extends ConsumerState<FeedbackSheet> {
         FilledButton(
           onPressed: _hasRequiredClothing ? _continueToFeeling : null,
           child: const Text(AppStrings.next),
+        ),
+        TextButton(
+          onPressed: () => setState(() => _step = 0),
+          child: const Text(AppStrings.back),
         ),
       ],
     );
@@ -455,7 +544,11 @@ class _FeedbackSheetState extends ConsumerState<FeedbackSheet> {
           color: const Color(0xFF326FA8),
           selected: _selectedFeeling == 'cold',
           isSubmitting: _isSubmitting,
-          onTap: _submit,
+          onTap: (value) => setState(() {
+            _selectedFeeling = value;
+            _isDirty = true;
+            _errorMessage = null;
+          }),
         ),
         const SizedBox(height: 12),
         _FeelingButton(
@@ -465,7 +558,11 @@ class _FeedbackSheetState extends ConsumerState<FeedbackSheet> {
           color: const Color(0xFF2E7D5B),
           selected: _selectedFeeling == 'perfect',
           isSubmitting: _isSubmitting,
-          onTap: _submit,
+          onTap: (value) => setState(() {
+            _selectedFeeling = value;
+            _isDirty = true;
+            _errorMessage = null;
+          }),
         ),
         const SizedBox(height: 12),
         _FeelingButton(
@@ -475,7 +572,11 @@ class _FeedbackSheetState extends ConsumerState<FeedbackSheet> {
           color: const Color(0xFFC65353),
           selected: _selectedFeeling == 'hot',
           isSubmitting: _isSubmitting,
-          onTap: _submit,
+          onTap: (value) => setState(() {
+            _selectedFeeling = value;
+            _isDirty = true;
+            _errorMessage = null;
+          }),
         ),
         if (_errorMessage != null) ...[
           const SizedBox(height: 16),
@@ -488,19 +589,25 @@ class _FeedbackSheetState extends ConsumerState<FeedbackSheet> {
           ),
         ],
         const Spacer(),
+        FilledButton(
+          onPressed: _selectedFeeling == null || _isSubmitting ? null : _submit,
+          child: _isSubmitting
+              ? const SizedBox.square(
+                  dimension: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : Text(
+                  _loadedFeedback == null
+                      ? AppStrings.feedbackSave
+                      : AppStrings.feedbackUpdateSave,
+                ),
+        ),
         TextButton(
-          onPressed: _isSubmitting ? null : () => setState(() => _step = 0),
+          onPressed: _isSubmitting ? null : () => setState(() => _step = 1),
           child: const Text(AppStrings.back),
         ),
       ],
     );
-  }
-
-  List<ClothingBottom> get _bottomOptions {
-    if (widget.gender == 'male') {
-      return [ClothingBottom.longPants, ClothingBottom.halfPants];
-    }
-    return ClothingBottom.values;
   }
 
   Widget _buildDateSelection() {
@@ -628,14 +735,13 @@ class _FeedbackSheetState extends ConsumerState<FeedbackSheet> {
       _selectedTop = null;
       _selectedBottom = null;
       _selectedOuter = null;
+      _outerSelectionMade = false;
       _selectedFeeling = null;
       _loadedFeedback = null;
       _errorMessage = null;
       _showTimeSlotError = false;
       if (day.feedback != null) {
         _applyFeedback(day.feedback!);
-      } else if (_isSameDate(day.date, jstToday())) {
-        _applyTodayRecommendation();
       }
       _isDirty = false;
       _showDateSelection = false;
@@ -1213,7 +1319,6 @@ class _FeelingButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final showSpinner = isSubmitting && selected;
     return Semantics(
       selected: selected,
       child: OutlinedButton(
@@ -1230,15 +1335,9 @@ class _FeelingButton extends StatelessWidget {
           ),
           shape: const StadiumBorder(),
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            if (showSpinner)
-              const SizedBox.square(
-                dimension: 18,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              )
-            else
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
               Icon(icon),
             const SizedBox(width: 10),
             Flexible(child: Text(label, textAlign: TextAlign.center)),

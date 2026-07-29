@@ -22,8 +22,9 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.text(AppStrings.feedbackClothingTitle), findsOneWidget);
-    // 새 상단 섹션(날짜·시간대)이 먼저 보인다.
+    expect(find.text(AppStrings.feedbackWhenTitle), findsOneWidget);
+    expect(find.text('1/3'), findsOneWidget);
+    // 날짜·시간대가 독립된 첫 단계에 표시된다.
     expect(find.text(AppStrings.feedbackDateLabel), findsOneWidget);
     expect(find.text(AppStrings.feedbackTimeSlotsTitle), findsOneWidget);
     expect(find.text(AppStrings.slotMorning), findsOneWidget);
@@ -35,36 +36,11 @@ void main() {
     expect(find.text(AppStrings.feedbackTimeSlotsRequired), findsNothing);
     expect(find.text(AppStrings.feedbackTimeSlotsHelp), findsOneWidget);
 
-    // 하의·아우터 섹션은 접혀 내려갔으니 스크롤해서 확인.
-    await tester.drag(
-      find.text(AppStrings.feedbackTops),
-      const Offset(0, -300),
-    );
-    await tester.pump();
-    expect(find.text('半ズボン'), findsOneWidget);
-    expect(find.text(AppStrings.noOuter), findsWidgets);
-
     final nextButton = tester.widget<FilledButton>(
       find.widgetWithText(FilledButton, AppStrings.next),
     );
-    expect(nextButton.onPressed, isNull);
-
-    await tester.ensureVisible(find.text('半袖').first);
-    await tester.pump();
-    await tester.tap(find.text('半袖').first);
-    await tester.pump();
-    await tester.ensureVisible(find.text('長ズボン').first);
-    await tester.pump();
-    await tester.tap(find.text('長ズボン').first);
-    await tester.pump();
-
-    final timeValidationButton = tester.widget<FilledButton>(
-      find.widgetWithText(FilledButton, AppStrings.next),
-    );
-    expect(timeValidationButton.onPressed, isNotNull);
-    await tester.ensureVisible(
-      find.widgetWithText(FilledButton, AppStrings.next),
-    );
+    // 누락 오류는 버튼을 눌렀을 때만 표시되어야 하므로 활성 상태다.
+    expect(nextButton.onPressed, isNotNull);
     await tester.tap(find.widgetWithText(FilledButton, AppStrings.next));
     await tester.pumpAndSettle();
 
@@ -85,7 +61,15 @@ void main() {
     );
     await tester.tap(find.widgetWithText(FilledButton, AppStrings.next));
     await tester.pump();
-    expect(find.text(AppStrings.feedbackFeelingTitle), findsOneWidget);
+    expect(find.text(AppStrings.feedbackClothingTitle), findsOneWidget);
+    expect(find.text('2/3'), findsOneWidget);
+    // 남성 프로필도 실제 착용 기록에서는 모든 하의를 선택할 수 있다.
+    await tester.pumpAndSettle();
+    await tester.drag(find.byType(ListView).last, const Offset(0, -360));
+    await tester.pump();
+    expect(find.text('半ズボン'), findsOneWidget);
+    expect(find.text('ショートパンツ'), findsOneWidget);
+    expect(find.text('スカート'), findsOneWidget);
   });
 
   testWidgets('switches within the sheet and restores a recent saved record', (
@@ -173,10 +157,8 @@ void main() {
     await tester.tap(find.text(AppStrings.feedbackDateYesterday));
     await tester.pumpAndSettle();
 
-    expect(
-      find.text(AppStrings.feedbackClothingForDate(formatJpDate(yesterday))),
-      findsOneWidget,
-    );
+    expect(find.text(AppStrings.feedbackWhenTitle), findsOneWidget);
     expect(find.text(AppStrings.feedbackEditingSaved), findsOneWidget);
+    expect(find.text(formatJpDate(yesterday)), findsOneWidget);
   });
 }

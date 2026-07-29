@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -5,19 +8,92 @@ import '../../config/api_config.dart';
 import '../../config/theme.dart';
 import '../../constants/app_strings.dart';
 import '../../providers/auth_provider.dart';
+import '../../utils/api_error.dart';
 import '../../widgets/brand_logo.dart';
 
-class LoginScreen extends ConsumerWidget {
+/// Startup recovery screen for the anonymous-account MVP.
+///
+/// This is intentionally not presented as a sign-in screen: OAuth is not
+/// available yet, and the only user action is to retry startup.
+class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
   static const String routeName = '/login';
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends ConsumerState<LoginScreen>
+    with WidgetsBindingObserver {
+  StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
+  var _automaticRetryUsed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _connectivitySubscription = Connectivity().onConnectivityChanged.listen(
+      _handleConnectivity,
+    );
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _connectivitySubscription?.cancel();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      Connectivity().checkConnectivity().then(_handleConnectivity);
+    }
+  }
+
+  void _handleConnectivity(List<ConnectivityResult> results) {
+    if (_automaticRetryUsed ||
+        results.isEmpty ||
+        results.every((result) => result == ConnectivityResult.none)) {
+      return;
+    }
+    final auth = ref.read(authProvider).value;
+    if (auth?.startupErrorKind != ApiErrorKind.offline) {
+      return;
+    }
+    _automaticRetryUsed = true;
+    ref.invalidate(authProvider);
+  }
+
+  void _retry() {
+    _automaticRetryUsed = false;
+    ref.invalidate(authProvider);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
     final isLoading = authState.isLoading;
-    final hasError = authState.hasError;
+    final kind = authState.value?.startupErrorKind;
     final c = context.kisou;
+    final (title, body, icon) = switch (kind) {
+      ApiErrorKind.offline => (
+        AppStrings.offlineError,
+        AppStrings.startupOfflineBody,
+        Icons.wifi_off_rounded,
+      ),
+      ApiErrorKind.timeout => (
+        AppStrings.timeoutError,
+        AppStrings.startupTimeoutBody,
+        Icons.cloud_off_rounded,
+      ),
+      _ => (
+        AppStrings.startupFailedTitle,
+        AppStrings.startupFailedBody,
+        Icons.error_outline_rounded,
+      ),
+    };
 
     return Scaffold(
       body: SafeArea(
@@ -31,7 +107,7 @@ class LoginScreen extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      const Spacer(flex: 3),
+                      const Spacer(flex: 2),
                       const Center(
                         child: BrandLogo(
                           variant: BrandLogoVariant.mark,
@@ -44,68 +120,75 @@ class LoginScreen extends ConsumerWidget {
                         textAlign: TextAlign.center,
                         style: Theme.of(context).textTheme.displaySmall,
                       ),
-                      const SizedBox(height: KisouTheme.gapM),
-                      Text(
-                        AppStrings.loginDescription,
-                        textAlign: TextAlign.center,
-                        style: Theme.of(
-                          context,
-                        ).textTheme.bodyMedium?.copyWith(color: c.softInk),
+                      const SizedBox(height: KisouTheme.gapL),
+                      Semantics(
+                        liveRegion: true,
+                        child: Column(
+                          children: [
+                            Icon(
+                              icon,
+                              size: 40,
+                              color: Theme.of(context).colorScheme.error,
+                            ),
+                            const SizedBox(height: KisouTheme.gapM),
+                            Text(
+                              title,
+                              textAlign: TextAlign.center,
+                              style: Theme.of(context).textTheme.titleLarge,
+                            ),
+                            const SizedBox(height: KisouTheme.gapS),
+                            Text(
+                              body,
+                              textAlign: TextAlign.center,
+                              style: Theme.of(context).textTheme.bodyMedium
+                                  ?.copyWith(color: c.softInk),
+                            ),
+                          ],
+                        ),
                       ),
-                      const Spacer(flex: 4),
-
-                      // Development logins sit above the social buttons, in a smaller size.
-                      if (ApiConfig.showDevelopmentLogin) ...[
-                        _DevLoginButton(
-                          label: AppStrings.developmentExistingLogin,
-                          onPressed: isLoading
-                              ? null
-                              : () => ref
-                                    .read(authProvider.notifier)
-                                    .loginWithDevelopmentExistingUser(),
-                        ),
-                        const SizedBox(height: KisouTheme.gapS),
-                        _DevLoginButton(
-                          label: AppStrings.developmentNewLogin,
-                          onPressed: isLoading
-                              ? null
-                              : () => ref
-                                    .read(authProvider.notifier)
-                                    .loginWithDevelopmentNewUser(),
-                        ),
-                        const SizedBox(height: KisouTheme.gapL),
-                      ],
-
-                      // Anonymous-only MVP: the app auto-creates an anonymous account on
-                      // launch, so this screen only appears when that failed (e.g.
-                      // offline). Social sign-in is intentionally not offered yet.
+                      const SizedBox(height: KisouTheme.gapXl),
                       FilledButton(
-                        onPressed: isLoading
-                            ? null
-                            : () => ref.invalidate(authProvider),
+                        onPressed: isLoading ? null : _retry,
                         style: FilledButton.styleFrom(
                           minimumSize: const Size.fromHeight(50),
                           shape: const StadiumBorder(),
                         ),
-                        child: Text(AppStrings.retry),
+                        child: isLoading
+                            ? const SizedBox.square(
+                                dimension: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Text(AppStrings.retry),
                       ),
-
-                      if (hasError) ...[
+                      if (ApiConfig.showDevelopmentLogin) ...[
                         const SizedBox(height: KisouTheme.gapL),
-                        Text(
-                          AppStrings.loginFailed,
-                          textAlign: TextAlign.center,
-                          style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(
-                                color: Theme.of(context).colorScheme.error,
-                              ),
+                        ExpansionTile(
+                          tilePadding: EdgeInsets.zero,
+                          title: const Text(AppStrings.developerOptions),
+                          children: [
+                            _DevLoginButton(
+                              label: AppStrings.developmentExistingLogin,
+                              onPressed: isLoading
+                                  ? null
+                                  : () => ref
+                                        .read(authProvider.notifier)
+                                        .loginWithDevelopmentExistingUser(),
+                            ),
+                            const SizedBox(height: KisouTheme.gapS),
+                            _DevLoginButton(
+                              label: AppStrings.developmentNewLogin,
+                              onPressed: isLoading
+                                  ? null
+                                  : () => ref
+                                        .read(authProvider.notifier)
+                                        .loginWithDevelopmentNewUser(),
+                            ),
+                          ],
                         ),
                       ],
-                      if (isLoading) ...[
-                        const SizedBox(height: KisouTheme.gapL),
-                        const Center(child: CircularProgressIndicator()),
-                      ],
-                      const Spacer(),
+                      const Spacer(flex: 3),
                     ],
                   ),
                 ),

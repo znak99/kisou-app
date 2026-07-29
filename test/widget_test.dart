@@ -34,11 +34,10 @@ void main() {
     await pumpPastSplash(tester);
 
     expect(find.text(AppStrings.appName), findsOneWidget);
-    expect(find.text(AppStrings.loginDescription), findsOneWidget);
+    expect(find.text(AppStrings.startupFailedTitle), findsOneWidget);
     // Anonymous-only MVP: social sign-in is hidden; a retry button is offered.
     expect(find.text(AppStrings.retry), findsOneWidget);
-    expect(find.text(AppStrings.developmentExistingLogin), findsOneWidget);
-    expect(find.text(AppStrings.developmentNewLogin), findsOneWidget);
+    expect(find.text(AppStrings.developerOptions), findsOneWidget);
   });
 
   testWidgets(
@@ -98,7 +97,7 @@ void main() {
     await tester.tap(find.text(AppStrings.feedbackButton));
     await tester.pumpAndSettle();
 
-    expect(find.text(AppStrings.feedbackClothingTitle), findsOneWidget);
+    expect(find.text(AppStrings.feedbackWhenTitle), findsOneWidget);
   });
 
   testWidgets('予報 탭: 내일 카드·피드백 유도·날짜 예상 입구가 보인다', (WidgetTester tester) async {
@@ -125,6 +124,10 @@ void main() {
 
     // 내일(19°) vs 오늘(22°) 목 데이터 → 3° 시원해진다는 문구.
     expect(find.text('明日は今日より3°涼しくなります'), findsOneWidget);
+    expect(find.text(AppStrings.forecastTomorrowSection), findsOneWidget);
+    expect(find.text(AppStrings.forecastUpcomingSection), findsOneWidget);
+    await tester.drag(find.byType(ListView).last, const Offset(0, -700));
+    await tester.pumpAndSettle();
     // 오늘 피드백 미기록 → 유도 카드.
     expect(find.text(AppStrings.forecastNudgeTitle), findsOneWidget);
     expect(find.text(AppStrings.forecastNudgeAction), findsOneWidget);
@@ -150,6 +153,8 @@ void main() {
     await pumpPastSplash(tester);
 
     await tester.tap(find.text(AppStrings.tabForecast));
+    await tester.pumpAndSettle();
+    await tester.drag(find.byType(ListView).last, const Offset(0, -700));
     await tester.pumpAndSettle();
 
     expect(find.text(AppStrings.forecastNudgeDone), findsOneWidget);
@@ -271,7 +276,8 @@ void main() {
         matching: find.byType(Scrollable),
       ),
     );
-    expect(find.text(AppStrings.logout), findsOneWidget);
+    // 게스트 계정은 복구 경로가 없으므로 로그아웃을 노출하지 않는다.
+    expect(find.text(AppStrings.logout), findsNothing);
     expect(find.text(AppStrings.accountDelete), findsOneWidget);
     expect(find.text(AppStrings.profileCategorySupport), findsOneWidget);
     expect(find.text(AppStrings.privacyPolicy), findsOneWidget);
@@ -302,19 +308,11 @@ void main() {
         child: const KisouApp(),
       ),
     );
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 1600));
-
-    // 서버에 못 닿으면 스플래시에서 재시도한다(_kHomeRetryLimit 회).
-    expect(find.text(AppStrings.splashLoading), findsOneWidget);
-    expect(find.text(AppStrings.timeoutError), findsNothing);
-
-    // 상한을 넘기면 홈으로 넘겨 홈의 에러 UI가 처리한다.
-    for (var i = 0; i < 6; i++) {
-      await tester.pump(const Duration(seconds: 2));
-    }
+    await tester.pump(const Duration(milliseconds: 700));
     await tester.pumpAndSettle();
 
+    // 시작 화면에 붙잡아 두지 않고 원인을 밝힌 복구 UI로 전환한다.
+    expect(find.text(AppStrings.splashLoading), findsNothing);
     expect(find.text(AppStrings.timeoutError), findsOneWidget);
     expect(find.text(AppStrings.retry), findsOneWidget);
   });
@@ -364,7 +362,7 @@ void main() {
     container.read(authRequiredProvider.notifier).requireAuth();
     await tester.pumpAndSettle();
 
-    expect(find.text(AppStrings.loginDescription), findsOneWidget);
+    expect(find.text(AppStrings.startupFailedTitle), findsOneWidget);
     expect(find.text(AppStrings.sessionExpired), findsOneWidget);
   });
 
@@ -393,7 +391,7 @@ void main() {
     expect(find.text(AppStrings.genderPrompt), findsOneWidget);
   });
 
-  testWidgets('재방문 사용자: 홈 응답이 늦으면 스플래시가 계속 뜨고 안내 문구가 보인다', (
+  testWidgets('재방문 사용자: 홈 응답이 늦어도 1.2초 뒤 앱 화면으로 전환한다', (
     WidgetTester tester,
   ) async {
     // 토큰이 있으면 인증은 서버 없이 즉시 끝난다. 그래도 첫 홈 로드를 기다려야 한다.
@@ -406,7 +404,7 @@ void main() {
               onboardingCompletedValue: true,
             ),
           ),
-          apiClientProvider.overrideWithValue(_createHangingDio()),
+          apiClientProvider.overrideWithValue(_createSlowDio()),
         ],
         child: const KisouApp(),
       ),
@@ -416,17 +414,15 @@ void main() {
     // 최소 시간 전: 스플래시만, 문구 없음
     expect(find.text(AppStrings.splashLoading), findsNothing);
 
-    // 최소 시간 경과 후에도 홈이 안 오면 문구가 뜬다 (pumpAndSettle 금지: 점 타이머가 계속 돈다)
-    await tester.pump(const Duration(milliseconds: 1600));
-    await tester.pump(const Duration(milliseconds: 400));
-    expect(find.text(AppStrings.splashLoading), findsOneWidget);
-    expect(find.text(AppStrings.todayClothing), findsNothing); // 홈으로 안 넘어감
-
-    // 위젯 정리(점 타이머 해제)
-    await tester.pumpWidget(const SizedBox());
+    // 장기 로딩은 스플래시에 사용자를 붙잡지 않고 홈 로딩 상태로 넘긴다.
+    await tester.pump(const Duration(milliseconds: 1300));
+    expect(find.text(AppStrings.splashLoading), findsNothing);
+    expect(find.byType(CircularProgressIndicator), findsWidgets);
+    await tester.pump(const Duration(milliseconds: 1000));
+    await tester.pumpAndSettle();
   });
 
-  testWidgets('서버가 죽어 있으면 스플래시에서 재시도하고, 살아나면 자동으로 홈에 들어간다', (
+  testWidgets('서버가 죽어 있으면 즉시 복구 화면을 표시하고 재시도할 수 있다', (
     WidgetTester tester,
   ) async {
     var serverDown = true;
@@ -462,15 +458,15 @@ void main() {
         child: const KisouApp(),
       ),
     );
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 1600));
+    await tester.pump(const Duration(milliseconds: 700));
+    await tester.pumpAndSettle();
 
-    // 연결 거부는 즉시 실패하지만, 홈으로 떨어뜨리지 않고 스플래시에서 기다린다.
-    expect(find.text(AppStrings.splashLoading), findsOneWidget);
+    expect(find.text(AppStrings.offlineError), findsOneWidget);
+    expect(find.text(AppStrings.retry), findsWidgets);
 
-    // 서버가 살아나면 다음 재시도에서 홈으로 진입한다.
+    // 서버가 살아난 뒤 사용자가 재시도하면 홈으로 진입한다.
     serverDown = false;
-    await tester.pump(const Duration(seconds: 2));
+    await tester.tap(find.widgetWithText(FilledButton, AppStrings.retry).first);
     await tester.pumpAndSettle();
 
     expect(find.text(AppStrings.splashLoading), findsNothing);
@@ -478,20 +474,21 @@ void main() {
   });
 }
 
-/// KisouApp 은 시작 시 최소 1.5초 스플래시를 띄운다(app.dart의 _kMinSplash).
+/// KisouApp 은 시작 시 최대 0.5초의 짧은 anti-flash 스플래시를 둔다.
 /// 실제 화면을 검증하려면 그 시간을 넘겨야 한다.
 Future<void> pumpPastSplash(WidgetTester tester) async {
-  await tester.pump(const Duration(milliseconds: 1600));
+  await tester.pump(const Duration(milliseconds: 700));
   await tester.pumpAndSettle();
 }
 
-/// 요청을 영원히 붙잡아 두는 Dio — provider 를 loading 상태에 묶어 둔다.
-Dio _createHangingDio() {
+/// 응답을 2초 늦춰 1.2초 스플래시 상한 이후의 로딩 전환을 검증한다.
+Dio _createSlowDio() {
   final dio = Dio();
   dio.interceptors.add(
     InterceptorsWrapper(
-      onRequest: (options, handler) {
-        /* 응답하지 않음 */
+      onRequest: (options, handler) async {
+        await Future<void>.delayed(const Duration(seconds: 2));
+        _resolveAppRequest(options, handler);
       },
     ),
   );

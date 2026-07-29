@@ -50,7 +50,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     });
     _pageController.animateToPage(
       nextStep,
-      duration: const Duration(milliseconds: 240),
+      duration: MediaQuery.disableAnimationsOf(context)
+          ? Duration.zero
+          : const Duration(milliseconds: 240),
       curve: Curves.easeOut,
     );
   }
@@ -66,7 +68,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     });
     _pageController.animateToPage(
       previousStep,
-      duration: const Duration(milliseconds: 240),
+      duration: MediaQuery.disableAnimationsOf(context)
+          ? Duration.zero
+          : const Duration(milliseconds: 240),
       curve: Curves.easeOut,
     );
   }
@@ -108,19 +112,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       if (!mounted) {
         return;
       }
-      await showDialog<void>(
-        context: context,
-        builder: (context) {
-          return AlertDialog(
-            content: const Text(AppStrings.onboardingComplete),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text(AppStrings.ok),
-              ),
-            ],
-          );
-        },
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text(AppStrings.onboardingComplete)),
       );
       await ref.read(authProvider.notifier).completeOnboarding();
     } catch (_) {
@@ -223,16 +216,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                       },
                       onNext: _goNext,
                     ),
-                    // Last step: picking a region completes onboarding. The
-                    // departure/return schedule was dropped (review 6) — the
-                    // server keeps sane defaults and feedback now records the
-                    // actual hours outside per day.
                     LocationStep(
                       selectedLocation: _location,
-                      onLocationSelected: (value) {
-                        setState(() => _location = value);
-                        _finish();
-                      },
+                      onLocationSelected: (value) =>
+                          setState(() => _location = value),
+                      onComplete: _finish,
+                      isSaving: _isSaving,
                     ),
                   ],
                 ),

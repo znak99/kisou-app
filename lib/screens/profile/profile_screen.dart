@@ -27,10 +27,22 @@ class ProfileScreen extends ConsumerStatefulWidget {
   ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
 }
 
+enum _ProfileAction {
+  nickname,
+  gender,
+  location,
+  sensitivity,
+  reset,
+  link,
+  logout,
+  delete,
+}
+
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   static final _privacyPolicyUri = Uri.parse('https://example.com/privacy');
 
   var _isSaving = false;
+  _ProfileAction? _savingAction;
   var _menuHasOverflow = false;
   var _menuScrollProgress = 1.0;
 
@@ -120,10 +132,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     return [
       _ProfileHeader(user: user),
       const SizedBox(height: KisouTheme.gapL),
-      if (_isSaving) ...[
-        const LinearProgressIndicator(),
-        const SizedBox(height: KisouTheme.gapM),
-      ],
       // --- 個人情報設定 ---
       _CategorySection(
         title: AppStrings.profileCategoryPersonal,
@@ -132,18 +140,21 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             icon: Icons.person_outline,
             title: AppStrings.nicknameSetting,
             value: _displayValue(user.nickname),
+            loading: _savingAction == _ProfileAction.nickname,
             onTap: _isSaving ? null : () => _editNickname(user),
           ),
           _SettingRow(
             icon: Icons.wc_outlined,
             title: AppStrings.genderSetting,
             value: _genderLabel(user.gender),
+            loading: _savingAction == _ProfileAction.gender,
             onTap: _isSaving ? null : () => _editGender(user),
           ),
           _SettingRow(
             icon: Icons.location_on_outlined,
             title: AppStrings.locationSetting,
             value: _displayValue(user.regionName),
+            loading: _savingAction == _ProfileAction.location,
             onTap: _isSaving ? null : () => _editLocation(),
           ),
         ],
@@ -160,12 +171,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 '${_coldSensitivityLabel(user.coldSensitivity)}'
                 '${AppStrings.sensitivitySeparator}'
                 '${_heatSensitivityLabel(user.heatSensitivity)}',
+            loading: _savingAction == _ProfileAction.sensitivity,
             onTap: _isSaving ? null : () => _editSensitivity(user),
           ),
           _SettingRow(
             icon: Icons.restart_alt_rounded,
             title: AppStrings.dataReset,
             iconColor: context.kisou.warm,
+            loading: _savingAction == _ProfileAction.reset,
             onTap: _isSaving ? null : _resetData,
           ),
         ],
@@ -183,15 +196,18 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       const SizedBox(height: KisouTheme.gapS),
       _TileCard(
         children: [
-          _SettingRow(
-            icon: Icons.logout,
-            title: AppStrings.logout,
-            onTap: _isSaving ? null : _confirmLogout,
-          ),
+          if (!user.isAnonymous)
+            _SettingRow(
+              icon: Icons.logout,
+              title: AppStrings.logout,
+              loading: _savingAction == _ProfileAction.logout,
+              onTap: _isSaving ? null : _confirmLogout,
+            ),
           _SettingRow(
             icon: Icons.delete_outline,
             title: AppStrings.accountDelete,
             destructive: true,
+            loading: _savingAction == _ProfileAction.delete,
             onTap: _isSaving ? null : _confirmDeleteAccount,
           ),
         ],
@@ -334,18 +350,37 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               ),
             ],
           ),
+          const SizedBox(height: KisouTheme.gapXs),
+          Text(
+            AppStrings.anonymousAccountHelp,
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: c.softInk),
+          ),
           // Social account linking (Apple/Google) is intentionally hidden for
           // the anonymous-only MVP. The dev-only link stays for testing.
           if (ApiConfig.showDevelopmentLogin) ...[
             const SizedBox(height: KisouTheme.gapM),
-            TextButton(
-              onPressed: _isSaving
-                  ? null
-                  : () => _linkAccount(
-                      () =>
-                          ref.read(authProvider.notifier).linkWithDevelopment(),
-                    ),
-              child: const Text('開発連携'),
+            ExpansionTile(
+              tilePadding: EdgeInsets.zero,
+              title: const Text(AppStrings.developerOptions),
+              children: [
+                TextButton(
+                  onPressed: _isSaving
+                      ? null
+                      : () => _linkAccount(
+                          () => ref
+                              .read(authProvider.notifier)
+                              .linkWithDevelopment(),
+                        ),
+                  child: _savingAction == _ProfileAction.link
+                      ? const SizedBox.square(
+                          dimension: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('開発連携'),
+                ),
+              ],
             ),
           ],
         ],
@@ -354,7 +389,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 
   Future<void> _linkAccount(Future<void> Function() action) async {
-    setState(() => _isSaving = true);
+    _startSaving(_ProfileAction.link);
     try {
       await action();
       final updated = await ref.read(userProvider.notifier).getMe();
@@ -367,21 +402,23 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       _showMessage(AppStrings.linkFailed);
     } finally {
       if (mounted) {
-        setState(() => _isSaving = false);
+        _stopSaving();
       }
     }
   }
 
   Future<void> _resetData() async {
     final confirmed = await _confirm(
+      title: AppStrings.dataResetTitle,
       message: AppStrings.dataResetConfirm,
-      confirmLabel: AppStrings.deleteAction,
+      confirmLabel: AppStrings.dataResetAction,
       cancelLabel: AppStrings.cancel,
+      destructive: true,
     );
     if (!confirmed) {
       return;
     }
-    setState(() => _isSaving = true);
+    _startSaving(_ProfileAction.reset);
     try {
       await ref.read(userProvider.notifier).resetData();
       _invalidateRecommendationData(includeFeedback: true);
@@ -390,7 +427,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       _showMessage(AppStrings.dataResetFailed);
     } finally {
       if (mounted) {
-        setState(() => _isSaving = false);
+        _stopSaving();
       }
     }
   }
@@ -444,7 +481,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         _showMessage(AppStrings.nicknameMinLength);
         return;
       }
-      await _updateUser(UserUpdate(nickname: nickname));
+      await _updateUser(
+        UserUpdate(nickname: nickname),
+        action: _ProfileAction.nickname,
+      );
     } finally {
       controller.dispose();
     }
@@ -463,7 +503,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     if (gender == null || gender == user.gender) {
       return;
     }
-    await _updateUser(UserUpdate(gender: gender), recommendationChanged: true);
+    await _updateUser(
+      UserUpdate(gender: gender),
+      action: _ProfileAction.gender,
+      recommendationChanged: true,
+    );
   }
 
   Future<void> _editSensitivity(User user) async {
@@ -541,6 +585,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       return;
     }
     final confirmed = await _confirm(
+      title: AppStrings.sensitivitySetting,
       message: AppStrings.sensitivityResetConfirm,
       confirmLabel: AppStrings.yes,
       cancelLabel: AppStrings.no,
@@ -553,6 +598,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         coldSensitivity: selection.cold,
         heatSensitivity: selection.heat,
       ),
+      action: _ProfileAction.sensitivity,
       recommendationChanged: true,
     );
   }
@@ -596,6 +642,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         longitude: location.longitude,
         regionName: location.regionName,
       ),
+      action: _ProfileAction.location,
       recommendationChanged: true,
     );
   }
@@ -625,14 +672,27 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           timeLimit: Duration(seconds: 15),
         ),
       );
-      final region = await reverseGeocodeRegion(
+      final geocoded = await reverseGeocodeLocation(
         position.latitude,
         position.longitude,
       );
+      if (geocoded == null || !geocoded.isJapan) {
+        _showMessage(
+          geocoded == null
+              ? AppStrings.locationUnavailable
+              : AppStrings.locationOutsideJapan,
+        );
+        return _selectManualLocation();
+      }
+      final region = geocoded.regionName;
+      if (region == null || region.isEmpty) {
+        _showMessage(AppStrings.locationUnavailable);
+        return _selectManualLocation();
+      }
       return LocationValue(
         latitude: position.latitude,
         longitude: position.longitude,
-        regionName: region ?? AppStrings.currentLocation,
+        regionName: region,
       );
     } catch (_) {
       _showMessage(AppStrings.useCurrentLocationFailed);
@@ -684,18 +744,27 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   Future<void> _confirmLogout() async {
     final confirmed = await _confirm(
-      message: AppStrings.logoutConfirm,
-      confirmLabel: AppStrings.yes,
-      cancelLabel: AppStrings.no,
+      title: AppStrings.logoutConfirm,
+      message: AppStrings.logoutConfirmBody,
+      confirmLabel: AppStrings.logoutAction,
+      cancelLabel: AppStrings.cancel,
     );
     if (!confirmed) {
       return;
     }
-    await ref.read(authProvider.notifier).logout();
+    _startSaving(_ProfileAction.logout);
+    try {
+      await ref.read(authProvider.notifier).logout();
+    } finally {
+      if (mounted) {
+        _stopSaving();
+      }
+    }
   }
 
   Future<void> _confirmDeleteAccount() async {
     final confirmed = await _confirm(
+      title: AppStrings.accountDeleteTitle,
       message: AppStrings.accountDeleteConfirm,
       confirmLabel: AppStrings.deleteAction,
       cancelLabel: AppStrings.cancel,
@@ -704,7 +773,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     if (!confirmed) {
       return;
     }
-    setState(() => _isSaving = true);
+    _startSaving(_ProfileAction.delete);
     try {
       await ref.read(userProvider.notifier).deleteMe();
       await ref.read(authProvider.notifier).logout();
@@ -716,7 +785,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       );
     } finally {
       if (mounted) {
-        setState(() => _isSaving = false);
+        _stopSaving();
       }
     }
   }
@@ -758,6 +827,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 
   Future<bool> _confirm({
+    required String title,
     required String message,
     required String confirmLabel,
     required String cancelLabel,
@@ -767,6 +837,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       context: context,
       builder: (context) {
         return AlertDialog(
+          title: Text(title),
           content: Text(message),
           actions: [
             TextButton(
@@ -792,9 +863,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   Future<void> _updateUser(
     UserUpdate update, {
+    required _ProfileAction action,
     bool recommendationChanged = false,
   }) async {
-    setState(() => _isSaving = true);
+    _startSaving(action);
     try {
       await ref.read(userProvider.notifier).updateMe(update);
       if (recommendationChanged) {
@@ -808,9 +880,23 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       );
     } finally {
       if (mounted) {
-        setState(() => _isSaving = false);
+        _stopSaving();
       }
     }
+  }
+
+  void _startSaving(_ProfileAction action) {
+    setState(() {
+      _isSaving = true;
+      _savingAction = action;
+    });
+  }
+
+  void _stopSaving() {
+    setState(() {
+      _isSaving = false;
+      _savingAction = null;
+    });
   }
 
   void _invalidateRecommendationData({bool includeFeedback = false}) {
@@ -996,6 +1082,7 @@ class _SettingRow extends StatelessWidget {
     this.value,
     this.destructive = false,
     this.iconColor,
+    this.loading = false,
   });
 
   final IconData icon;
@@ -1004,6 +1091,7 @@ class _SettingRow extends StatelessWidget {
   final String? value;
   final bool destructive;
   final Color? iconColor;
+  final bool loading;
 
   @override
   Widget build(BuildContext context) {
@@ -1061,7 +1149,13 @@ class _SettingRow extends StatelessWidget {
                       ],
                     ),
                   ),
-                  Icon(Icons.chevron_right, size: 20, color: c.softInk),
+                  if (loading)
+                    const SizedBox.square(
+                      dimension: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  else
+                    Icon(Icons.chevron_right, size: 20, color: c.softInk),
                 ],
               ),
             ),

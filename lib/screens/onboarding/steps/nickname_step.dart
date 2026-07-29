@@ -59,6 +59,13 @@ class _NicknameStepState extends State<NicknameStep> {
                     icon: Icons.person_rounded,
                     title: AppStrings.nicknamePrompt,
                   ),
+                  const SizedBox(height: KisouTheme.gapS),
+                  Text(
+                    AppStrings.nicknameHelp,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: context.kisou.softInk,
+                    ),
+                  ),
                   const SizedBox(height: KisouTheme.gapXl),
                   TextField(
                     controller: _controller,

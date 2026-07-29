@@ -60,6 +60,13 @@ class GenderStep extends StatelessWidget {
                     icon: Icons.wc_rounded,
                     title: AppStrings.genderPrompt,
                   ),
+                  const SizedBox(height: KisouTheme.gapS),
+                  Text(
+                    AppStrings.genderHelp,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: context.kisou.softInk,
+                    ),
+                  ),
                   const SizedBox(height: KisouTheme.gapXl),
                   for (final option in options) ...[
                     _SelectionButton(

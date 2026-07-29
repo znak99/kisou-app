@@ -21,15 +21,44 @@ class ForecastScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-      children: const [
-        _TomorrowCard(),
-        SizedBox(height: KisouTheme.gapM),
-        _FeedbackNudge(),
-        SizedBox(height: KisouTheme.gapM),
-        _UpcomingStrip(),
-      ],
+    return RefreshIndicator(
+      onRefresh: () async {
+        await Future.wait([
+          ref.read(forecastTomorrowProvider.notifier).refresh(),
+          ref.read(feedbackProvider.notifier).refresh(),
+        ]);
+      },
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+        children: const [
+          _SectionTitle(title: AppStrings.forecastTomorrowSection),
+          SizedBox(height: KisouTheme.gapS),
+          _TomorrowCard(),
+          SizedBox(height: KisouTheme.gapL),
+          _SectionTitle(title: AppStrings.forecastUpcomingSection),
+          SizedBox(height: KisouTheme.gapS),
+          _UpcomingStrip(),
+          SizedBox(height: KisouTheme.gapL),
+          _FeedbackNudge(),
+        ],
+      ),
+    );
+  }
+}
+
+class _SectionTitle extends StatelessWidget {
+  const _SectionTitle({required this.title});
+
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      title,
+      style: Theme.of(
+        context,
+      ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
     );
   }
 }
@@ -56,33 +85,101 @@ class _TomorrowCard extends ConsumerWidget {
     final state = ref.watch(forecastTomorrowProvider);
     return state.when(
       data: (forecast) => _TomorrowContent(forecast: forecast),
-      loading: () => _card(
+      loading: () => const _TomorrowSkeleton(),
+      error: (error, _) => _card(
         context,
-        child: const Center(
-          child: Padding(
-            padding: EdgeInsets.all(KisouTheme.gapL),
-            child: CircularProgressIndicator(strokeWidth: 2),
+        child: Semantics(
+          liveRegion: true,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                _forecastErrorMessage(error),
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+              const SizedBox(height: KisouTheme.gapS),
+              FilledButton.tonal(
+                onPressed: () {
+                  ref.read(forecastTomorrowProvider.notifier).retry();
+                },
+                child: const Text(AppStrings.retry),
+              ),
+            ],
           ),
         ),
       ),
-      error: (error, _) => _card(
-        context,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              apiErrorMessage(error),
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-            const SizedBox(height: KisouTheme.gapS),
-            TextButton(
-              onPressed: () {
-                ref.read(forecastTomorrowProvider.notifier).retry();
-              },
-              child: const Text(AppStrings.retry),
-            ),
-          ],
+    );
+  }
+}
+
+String _forecastErrorMessage(Object error) {
+  return switch (classifyApiError(error)) {
+    ApiErrorKind.offline => AppStrings.forecastOffline,
+    ApiErrorKind.timeout => AppStrings.forecastTimeout,
+    _ => AppStrings.forecastFailed,
+  };
+}
+
+class _TomorrowSkeleton extends StatelessWidget {
+  const _TomorrowSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      liveRegion: true,
+      label: AppStrings.forecastLoading,
+      child: ExcludeSemantics(
+        child: _card(
+          context,
+          child: const Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _SkeletonLine(width: 150, height: 14),
+              SizedBox(height: KisouTheme.gapM),
+              _SkeletonLine(width: 230, height: 22),
+              SizedBox(height: KisouTheme.gapS),
+              _SkeletonLine(width: 100, height: 12),
+              SizedBox(height: KisouTheme.gapL),
+              _SkeletonBlock(height: 148),
+            ],
+          ),
         ),
+      ),
+    );
+  }
+}
+
+class _SkeletonLine extends StatelessWidget {
+  const _SkeletonLine({required this.width, required this.height});
+
+  final double width;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: width,
+      height: height,
+      decoration: BoxDecoration(
+        color: context.kisou.surfaceAlt,
+        borderRadius: BorderRadius.circular(999),
+      ),
+    );
+  }
+}
+
+class _SkeletonBlock extends StatelessWidget {
+  const _SkeletonBlock({required this.height});
+
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: height,
+      decoration: BoxDecoration(
+        color: context.kisou.surfaceAlt,
+        borderRadius: BorderRadius.circular(KisouTheme.rSm),
       ),
     );
   }
@@ -215,9 +312,11 @@ class _UpcomingStrip extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final upcoming = ref
-        .watch(forecastTomorrowProvider)
-        .maybeWhen(data: (value) => value.upcoming, orElse: () => null);
+    final state = ref.watch(forecastTomorrowProvider);
+    if (state.isLoading && !state.hasValue) {
+      return const _UpcomingSkeleton();
+    }
+    final upcoming = state.value?.upcoming;
     if (upcoming == null || upcoming.isEmpty) {
       return const SizedBox.shrink();
     }
@@ -233,6 +332,45 @@ class _UpcomingStrip extends ConsumerWidget {
           ],
         ],
       ),
+    );
+  }
+}
+
+class _UpcomingSkeleton extends StatelessWidget {
+  const _UpcomingSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return ExcludeSemantics(
+      child: _card(
+        context,
+        child: const Column(
+          children: [
+            _UpcomingSkeletonRow(),
+            SizedBox(height: KisouTheme.gapL),
+            _UpcomingSkeletonRow(),
+            SizedBox(height: KisouTheme.gapL),
+            _UpcomingSkeletonRow(),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _UpcomingSkeletonRow extends StatelessWidget {
+  const _UpcomingSkeletonRow();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Row(
+      children: [
+        _SkeletonLine(width: 72, height: 13),
+        SizedBox(width: KisouTheme.gapM),
+        _SkeletonLine(width: 70, height: 13),
+        Spacer(),
+        _SkeletonLine(width: 74, height: 15),
+      ],
     );
   }
 }
@@ -321,9 +459,19 @@ class _FeedbackNudge extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final feedbackState = ref.watch(feedbackProvider);
     return feedbackState.when(
-      // The nudge is a bonus entry point, not core content: while unknown
-      // (loading/error) it just stays out of the way.
-      loading: () => const SizedBox.shrink(),
+      loading: () => ExcludeSemantics(
+        child: _card(
+          context,
+          child: const SizedBox(
+            height: 38,
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: _SkeletonLine(width: 180, height: 14),
+            ),
+          ),
+        ),
+      ),
+      // The nudge is secondary content. A failure must not hide the forecast.
       error: (_, _) => const SizedBox.shrink(),
       data: (status) {
         final submitted = status.exists && status.feedback != null;

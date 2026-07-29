@@ -12,30 +12,42 @@ class LocationStep extends StatefulWidget {
     super.key,
     required this.selectedLocation,
     required this.onLocationSelected,
+    required this.onComplete,
+    required this.isSaving,
   });
 
   final LocationValue? selectedLocation;
   final ValueChanged<LocationValue> onLocationSelected;
+  final VoidCallback onComplete;
+  final bool isSaving;
 
   @override
   State<LocationStep> createState() => _LocationStepState();
 }
 
+enum _LocationIssue {
+  none,
+  serviceDisabled,
+  denied,
+  deniedForever,
+  outsideJapan,
+  unavailable,
+}
+
 class _LocationStepState extends State<LocationStep> {
   bool _isLoading = false;
-  String? _message;
-  bool _showManualList = false;
+  _LocationIssue _issue = _LocationIssue.none;
 
   Future<void> _requestCurrentLocation() async {
     setState(() {
       _isLoading = true;
-      _message = null;
+      _issue = _LocationIssue.none;
     });
 
     try {
       final serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
-        _showManualSelection(AppStrings.locationDisabled);
+        _setIssue(_LocationIssue.serviceDisabled);
         return;
       }
 
@@ -43,35 +55,54 @@ class _LocationStepState extends State<LocationStep> {
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
       }
-
-      if (permission == LocationPermission.denied ||
-          permission == LocationPermission.deniedForever) {
-        _showManualSelection(AppStrings.locationDenied);
+      if (permission == LocationPermission.deniedForever) {
+        _setIssue(_LocationIssue.deniedForever);
+        return;
+      }
+      if (permission == LocationPermission.denied) {
+        _setIssue(_LocationIssue.denied);
         return;
       }
 
       final position = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.high,
+          accuracy: LocationAccuracy.medium,
           timeLimit: Duration(seconds: 15),
         ),
       );
-      final region = await reverseGeocodeRegion(
+      final geocoded = await reverseGeocodeLocation(
         position.latitude,
         position.longitude,
       );
       if (!mounted) {
         return;
       }
+
+      if (geocoded == null) {
+        _setIssue(_LocationIssue.unavailable);
+        await _forceManualSelection();
+        return;
+      }
+      if (!geocoded.isJapan) {
+        _setIssue(_LocationIssue.outsideJapan);
+        await _forceManualSelection();
+        return;
+      }
+      final regionName = geocoded.regionName;
+      if (regionName == null || regionName.isEmpty) {
+        _setIssue(_LocationIssue.unavailable);
+        await _forceManualSelection();
+        return;
+      }
       widget.onLocationSelected(
         LocationValue(
           latitude: position.latitude,
           longitude: position.longitude,
-          regionName: region ?? AppStrings.currentLocation,
+          regionName: regionName,
         ),
       );
     } catch (_) {
-      _showManualSelection(AppStrings.locationDenied);
+      _setIssue(_LocationIssue.unavailable);
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -79,21 +110,108 @@ class _LocationStepState extends State<LocationStep> {
     }
   }
 
-  void _showManualSelection(String message) {
+  void _setIssue(_LocationIssue issue) {
     if (!mounted) {
       return;
     }
     setState(() {
-      _message = message;
-      _showManualList = true;
+      _issue = issue;
       _isLoading = false;
     });
+  }
+
+  Future<void> _forceManualSelection() async {
+    final location = await _selectManualLocation();
+    if (location != null && mounted) {
+      widget.onLocationSelected(location);
+    }
+  }
+
+  Future<void> _chooseManualLocation() async {
+    final location = await _selectManualLocation();
+    if (location != null && mounted) {
+      setState(() => _issue = _LocationIssue.none);
+      widget.onLocationSelected(location);
+    }
+  }
+
+  Future<LocationValue?> _selectManualLocation() {
+    return showModalBottomSheet<LocationValue>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (sheetContext) {
+        return SafeArea(
+          child: SizedBox(
+            height: MediaQuery.sizeOf(sheetContext).height * 0.72,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+                  child: Text(
+                    AppStrings.selectRegion,
+                    style: Theme.of(sheetContext).textTheme.titleLarge,
+                  ),
+                ),
+                Expanded(
+                  child: ListView.separated(
+                    itemCount: majorCities.length,
+                    separatorBuilder: (_, _) => const Divider(height: 1),
+                    itemBuilder: (context, index) {
+                      final city = majorCities[index];
+                      final selected =
+                          city.regionName ==
+                          widget.selectedLocation?.regionName;
+                      return ListTile(
+                        minTileHeight: 56,
+                        leading: const Icon(Icons.location_city_rounded),
+                        title: Text(city.regionName),
+                        selected: selected,
+                        trailing: selected
+                            ? const Icon(Icons.check_rounded)
+                            : null,
+                        onTap: () => Navigator.of(context).pop(city),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  String? get _issueMessage {
+    return switch (_issue) {
+      _LocationIssue.none => null,
+      _LocationIssue.serviceDisabled => AppStrings.locationDisabled,
+      _LocationIssue.denied => AppStrings.locationDenied,
+      _LocationIssue.deniedForever => AppStrings.locationDeniedForever,
+      _LocationIssue.outsideJapan => AppStrings.locationOutsideJapan,
+      _LocationIssue.unavailable => AppStrings.locationUnavailable,
+    };
+  }
+
+  Future<void> _openSettings() async {
+    if (_issue == _LocationIssue.serviceDisabled) {
+      await Geolocator.openLocationSettings();
+    } else {
+      await Geolocator.openAppSettings();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final c = context.kisou;
     final selectedLocation = widget.selectedLocation;
+    final busy = _isLoading || widget.isSaving;
+    final showSettings =
+        _issue == _LocationIssue.serviceDisabled ||
+        _issue == _LocationIssue.deniedForever;
+
     return ListView(
       padding: const EdgeInsets.all(KisouTheme.pagePad),
       children: [
@@ -102,38 +220,71 @@ class _LocationStepState extends State<LocationStep> {
           icon: Icons.place_rounded,
           title: AppStrings.locationPrompt,
         ),
+        const SizedBox(height: KisouTheme.gapS),
+        Text(
+          AppStrings.locationHelp,
+          style: Theme.of(
+            context,
+          ).textTheme.bodyMedium?.copyWith(color: c.softInk),
+        ),
         const SizedBox(height: KisouTheme.gapXl),
         FilledButton.icon(
-          onPressed: _isLoading ? null : _requestCurrentLocation,
+          onPressed: busy ? null : _requestCurrentLocation,
           icon: _isLoading
               ? const SizedBox.square(
                   dimension: 20,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
               : const Icon(Icons.my_location_rounded, size: 20),
-          label: const Text(AppStrings.allowLocation),
+          label: Text(
+            _issue == _LocationIssue.denied
+                ? AppStrings.retryLocation
+                : AppStrings.allowLocation,
+          ),
         ),
         const SizedBox(height: KisouTheme.gapM),
         OutlinedButton.icon(
-          onPressed: _isLoading
-              ? null
-              : () => setState(() => _showManualList = true),
+          onPressed: busy ? null : _chooseManualLocation,
           icon: const Icon(Icons.map_rounded, size: 20),
           label: const Text(AppStrings.manualLocation),
         ),
-        if (_message != null) ...[
+        if (_issueMessage case final message?) ...[
           const SizedBox(height: KisouTheme.gapL),
-          Row(
-            children: [
-              Icon(Icons.info_outline_rounded, size: 16, color: c.softInk),
-              const SizedBox(width: KisouTheme.gapXs),
-              Expanded(
-                child: Text(
-                  _message!,
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
+          Semantics(
+            liveRegion: true,
+            child: ClayCard(
+              padding: const EdgeInsets.all(KisouTheme.gapM),
+              radius: KisouTheme.rSm,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(
+                        Icons.info_outline_rounded,
+                        size: 18,
+                        color: c.softInk,
+                      ),
+                      const SizedBox(width: KisouTheme.gapS),
+                      Expanded(
+                        child: Text(
+                          message,
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (showSettings) ...[
+                    const SizedBox(height: KisouTheme.gapS),
+                    TextButton(
+                      onPressed: _openSettings,
+                      child: const Text(AppStrings.openDeviceSettings),
+                    ),
+                  ],
+                ],
               ),
-            ],
+            ),
           ),
         ],
         if (selectedLocation != null) ...[
@@ -157,43 +308,15 @@ class _LocationStepState extends State<LocationStep> {
               ],
             ),
           ),
-        ],
-        const SizedBox(height: KisouTheme.gapL),
-        if (_showManualList) ...[
-          Row(
-            children: [
-              Icon(Icons.list_rounded, size: 20, color: c.accent),
-              const SizedBox(width: KisouTheme.gapS),
-              Text(
-                AppStrings.selectRegion,
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-            ],
-          ),
-          const SizedBox(height: KisouTheme.gapS),
-          ListView.separated(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: majorCities.length,
-            separatorBuilder: (_, _) => const Divider(height: 1),
-            itemBuilder: (context, index) {
-              final city = majorCities[index];
-              final isSelected =
-                  city.regionName == selectedLocation?.regionName;
-              return ListTile(
-                leading: Icon(
-                  Icons.location_city_rounded,
-                  size: 20,
-                  color: isSelected ? c.accent : c.softInk,
-                ),
-                title: Text(city.regionName),
-                selected: isSelected,
-                trailing: isSelected
-                    ? Icon(Icons.check_rounded, size: 20, color: c.accent)
-                    : null,
-                onTap: () => widget.onLocationSelected(city),
-              );
-            },
+          const SizedBox(height: KisouTheme.gapXl),
+          FilledButton(
+            onPressed: busy ? null : widget.onComplete,
+            child: widget.isSaving
+                ? const SizedBox.square(
+                    dimension: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Text(AppStrings.finishOnboarding),
           ),
         ],
         const SizedBox(height: KisouTheme.gapXl),
@@ -202,7 +325,6 @@ class _LocationStepState extends State<LocationStep> {
   }
 }
 
-/// Leading icon + prompt title shown at the top of each onboarding step.
 class _StepHeader extends StatelessWidget {
   const _StepHeader({required this.icon, required this.title});
 

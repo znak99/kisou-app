@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -25,9 +28,16 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
+  StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
+  var _automaticRetryUsed = false;
+
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(_lifecycleObserver);
+    _connectivitySubscription = Connectivity().onConnectivityChanged.listen(
+      _handleConnectivity,
+    );
     Future.microtask(() async {
       try {
         await ref.read(userProvider.notifier).getMe();
@@ -37,9 +47,51 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     });
   }
 
+  late final WidgetsBindingObserver _lifecycleObserver = _HomeLifecycleObserver(
+    onResume: _checkConnectivity,
+  );
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(_lifecycleObserver);
+    _connectivitySubscription?.cancel();
+    super.dispose();
+  }
+
+  void _checkConnectivity() {
+    Connectivity().checkConnectivity().then(_handleConnectivity);
+  }
+
+  void _handleConnectivity(List<ConnectivityResult> results) {
+    if (_automaticRetryUsed ||
+        results.isEmpty ||
+        results.every((result) => result == ConnectivityResult.none)) {
+      return;
+    }
+    final state = ref.read(homeProvider);
+    if (!state.hasError ||
+        classifyApiError(state.error!) != ApiErrorKind.offline) {
+      return;
+    }
+    _automaticRetryUsed = true;
+    unawaited(
+      Future.wait([
+        ref.read(homeProvider.notifier).retry(),
+        ref.read(feedbackProvider.notifier).refresh(),
+        ref
+            .read(userProvider.notifier)
+            .getMe()
+            .then<void>((_) {}, onError: (_) {}),
+      ]),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final homeState = ref.watch(homeProvider);
+    if (homeState.hasValue) {
+      _automaticRetryUsed = false;
+    }
     final user = ref
         .watch(userProvider)
         .when(
@@ -52,6 +104,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (error, _) => _HomeError(error: error),
     );
+  }
+}
+
+class _HomeLifecycleObserver with WidgetsBindingObserver {
+  _HomeLifecycleObserver({required this.onResume});
+
+  final VoidCallback onResume;
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      onResume();
+    }
   }
 }
 
@@ -164,7 +229,7 @@ class _HomeError extends ConsumerWidget {
     final isLocationMissing = errorKind == ApiErrorKind.locationMissing;
     final message = apiErrorMessage(error);
     return RefreshIndicator(
-      onRefresh: () => ref.read(homeProvider.notifier).refresh(),
+      onRefresh: () => _retryAll(ref),
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(24),
@@ -179,11 +244,22 @@ class _HomeError extends ConsumerWidget {
                 ? () => ref
                       .read(shellTabProvider.notifier)
                       .setTab(ShellTab.profile)
-                : () => ref.read(homeProvider.notifier).retry(),
+                : () => _retryAll(ref),
           ),
         ],
       ),
     );
+  }
+
+  Future<void> _retryAll(WidgetRef ref) async {
+    await Future.wait([
+      ref.read(homeProvider.notifier).retry(),
+      ref.read(feedbackProvider.notifier).refresh(),
+      ref
+          .read(userProvider.notifier)
+          .getMe()
+          .then<void>((_) {}, onError: (_) {}),
+    ]);
   }
 }
 
