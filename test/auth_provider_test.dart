@@ -111,12 +111,54 @@ void main() {
     expect(container.read(shellTabProvider), ShellTab.home);
     expect(container.read(themeModeProvider), ThemeMode.system);
   });
+
+  test(
+    'local cleanup failure signs out into a recoverable cleanup state',
+    () async {
+      SharedPreferences.setMockInitialValues({});
+      final authService = _LoginFakeAuthService(
+        isNewUser: false,
+        failLocalCleanup: true,
+      );
+      final container = ProviderContainer(
+        overrides: [
+          authServiceProvider.overrideWithValue(authService),
+          apiClientProvider.overrideWithValue(Dio()),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await container.read(authProvider.future);
+      await expectLater(
+        container.read(authProvider.notifier).completeAccountDeletion(),
+        throwsA(isA<LocalAccountCleanupException>()),
+      );
+
+      final failedState = container.read(authProvider).requireValue;
+      expect(failedState.isAuthenticated, isFalse);
+      expect(failedState.localCleanupRequired, isTrue);
+
+      authService.failLocalCleanup = false;
+      expect(
+        await container.read(authProvider.notifier).retryLocalAccountCleanup(),
+        isTrue,
+      );
+      expect(
+        container.read(authProvider).requireValue.localCleanupRequired,
+        isFalse,
+      );
+    },
+  );
 }
 
 class _LoginFakeAuthService extends AuthService {
-  _LoginFakeAuthService({required this.isNewUser});
+  _LoginFakeAuthService({
+    required this.isNewUser,
+    this.failLocalCleanup = false,
+  });
 
   final bool isNewUser;
+  bool failLocalCleanup;
   bool onboardingCompletedValue = false;
   bool didClearLocalAccountData = false;
 
@@ -145,6 +187,9 @@ class _LoginFakeAuthService extends AuthService {
 
   @override
   Future<void> clearLocalAccountData() async {
+    if (failLocalCleanup) {
+      throw StateError('local cleanup failed');
+    }
     didClearLocalAccountData = true;
   }
 }

@@ -908,8 +908,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
     }
     _startSaving(_ProfileAction.delete);
     try {
-      await ref.read(userProvider.notifier).deleteMe();
-      await ref.read(authProvider.notifier).completeAccountDeletion();
+      await ref.read(authProvider.notifier).deleteAccount();
     } catch (error) {
       _showMessage(
         error is LocalAccountCleanupException

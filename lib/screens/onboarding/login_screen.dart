@@ -28,6 +28,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     with WidgetsBindingObserver {
   StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
   var _automaticRetryUsed = false;
+  var _cleanupRetrying = false;
 
   @override
   void initState() {
@@ -71,19 +72,42 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     ref.invalidate(authProvider);
   }
 
+  Future<void> _retryLocalCleanup() async {
+    if (_cleanupRetrying) {
+      return;
+    }
+    setState(() => _cleanupRetrying = true);
+    final succeeded = await ref
+        .read(authProvider.notifier)
+        .retryLocalAccountCleanup();
+    if (!mounted) {
+      return;
+    }
+    setState(() => _cleanupRetrying = false);
+    if (succeeded) {
+      ref.invalidate(authProvider);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
-    final isLoading = authState.isLoading;
+    final cleanupRequired = authState.value?.localCleanupRequired ?? false;
+    final isLoading = authState.isLoading || _cleanupRetrying;
     final kind = authState.value?.startupErrorKind;
     final c = context.kisou;
-    final (title, body, icon) = switch (kind) {
-      ApiErrorKind.offline => (
+    final (title, body, icon) = switch ((cleanupRequired, kind)) {
+      (true, _) => (
+        AppStrings.accountDeleteLocalCleanupTitle,
+        AppStrings.accountDeleteLocalCleanupFailed,
+        Icons.phonelink_erase_rounded,
+      ),
+      (false, ApiErrorKind.offline) => (
         AppStrings.offlineError,
         AppStrings.startupOfflineBody,
         Icons.wifi_off_rounded,
       ),
-      ApiErrorKind.timeout => (
+      (false, ApiErrorKind.timeout) => (
         AppStrings.timeoutError,
         AppStrings.startupTimeoutBody,
         Icons.cloud_off_rounded,
@@ -148,7 +172,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                       ),
                       const SizedBox(height: KisouTheme.gapXl),
                       FilledButton(
-                        onPressed: isLoading ? null : _retry,
+                        onPressed: isLoading
+                            ? null
+                            : cleanupRequired
+                            ? _retryLocalCleanup
+                            : _retry,
                         style: FilledButton.styleFrom(
                           minimumSize: const Size.fromHeight(50),
                           shape: const StadiumBorder(),
@@ -160,7 +188,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                                   strokeWidth: 2,
                                 ),
                               )
-                            : const Text(AppStrings.retry),
+                            : Text(
+                                cleanupRequired
+                                    ? AppStrings.accountDeleteLocalCleanupRetry
+                                    : AppStrings.retry,
+                              ),
                       ),
                       if (ApiConfig.showDevelopmentLogin) ...[
                         const SizedBox(height: KisouTheme.gapL),

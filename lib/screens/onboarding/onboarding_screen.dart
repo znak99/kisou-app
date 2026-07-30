@@ -81,6 +81,55 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     );
   }
 
+  Future<void> _confirmDeleteAccount() async {
+    if (_isSaving) {
+      return;
+    }
+    _dismissKeyboard();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text(AppStrings.accountDeleteTitle),
+          content: const Text(AppStrings.onboardingAccountDeleteConfirm),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text(AppStrings.cancel),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: Theme.of(dialogContext).colorScheme.error,
+                foregroundColor: Theme.of(dialogContext).colorScheme.onError,
+              ),
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text(AppStrings.deleteAction),
+            ),
+          ],
+        );
+      },
+    );
+    if (confirmed != true || !mounted) {
+      return;
+    }
+
+    setState(() {
+      _isSaving = true;
+      _errorMessage = null;
+    });
+    try {
+      await ref.read(authProvider.notifier).deleteAccount();
+    } catch (error) {
+      if (mounted && error is! LocalAccountCleanupException) {
+        setState(() => _errorMessage = AppStrings.deleteFailed);
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
+    }
+  }
+
   Future<void> _finish() async {
     final location = _location;
     final gender = _gender;
@@ -179,6 +228,23 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                   ],
+                ),
+              ),
+              Align(
+                alignment: Alignment.centerRight,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: KisouTheme.pagePad,
+                  ),
+                  child: TextButton.icon(
+                    onPressed: _isSaving ? null : _confirmDeleteAccount,
+                    icon: const Icon(Icons.delete_outline_rounded, size: 18),
+                    label: const Text(AppStrings.onboardingAccountDelete),
+                    style: TextButton.styleFrom(
+                      minimumSize: const Size(48, 48),
+                      foregroundColor: Theme.of(context).colorScheme.error,
+                    ),
+                  ),
                 ),
               ),
               if (_errorMessage != null)

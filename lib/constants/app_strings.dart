@@ -248,6 +248,9 @@ class AppStrings {
   static const externalLinkOpenFailed = 'リンクを開けませんでした。';
   static const accountDelete = 'アカウント削除';
   static const accountDeleteTitle = 'アカウントを削除しますか？';
+  static const onboardingAccountDelete = 'アカウント削除';
+  static const onboardingAccountDeleteConfirm =
+      '設定途中のゲストアカウントと端末内データを削除します。元に戻せません。';
   static const editNickname = 'ニックネームを変更';
   static const save = '保存';
   static const cancel = 'キャンセル';
@@ -263,6 +266,8 @@ class AppStrings {
   static const accountDeleteLocalCleanupFailed =
       'アカウントは削除されましたが、端末内データを消去できませんでした。'
       'KISOUをアンインストールしてから再インストールしてください。';
+  static const accountDeleteLocalCleanupTitle = '端末内データを消去できませんでした';
+  static const accountDeleteLocalCleanupRetry = '端末データの消去を再試行';
   static const currentLocationOption = '現在地を使用';
   static const manualLocationOption = '手動で選択';
   static const openLocationServices = '位置情報サービスを開く';
@@ -308,6 +313,9 @@ class AppStrings {
   static const forecastOutlookLoading = '予想結果を読み込んでいます';
   static const forecastOutlookEmptyTitle = '旅行の日付と場所を選びましょう';
   static const forecastOutlookEmptyBody = 'その日の気温とおすすめの服装を予想します';
+  static const forecastOutlookScreenshotNotice = '画面イメージ・説明用データ';
+  static const forecastOutlookScreenshotSource =
+      'この画面は説明用です。実際の予想では、以下の気象データを使用します。';
   static const tryAgain = 'もう一度試す';
 
   static String forecastComparedToToday(int degrees) {

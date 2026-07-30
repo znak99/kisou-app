@@ -12,9 +12,12 @@ import 'package:kisou_app/config/app_links.dart';
 import 'package:kisou_app/config/theme.dart';
 import 'package:kisou_app/constants/app_strings.dart';
 import 'package:kisou_app/providers/api_provider.dart';
+import 'package:kisou_app/providers/auth_provider.dart';
 import 'package:kisou_app/providers/external_link_provider.dart';
+import 'package:kisou_app/providers/user_provider.dart';
 import 'package:kisou_app/screens/onboarding/onboarding_screen.dart';
 import 'package:kisou_app/services/auth_service.dart';
+import 'package:kisou_app/services/user_service.dart';
 import 'package:kisou_app/utils/jp_date.dart';
 import 'package:kisou_app/widgets/feeling_headline.dart';
 
@@ -583,6 +586,80 @@ void main() {
     expect(find.text(AppStrings.sessionExpired), findsOneWidget);
   });
 
+  testWidgets('local deletion cleanup failure shows persistent recovery', (
+    WidgetTester tester,
+  ) async {
+    final authService = _FakeAuthService(
+      hasTokenValue: true,
+      onboardingCompletedValue: true,
+      failLocalCleanup: true,
+    );
+    final container = ProviderContainer(
+      overrides: [
+        authServiceProvider.overrideWithValue(authService),
+        apiClientProvider.overrideWithValue(_createAppDio()),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(container: container, child: const KisouApp()),
+    );
+    await pumpPastSplash(tester);
+
+    await expectLater(
+      container.read(authProvider.notifier).completeAccountDeletion(),
+      throwsA(isA<LocalAccountCleanupException>()),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(AppStrings.accountDeleteLocalCleanupTitle),
+      findsOneWidget,
+    );
+    expect(
+      find.text(AppStrings.accountDeleteLocalCleanupFailed),
+      findsOneWidget,
+    );
+    expect(
+      find.text(AppStrings.accountDeleteLocalCleanupRetry),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('onboarding exposes account deletion before completion', (
+    WidgetTester tester,
+  ) async {
+    final authService = _FakeAuthService(
+      hasTokenValue: true,
+      onboardingCompletedValue: false,
+    );
+    final userService = _DeleteTrackingUserService();
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authServiceProvider.overrideWithValue(authService),
+          userServiceProvider.overrideWithValue(userService),
+        ],
+        child: const MaterialApp(home: OnboardingScreen()),
+      ),
+    );
+    await tester.pump();
+
+    await tester.tap(find.text(AppStrings.onboardingAccountDelete));
+    await tester.pumpAndSettle();
+
+    expect(find.text(AppStrings.accountDeleteTitle), findsOneWidget);
+    expect(
+      find.text(AppStrings.onboardingAccountDeleteConfirm),
+      findsOneWidget,
+    );
+    await tester.tap(find.text(AppStrings.deleteAction));
+    await tester.pumpAndSettle();
+    expect(userService.deleteCallCount, 1);
+    expect(authService.didClearLocalAccountData, isTrue);
+  });
+
   testWidgets('onboarding nickname step blocks empty input and advances', (
     WidgetTester tester,
   ) async {
@@ -1103,10 +1180,13 @@ class _FakeAuthService extends AuthService {
   _FakeAuthService({
     required this.hasTokenValue,
     this.onboardingCompletedValue = false,
+    this.failLocalCleanup = false,
   });
 
   final bool hasTokenValue;
   final bool onboardingCompletedValue;
+  final bool failLocalCleanup;
+  bool didClearLocalAccountData = false;
 
   @override
   Future<void> clearKeychainOnFirstLaunch() async {}
@@ -1131,6 +1211,14 @@ class _FakeAuthService extends AuthService {
   Future<void> clearOnboardingCompleted() async {}
 
   @override
+  Future<void> clearLocalAccountData() async {
+    if (failLocalCleanup) {
+      throw StateError('local cleanup failed');
+    }
+    didClearLocalAccountData = true;
+  }
+
+  @override
   Future<void> logoutServer({required Dio dio}) async {}
 
   // No token → simulate an offline anonymous-login failure so the login screen
@@ -1138,5 +1226,16 @@ class _FakeAuthService extends AuthService {
   @override
   Future<bool> loginAnonymous({required Dio dio}) async {
     throw const AuthException('offline');
+  }
+}
+
+class _DeleteTrackingUserService extends UserService {
+  _DeleteTrackingUserService() : super(Dio());
+
+  var deleteCallCount = 0;
+
+  @override
+  Future<void> deleteMe() async {
+    deleteCallCount++;
   }
 }

@@ -85,6 +85,15 @@ void main() {
       expect(find.text(AppStrings.openMeteoDataAttribution), findsOneWidget);
       expect(find.text(AppStrings.openMeteoLicense), findsOneWidget);
       expect(find.text(AppStrings.weatherDataModified), findsOneWidget);
+      expect(
+        find.text(AppStrings.forecastOutlookScreenshotNotice),
+        findsOneWidget,
+      );
+      expect(
+        find.text(AppStrings.forecastOutlookScreenshotSource),
+        findsOneWidget,
+      );
+      expect(find.text(AppStrings.forecastExplainForecastMode), findsNothing);
       expect(tester.takeException(), isNull);
     },
     skip: !ApiConfig.outlookScreenshotFixtureEnabled,

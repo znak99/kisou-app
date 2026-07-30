@@ -106,7 +106,8 @@ Resolution rules (`lib/config/api_config.dart`):
 - 날짜 지정 스토어 캡처 fixture는
   `kDebugMode && OUTLOOK_SCREENSHOT_FIXTURE=true`일 때만 사용할 수 있습니다.
   운영 API와 같은 화면을 캡처하기 위해 production debug에서도 명시적으로
-  켤 수 있지만 profile·release에서는 define 값과 관계없이 비활성화됩니다.
+  켤 수 있지만 결과에 설명용 데이터 배지를 표시하며 profile·release에서는
+  define 값과 관계없이 비활성화됩니다.
 - Android와 iOS의 `dev` flavor는 `.dev` 앱 식별자와 `KISOU Dev`
   표시명을 사용해 운영 앱의 보안 저장소와 로컬 설정을 공유하지 않습니다.
 - iOS의 로컬 네트워크 권한과 HTTP 허용은 dev Info.plist에만 있으며,

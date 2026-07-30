@@ -18,14 +18,18 @@ class AuthState {
     required this.status,
     required this.isNewUser,
     this.startupErrorKind,
+    this.localCleanupRequired = false,
   });
 
-  const AuthState.unauthenticated({ApiErrorKind? startupErrorKind})
-    : this._(
-        status: AuthStatus.unauthenticated,
-        isNewUser: false,
-        startupErrorKind: startupErrorKind,
-      );
+  const AuthState.unauthenticated({
+    ApiErrorKind? startupErrorKind,
+    bool localCleanupRequired = false,
+  }) : this._(
+         status: AuthStatus.unauthenticated,
+         isNewUser: false,
+         startupErrorKind: startupErrorKind,
+         localCleanupRequired: localCleanupRequired,
+       );
 
   const AuthState.authenticated({required bool isNewUser})
     : this._(status: AuthStatus.authenticated, isNewUser: isNewUser);
@@ -33,6 +37,7 @@ class AuthState {
   final AuthStatus status;
   final bool isNewUser;
   final ApiErrorKind? startupErrorKind;
+  final bool localCleanupRequired;
 
   bool get isAuthenticated => status == AuthStatus.authenticated;
 }
@@ -144,13 +149,41 @@ class AuthController extends AsyncNotifier<AuthState> {
       cleanupStackTrace = stackTrace;
     } finally {
       _invalidateUserScopedData();
-      state = const AsyncData(AuthState.unauthenticated());
+      state = AsyncData(
+        AuthState.unauthenticated(localCleanupRequired: cleanupError != null),
+      );
     }
     if (cleanupError != null) {
       Error.throwWithStackTrace(
         LocalAccountCleanupException(cleanupError),
         cleanupStackTrace!,
       );
+    }
+  }
+
+  /// Deletes the server account first, then removes every local credential.
+  /// Both onboarding and profile use this single coordinator so no created
+  /// guest account is left without an in-app deletion path.
+  Future<void> deleteAccount() async {
+    await ref.read(userProvider.notifier).deleteMe();
+    await completeAccountDeletion();
+  }
+
+  /// Re-attempts local cleanup after the server account has already been
+  /// deleted. Returns false without recreating an account when storage still
+  /// cannot be cleared, leaving the persistent recovery screen visible.
+  Future<bool> retryLocalAccountCleanup() async {
+    try {
+      await ref.read(authServiceProvider).clearLocalAccountData();
+      ref.read(themeModeProvider.notifier).resetAfterAccountDeletion();
+      _invalidateUserScopedData();
+      state = const AsyncData(AuthState.unauthenticated());
+      return true;
+    } catch (_) {
+      state = const AsyncData(
+        AuthState.unauthenticated(localCleanupRequired: true),
+      );
+      return false;
     }
   }
 

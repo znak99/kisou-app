@@ -103,8 +103,10 @@ The mapping from API code (`"THIN_LONG"`) → enum → Japanese display name →
 - On a 401, refresh once with the stored rotating refresh token and retry the request; simultaneous 401s share one refresh operation
 - Store access/refresh tokens and `device_secret` only in `flutter_secure_storage`
 - After account deletion, clear all secure-storage credentials and local
-  preferences immediately; after a successful social-account link, remove the
-  obsolete anonymous `device_secret`
+  preferences immediately. Route onboarding and profile through one deletion
+  coordinator, keep local-cleanup failure visible after the auth screen
+  replaces the caller, and offer retry plus reinstall guidance. After a
+  successful social-account link, remove the obsolete anonymous `device_secret`
 - API base URL is loaded from the matching `config/dev.json` or
   `config/prod.json`; release builds must fail before networking when the
   environment is not production or the production URL is not safe HTTPS
@@ -114,7 +116,8 @@ The mapping from API code (`"THIN_LONG"`) → enum → Japanese display name →
 - A deterministic store-capture fixture may run in a production-config debug
   build only when an additional explicit Dart define is true. Keep `kDebugMode`
   in the compile-time gate so the fixture is inert in profile and release,
-  bypass the API, and keep its quota state in memory
+  bypass the API, keep its quota state in memory, and visibly identify the
+  output as illustrative data
 - Android and iOS development commands use the `dev` flavor so test
   credentials and preferences cannot overwrite the installed production app
 - Keep the native flavor and Dart environment paired (`dev`/`development`,

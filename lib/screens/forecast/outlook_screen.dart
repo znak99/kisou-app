@@ -594,6 +594,36 @@ class _OutlookResult extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        if (ApiConfig.outlookScreenshotFixtureEnabled) ...[
+          Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: KisouTheme.gapS,
+              vertical: KisouTheme.gapXs,
+            ),
+            decoration: BoxDecoration(
+              color: c.accent.withValues(alpha: 0.1),
+              border: Border.all(color: c.accent.withValues(alpha: 0.28)),
+              borderRadius: BorderRadius.circular(KisouTheme.rSm),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.image_outlined, size: 16, color: c.accent),
+                const SizedBox(width: KisouTheme.gapXs),
+                Flexible(
+                  child: Text(
+                    AppStrings.forecastOutlookScreenshotNotice,
+                    style: textTheme.bodySmall?.copyWith(
+                      color: c.accent,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: KisouTheme.gapS),
+        ],
         LayoutBuilder(
           builder: (context, constraints) {
             final useVertical =
@@ -659,7 +689,9 @@ class _OutlookResult extends StatelessWidget {
             const SizedBox(width: KisouTheme.gapXs),
             Expanded(
               child: Text(
-                outlook.isClimatology && climate != null
+                ApiConfig.outlookScreenshotFixtureEnabled
+                    ? AppStrings.forecastOutlookScreenshotSource
+                    : outlook.isClimatology && climate != null
                     ? AppStrings.forecastExplainClimatology(
                         years: climate.yearsUsed,
                         sampleDays: climate.sampleDays,

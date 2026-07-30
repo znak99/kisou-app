@@ -26,6 +26,7 @@ void main() {
 
     expect(find.text(AppStrings.forecastOutlookEmptyTitle), findsOneWidget);
     expect(find.text(AppStrings.forecastOutlookEmptyBody), findsOneWidget);
+    expect(find.text(AppStrings.forecastOutlookScreenshotNotice), findsNothing);
     expect(
       find.byWidgetPredicate(
         (widget) =>
