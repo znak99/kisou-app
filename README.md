@@ -49,18 +49,28 @@ Environment values are compile-time `--dart-define`s, so **changing one requires
 | `config/prod.json` | production | `https://kisou.znak99.cloud` |
 
 ```bash
-# development (simulator, local API) — this is also the default with no flags
+# Android emulator development (separate .dev installation)
+flutter run --flavor dev \
+  --dart-define-from-file=config/dev.json \
+  --dart-define=API_BASE_URL=http://10.0.2.2:8000
+
+# iOS development
 flutter run --dart-define-from-file=config/dev.json
 
-# production (e.g. release install on a physical device)
-flutter run --release --dart-define-from-file=config/prod.json
+# Android production-config verification App Bundle
+bash scripts/build_android_release.sh
 ```
+
+The current Android release build is still signed with the debug key so local
+and CI verification can run. It is not a store-uploadable artifact; the
+`실기기·출시 준비` work must configure the owner-controlled upload key before
+distribution.
 
 ### Available defines
 
 | Define | Default | Purpose |
 |--------|---------|---------|
-| `APP_ENV` | `development` | Selects the environment |
+| `APP_ENV` | debug: `development`, release: `production` | Selects the environment |
 | `API_BASE_URL` | `http://127.0.0.1:8000` | Development API base URL |
 | `API_PRODUCTION_BASE_URL` | *(empty)* | Production API base URL |
 | `SHOW_DEV_LOGIN` | `true` | Show the development login buttons |
@@ -68,8 +78,16 @@ flutter run --release --dart-define-from-file=config/prod.json
 Resolution rules (`lib/config/api_config.dart`):
 
 - `baseUrl` = `APP_ENV == 'development' ? API_BASE_URL : API_PRODUCTION_BASE_URL`
-- `showDevelopmentLogin` = `!kReleaseMode && isDevelopment && SHOW_DEV_LOGIN` — never shown in a release build
-- Non-development builds assert that `baseUrl` is `https`
+- release는 `APP_ENV=production`만 허용하며, 앱 시작 시 네트워크 요청 전에
+  설정을 검사합니다.
+- production URL은 유효한 절대 HTTPS URL이어야 하고 사용자 정보·query·
+  fragment를 포함할 수 없습니다. 이 검사는 release에서도 제거되지 않습니다.
+- 개발 로그인·개발 연동·스플래시 미리보기·Dio 로그는
+  `kDebugMode && APP_ENV == development`일 때만 사용할 수 있습니다.
+- Android `dev` flavor는 `.dev` application ID와 `KISOU Dev` 표시명을
+  사용해 운영 앱의 보안 저장소와 로컬 설정을 공유하지 않습니다.
+- Android는 시작 시 `dev ↔ development`, `prod ↔ production` 조합을
+  강제하며 flavor와 `APP_ENV`가 다르거나 flavor가 없으면 즉시 중단합니다.
 
 ### Testing on a physical device over the LAN
 
@@ -78,7 +96,7 @@ The Mac's LAN IP changes per network, so keep it out of git — copy the dev con
 ```bash
 cp config/dev.json config/dev.local.json
 # edit API_BASE_URL to e.g. http://192.168.0.242:8000  (find it on Ubuntu with: hostname -I)
-flutter run --dart-define-from-file=config/dev.local.json
+flutter run --flavor dev --dart-define-from-file=config/dev.local.json
 ```
 
 ## Build And Run
@@ -92,6 +110,12 @@ flutter pub get
 Run on the selected simulator or device:
 
 ```bash
+# Android
+flutter run --flavor dev \
+  --dart-define-from-file=config/dev.json \
+  --dart-define=API_BASE_URL=http://10.0.2.2:8000
+
+# iOS
 flutter run --dart-define-from-file=config/dev.json
 ```
 
@@ -107,7 +131,14 @@ Tests:
 
 ```bash
 flutter test
+flutter test --dart-define-from-file=config/prod.json \
+  test/production_config_test.dart
 ```
+
+GitHub Actions runs analysis, both test modes, and a production-config Android
+App Bundle build on every `main`/`develop` push and pull request into `main`.
+That CI artifact verifies configuration and compilation only; it is not
+published or treated as store-signed.
 
 Common manual checks:
 

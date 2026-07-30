@@ -84,6 +84,21 @@ void main() {
     expect(tokens[1], startsWith('dev-user-'));
     expect(tokens[0], isNot(tokens[1]));
   });
+
+  test('development auth methods fail before a request when disabled', () {
+    final service = AuthService(developmentAuthEnabled: false);
+    final dio = Dio();
+
+    expect(
+      () => service.loginWithDevelopmentExistingUser(dio: dio),
+      throwsStateError,
+    );
+    expect(
+      () => service.loginWithDevelopmentNewUser(dio: dio),
+      throwsStateError,
+    );
+    expect(() => service.linkWithDevelopment(dio: dio), throwsStateError);
+  });
 }
 
 Dio _createLoginDio(List<String> tokens, {required bool isNewUser}) {

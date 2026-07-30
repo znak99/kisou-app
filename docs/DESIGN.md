@@ -726,5 +726,19 @@ GET /home:
 ## 운영 API 연결
 
 - 개발 빌드는 `config/dev.json`의 로컬 API를 사용하고, 운영 빌드는 `config/prod.json`의 `https://kisou.znak99.cloud`를 사용합니다.
-- 릴리스 빌드에서는 개발 로그인 UI가 항상 비활성화되고, 비개발 API URL은 HTTPS여야 합니다.
+- 앱 시작 시 `APP_ENV`와 API URL을 release에서도 제거되지 않는 코드로
+  검증합니다. release는 `production`만 허용하고 운영 URL은 host가 있는
+  절대 HTTPS URL이어야 하며 사용자 정보·query·fragment를 거부합니다.
+- 개발 로그인 UI, 개발 인증 메서드, 스플래시 미리보기와 네트워크 로그는
+  debug 모드와 development 환경이 동시에 맞을 때만 활성화합니다.
+- Android는 `dev` flavor를 `cloud.znak99.kisou.dev`와 `KISOU Dev`로
+  분리하고 `prod`는 스토어 식별자 `cloud.znak99.kisou`를 유지합니다.
+  시작 시 네이티브 flavor와 `APP_ENV`의 `dev ↔ development`,
+  `prod ↔ production` 일치를 강제해 운영 식별자로 개발 기능을 실행할 수
+  없습니다.
+  iOS 네이티브 식별자 분리는 별도 scheme·프로비저닝 검증 후 적용합니다.
+- `scripts/build_android_release.sh`와 CI의 AAB는 분석·전체 테스트·
+  production define·prod flavor·release 컴파일을 검증하는 용도입니다.
+  현재 Android debug key 서명을 실제 upload key로 교체하기 전에는
+  스토어 배포 산출물로 취급하지 않습니다.
 - 운영 API는 별도 MacBook 서버의 Docker Compose에서 실행되며 Cloudflare Tunnel을 통해 공개됩니다.

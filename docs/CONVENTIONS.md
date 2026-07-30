@@ -102,7 +102,17 @@ The mapping from API code (`"THIN_LONG"`) → enum → Japanese display name →
 - Auth interceptor adds `Authorization: Bearer <token>` to all requests
 - On a 401, refresh once with the stored rotating refresh token and retry the request; simultaneous 401s share one refresh operation
 - Store access/refresh tokens and `device_secret` only in `flutter_secure_storage`
-- API base URL loaded from config (different for dev/prod)
+- API base URL is loaded from the matching `config/dev.json` or
+  `config/prod.json`; release builds must fail before networking when the
+  environment is not production or the production URL is not safe HTTPS
+- Gate every development-only UI, network log, preview, and fake-auth method
+  on both debug mode and the development environment; hiding a button alone is
+  not sufficient
+- Android development commands use the `dev` flavor so test credentials and
+  preferences cannot overwrite the installed production app
+- Keep Android flavor and Dart environment paired (`dev`/`development`,
+  `prod`/`production`); runtime validation must reject missing or mismatched
+  pairs before any network or storage access
 - All API responses are parsed into model classes
 - Never use raw `Map<String, dynamic>` beyond the parsing layer
 

@@ -1,11 +1,11 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'config/api_config.dart';
 import 'config/theme.dart';
 import 'constants/app_strings.dart';
 import 'providers/api_provider.dart';
@@ -109,7 +109,7 @@ class _AuthGateState extends ConsumerState<_AuthGate> {
     // 포함)만 계속 표시한다. 릴리스 빌드에서는 define 이 있어도 무시된다.
     //   ./run dev simulator --dart-define=SPLASH_PREVIEW=true
     const splashPreview = bool.fromEnvironment('SPLASH_PREVIEW');
-    if (!kReleaseMode && splashPreview) {
+    if (ApiConfig.developmentFeaturesEnabled && splashPreview) {
       return const SplashView(showMessage: true);
     }
 

@@ -4,10 +4,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'app.dart';
+import 'config/api_config.dart';
 import 'providers/theme_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  ApiConfig.validateRuntime();
   // Portrait-only across platforms (matches the design; avoids landscape
   // overflow) — audit B18.
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);

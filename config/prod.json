@@ -1,5 +1,6 @@
 {
-  "_comment": "운영. 사용: flutter run --release --dart-define-from-file=config/prod.json",
+  "_comment": "운영. Android: --release --flavor prod, iOS: --release와 함께 이 define 파일 사용",
   "APP_ENV": "production",
-  "API_PRODUCTION_BASE_URL": "https://kisou.znak99.cloud"
+  "API_PRODUCTION_BASE_URL": "https://kisou.znak99.cloud",
+  "SHOW_DEV_LOGIN": false
 }

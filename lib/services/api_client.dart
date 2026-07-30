@@ -13,13 +13,6 @@ class ApiClient {
           receiveTimeout: ApiConfig.receiveTimeout,
         ),
       ) {
-    assert(
-      ApiConfig.isDevelopment ||
-          (ApiConfig.baseUrl.isNotEmpty &&
-              ApiConfig.baseUrl.startsWith('https')),
-      'Non-development builds require an https API_PRODUCTION_BASE_URL '
-      '(got "${ApiConfig.baseUrl}").',
-    );
     dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
@@ -62,7 +55,7 @@ class ApiClient {
       ),
     );
 
-    if (kDebugMode) {
+    if (kDebugMode && ApiConfig.developmentFeaturesEnabled) {
       dio.interceptors.add(
         LogInterceptor(
           requestHeader: false,

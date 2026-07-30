@@ -20,9 +20,11 @@ class AuthService {
   AuthService({
     FlutterSecureStorage? storage,
     Future<SharedPreferences> Function()? preferencesFactory,
+    bool developmentAuthEnabled = ApiConfig.developmentFeaturesEnabled,
   }) : _storage = storage ?? const FlutterSecureStorage(),
        _preferencesFactory =
-           preferencesFactory ?? SharedPreferences.getInstance;
+           preferencesFactory ?? SharedPreferences.getInstance,
+       _developmentAuthEnabled = developmentAuthEnabled;
 
   static const String _tokenKey = 'jwt_token';
   static const String _refreshTokenKey = 'refresh_token';
@@ -34,6 +36,7 @@ class AuthService {
 
   final FlutterSecureStorage _storage;
   final Future<SharedPreferences> Function() _preferencesFactory;
+  final bool _developmentAuthEnabled;
   Future<void>? _googleInitializeFuture;
   Future<bool>? _refreshInFlight;
   int _developmentLoginSequence = 0;
@@ -274,6 +277,7 @@ class AuthService {
   }
 
   Future<void> linkWithDevelopment({required Dio dio}) {
+    _requireDevelopmentAuth();
     final timestamp = DateTime.now().microsecondsSinceEpoch;
     return linkAccount(
       dio: dio,
@@ -301,6 +305,7 @@ class AuthService {
   }
 
   Future<bool> loginWithDevelopmentExistingUser({required Dio dio}) {
+    _requireDevelopmentAuth();
     return loginWithServer(
       dio: dio,
       provider: AuthLoginProvider.google,
@@ -309,6 +314,7 @@ class AuthService {
   }
 
   Future<bool> loginWithDevelopmentNewUser({required Dio dio}) {
+    _requireDevelopmentAuth();
     _developmentLoginSequence += 1;
     final timestamp = DateTime.now().microsecondsSinceEpoch;
     return loginWithServer(
@@ -320,6 +326,12 @@ class AuthService {
 
   Future<void> _ensureGoogleInitialized() {
     return _googleInitializeFuture ??= GoogleSignIn.instance.initialize();
+  }
+
+  void _requireDevelopmentAuth() {
+    if (!_developmentAuthEnabled) {
+      throw StateError('Development authentication is disabled in this build.');
+    }
   }
 }
 
