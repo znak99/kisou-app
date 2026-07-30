@@ -188,7 +188,9 @@ class _HomeContent extends ConsumerWidget {
           // 4. Weather comparison
           WeatherComparison(comparison: home.weatherComparison),
           const SizedBox(height: KisouTheme.gapXs),
-          const WeatherDataAttribution(),
+          WeatherDataAttribution(
+            includesWbgt: home.weatherComparison.today.wbgtMax != null,
+          ),
         ],
       ),
     );

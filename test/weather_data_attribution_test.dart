@@ -8,7 +8,7 @@ import 'package:kisou_app/providers/external_link_provider.dart';
 import 'package:kisou_app/widgets/weather_data_attribution.dart';
 
 void main() {
-  testWidgets('shows both links and modification notice at 200% text', (
+  testWidgets('shows all weather sources and processing notice at 200% text', (
     tester,
   ) async {
     tester.view.physicalSize = const Size(320, 480);
@@ -26,7 +26,9 @@ void main() {
         ],
         child: MaterialApp(
           theme: KisouTheme.light(),
-          home: const Scaffold(body: WeatherDataAttribution()),
+          home: const Scaffold(
+            body: WeatherDataAttribution(includesWbgt: true),
+          ),
         ),
       ),
     );
@@ -34,6 +36,10 @@ void main() {
 
     expect(find.text(AppStrings.openMeteoDataAttribution), findsOneWidget);
     expect(find.text(AppStrings.openMeteoLicense), findsOneWidget);
+    expect(
+      find.text(AppStrings.environmentMinistryWbgtDataAttribution),
+      findsOneWidget,
+    );
     expect(find.text(AppStrings.weatherDataModified), findsOneWidget);
     expect(tester.takeException(), isNull);
 
@@ -57,6 +63,18 @@ void main() {
         hasTapAction: true,
       ),
     );
+    expect(
+      tester.getSemantics(
+        find.bySemanticsLabel(
+          AppStrings.environmentMinistryWbgtDataAttributionSemantics,
+        ),
+      ),
+      matchesSemantics(
+        label: AppStrings.environmentMinistryWbgtDataAttributionSemantics,
+        isLink: true,
+        hasTapAction: true,
+      ),
+    );
     await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
     await expectLater(tester, meetsGuideline(iOSTapTargetGuideline));
     semantics.dispose();
@@ -74,7 +92,9 @@ void main() {
         ],
         child: MaterialApp(
           theme: KisouTheme.light(),
-          home: const Scaffold(body: WeatherDataAttribution()),
+          home: const Scaffold(
+            body: WeatherDataAttribution(includesWbgt: true),
+          ),
         ),
       ),
     );
@@ -83,10 +103,15 @@ void main() {
     await tester.pump();
     await tester.tap(find.text(AppStrings.openMeteoLicense));
     await tester.pump();
+    await tester.tap(
+      find.text(AppStrings.environmentMinistryWbgtDataAttribution),
+    );
+    await tester.pump();
 
     expect(launched, [
       AppLinks.openMeteo,
       AppLinks.creativeCommonsAttribution40,
+      AppLinks.environmentMinistryWbgt,
     ]);
   });
 
@@ -98,14 +123,39 @@ void main() {
         ],
         child: MaterialApp(
           theme: KisouTheme.light(),
+          home: const Scaffold(
+            body: WeatherDataAttribution(includesWbgt: true),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(
+      find.text(AppStrings.environmentMinistryWbgtDataAttribution),
+    );
+    await tester.pump();
+
+    expect(find.text(AppStrings.externalLinkOpenFailed), findsOneWidget);
+  });
+
+  testWidgets('omits the WBGT source when no WBGT value is shown', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          externalUrlLauncherProvider.overrideWithValue((_) async => true),
+        ],
+        child: MaterialApp(
+          theme: KisouTheme.light(),
           home: const Scaffold(body: WeatherDataAttribution()),
         ),
       ),
     );
 
-    await tester.tap(find.text(AppStrings.openMeteoLicense));
-    await tester.pump();
-
-    expect(find.text(AppStrings.externalLinkOpenFailed), findsOneWidget);
+    expect(
+      find.text(AppStrings.environmentMinistryWbgtDataAttribution),
+      findsNothing,
+    );
   });
 }

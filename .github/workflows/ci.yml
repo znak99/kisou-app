@@ -51,6 +51,13 @@ jobs:
           --dart-define-from-file=config/prod.json
           test/production_config_test.dart
 
+      - name: Verify opt-in production-debug screenshot fixture
+        run: >-
+          flutter test
+          --dart-define-from-file=config/prod.json
+          --dart-define=OUTLOOK_SCREENSHOT_FIXTURE=true
+          test/outlook_screenshot_fixture_test.dart
+
       - name: Build production-config verification App Bundle
         env:
           KISOU_ALLOW_EPHEMERAL_SIGNING: "1"

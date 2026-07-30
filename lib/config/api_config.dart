@@ -72,6 +72,13 @@ String secureStorageServiceForEnvironment(String environment) {
   };
 }
 
+bool resolveOutlookScreenshotFixtureEnabled({
+  required bool debugMode,
+  required bool requested,
+}) {
+  return debugMode && requested;
+}
+
 class ApiConfig {
   const ApiConfig._();
 
@@ -103,6 +110,13 @@ class ApiConfig {
   );
 
   static const bool developmentFeaturesEnabled = kDebugMode && isDevelopment;
+
+  /// Deterministic store-capture data is an explicit debug-build tool. Keeping
+  /// [kDebugMode] in this compile-time expression makes the opt-in inert in
+  /// profile and release artifacts even if the define is accidentally supplied.
+  static const bool outlookScreenshotFixtureEnabled =
+      kDebugMode &&
+      bool.fromEnvironment('OUTLOOK_SCREENSHOT_FIXTURE', defaultValue: false);
 
   static final String secureStorageService = secureStorageServiceForEnvironment(
     environment,

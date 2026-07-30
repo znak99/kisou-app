@@ -1,5 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../config/api_config.dart';
+import '../debug/outlook_screenshot_fixture.dart';
 import '../models/forecast.dart';
 import '../services/forecast_service.dart';
 import 'api_provider.dart';
@@ -56,6 +58,10 @@ class ForecastOutlookController extends Notifier<AsyncValue<ForecastOutlook>?> {
     required double longitude,
   }) async {
     state = const AsyncLoading<ForecastOutlook>();
+    if (ApiConfig.outlookScreenshotFixtureEnabled) {
+      state = AsyncData(buildOutlookScreenshotFixture(date: date));
+      return true;
+    }
     state = await AsyncValue.guard(() {
       return ref
           .read(forecastServiceProvider)

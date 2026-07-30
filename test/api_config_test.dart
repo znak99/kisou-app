@@ -149,4 +149,31 @@ void main() {
       throwsStateError,
     );
   });
+
+  test(
+    'outlook screenshot fixture requires a debug build and explicit opt-in',
+    () {
+      expect(
+        resolveOutlookScreenshotFixtureEnabled(
+          debugMode: true,
+          requested: true,
+        ),
+        isTrue,
+      );
+      expect(
+        resolveOutlookScreenshotFixtureEnabled(
+          debugMode: true,
+          requested: false,
+        ),
+        isFalse,
+      );
+      expect(
+        resolveOutlookScreenshotFixtureEnabled(
+          debugMode: false,
+          requested: true,
+        ),
+        isFalse,
+      );
+    },
+  );
 }

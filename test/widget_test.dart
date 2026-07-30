@@ -99,6 +99,10 @@ void main() {
     expect(find.text('昨日より3°'), findsOneWidget);
     expect(find.text(AppStrings.openMeteoDataAttribution), findsOneWidget);
     expect(find.text(AppStrings.openMeteoLicense), findsOneWidget);
+    expect(
+      find.text(AppStrings.environmentMinistryWbgtDataAttribution),
+      findsOneWidget,
+    );
     expect(find.text(AppStrings.weatherDataModified), findsOneWidget);
     // The feedback action lives in the shared top toolbar.
     expect(find.text(AppStrings.feedbackButton), findsOneWidget);
@@ -891,7 +895,7 @@ void _resolveAppRequest(
               },
             ],
             'weather_comparison': {
-              'today': _weather(tempHigh: 22, tempLow: 14),
+              'today': _weather(tempHigh: 22, tempLow: 14, wbgtMax: 24),
               'yesterday': _weather(tempHigh: 19, tempLow: 12),
               'two_days_ago': _weather(tempHigh: 24, tempLow: 16),
             },
@@ -1059,6 +1063,7 @@ Dio _createLocationMissingDio() {
 Map<String, dynamic> _weather({
   required double tempHigh,
   required double tempLow,
+  double? wbgtMax,
 }) {
   return {
     'temp_high': tempHigh,
@@ -1068,7 +1073,7 @@ Map<String, dynamic> _weather({
     'humidity_avg': 55,
     'wind_speed_avg': 2.0,
     'precipitation_chance_max': null,
-    'wbgt_max': null,
+    'wbgt_max': wbgtMax,
   };
 }
 

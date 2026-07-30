@@ -13,7 +13,8 @@ Flutter mobile app for **キソウ**, a weather-based personalized clothing reco
 - Home screen with three API-provided recommendation combinations
 - Weather comparison for today, yesterday, and two days ago
 - Forecast tab with tomorrow recommendation, D+2 through D+4 weather, and future date/place estimates
-- Linked Open-Meteo source and CC BY 4.0 attribution beside every weather-data surface
+- Linked Open-Meteo/CC BY 4.0 attribution beside every weather-data surface,
+  with the Ministry of the Environment source shown in context when WBGT appears
 - Feedback bottom sheet for a recent date, outside time slots, actual clothing, and comfort feedback
 - Feedback submitted/edit state for today
 - Menu screen for account linking, profile, sensitivity, location, data reset, theme, privacy, logout, and account deletion
@@ -91,6 +92,7 @@ certificate registered in Play Console before distribution.
 | `API_BASE_URL` | `http://127.0.0.1:8000` | Development API base URL |
 | `API_PRODUCTION_BASE_URL` | *(empty)* | Production API base URL |
 | `SHOW_DEV_LOGIN` | `true` | Show the development login buttons |
+| `OUTLOOK_SCREENSHOT_FIXTURE` | `false` | Opt in to deterministic Outlook data for store capture |
 
 Resolution rules (`lib/config/api_config.dart`):
 
@@ -101,6 +103,10 @@ Resolution rules (`lib/config/api_config.dart`):
   fragment를 포함할 수 없습니다. 이 검사는 release에서도 제거되지 않습니다.
 - 개발 로그인·개발 연동·스플래시 미리보기·Dio 로그는
   `kDebugMode && APP_ENV == development`일 때만 사용할 수 있습니다.
+- 날짜 지정 스토어 캡처 fixture는
+  `kDebugMode && OUTLOOK_SCREENSHOT_FIXTURE=true`일 때만 사용할 수 있습니다.
+  운영 API와 같은 화면을 캡처하기 위해 production debug에서도 명시적으로
+  켤 수 있지만 profile·release에서는 define 값과 관계없이 비활성화됩니다.
 - Android와 iOS의 `dev` flavor는 `.dev` 앱 식별자와 `KISOU Dev`
   표시명을 사용해 운영 앱의 보안 저장소와 로컬 설정을 공유하지 않습니다.
 - iOS의 로컬 네트워크 권한과 HTTP 허용은 dev Info.plist에만 있으며,
@@ -143,6 +149,21 @@ flutter run --flavor dev \
 flutter run --flavor dev --dart-define-from-file=config/dev.json
 ```
 
+### Reproducing the Outlook store screenshot
+
+Run the production flavor as an explicitly opted-in debug build:
+
+```bash
+flutter run --debug --flavor prod \
+  --dart-define-from-file=config/prod.json \
+  --dart-define=OUTLOOK_SCREENSHOT_FIXTURE=true
+```
+
+The fixture preselects Tokyo and JST today + 8 days, starts with three in-memory
+lookups, and returns a stable result without calling the API. It neither reads
+nor writes the persisted quota. The fixture is unavailable in profile and
+release builds even if the define is supplied.
+
 ## Verification
 
 Static analysis:
@@ -157,12 +178,16 @@ Tests:
 flutter test
 flutter test --dart-define-from-file=config/prod.json \
   test/production_config_test.dart
+flutter test --dart-define-from-file=config/prod.json \
+  --dart-define=OUTLOOK_SCREENSHOT_FIXTURE=true \
+  test/outlook_screenshot_fixture_test.dart
 ```
 
-GitHub Actions runs analysis, both test modes, and a production-config Android
-App Bundle build on every `main`/`develop` push and pull request into `main`.
-CI uses an ephemeral two-day certificate, verifies the bundle, and deletes it.
-It never accepts owner signing material and never publishes a store artifact.
+GitHub Actions runs analysis, the default, production-config, and opted-in
+screenshot-fixture tests, plus a production-config Android App Bundle build on
+every `main`/`develop` push and pull request into `main`. CI uses an ephemeral
+two-day certificate, verifies the bundle, and deletes it. It never accepts
+owner signing material and never publishes a store artifact.
 
 Common manual checks:
 

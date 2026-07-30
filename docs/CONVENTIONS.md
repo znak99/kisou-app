@@ -111,6 +111,10 @@ The mapping from API code (`"THIN_LONG"`) → enum → Japanese display name →
 - Gate every development-only UI, network log, preview, and fake-auth method
   on both debug mode and the development environment; hiding a button alone is
   not sufficient
+- A deterministic store-capture fixture may run in a production-config debug
+  build only when an additional explicit Dart define is true. Keep `kDebugMode`
+  in the compile-time gate so the fixture is inert in profile and release,
+  bypass the API, and keep its quota state in memory
 - Android and iOS development commands use the `dev` flavor so test
   credentials and preferences cannot overwrite the installed production app
 - Keep the native flavor and Dart environment paired (`dev`/`development`,
@@ -128,9 +132,10 @@ The mapping from API code (`"THIN_LONG"`) → enum → Japanese display name →
 - Send exact coordinates for the future forecast in the
   `POST /forecast/outlook` JSON body, never in URL query parameters
 - Never use raw `Map<String, dynamic>` beyond the parsing layer
-- Keep weather-data attribution visible in the About screen. Open-Meteo data
-  links to its CC BY 4.0 terms, and summer WBGT data links to Japan's Ministry
-  of the Environment source page
+- Keep weather-data attribution visible in the About screen and beside the data
+  it describes. Open-Meteo data links to its CC BY 4.0 terms; when a surface
+  displays summer WBGT, link Japan's Ministry of the Environment there as well.
+  State that displayed weather values have been edited or processed
 
 ## Theming & Design
 

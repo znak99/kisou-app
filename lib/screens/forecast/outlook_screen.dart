@@ -57,10 +57,19 @@ class _OutlookScreenState extends ConsumerState<OutlookScreen> {
   @override
   void initState() {
     super.initState();
+    if (ApiConfig.outlookScreenshotFixtureEnabled) {
+      _date = jstToday().add(const Duration(days: 8));
+    }
     _loadQuota();
   }
 
   Future<void> _loadQuota() async {
+    if (ApiConfig.outlookScreenshotFixtureEnabled) {
+      if (mounted) {
+        setState(() => _remaining = _freeLookupsPerDay);
+      }
+      return;
+    }
     final prefs = await SharedPreferences.getInstance();
     final today = formatIsoDate(jstToday());
     final used = prefs.getString(_quotaDateKey) == today
@@ -72,6 +81,14 @@ class _OutlookScreenState extends ConsumerState<OutlookScreen> {
   }
 
   Future<void> _consumeQuota() async {
+    if (ApiConfig.outlookScreenshotFixtureEnabled) {
+      if (mounted) {
+        setState(() {
+          _remaining = ((_remaining ?? _freeLookupsPerDay) - 1).clamp(0, 99);
+        });
+      }
+      return;
+    }
     final prefs = await SharedPreferences.getInstance();
     final today = formatIsoDate(jstToday());
     final used = prefs.getString(_quotaDateKey) == today

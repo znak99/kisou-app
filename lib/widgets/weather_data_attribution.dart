@@ -7,9 +7,11 @@ import '../constants/app_strings.dart';
 import '../providers/external_link_provider.dart';
 
 /// Compact, accessible attribution shown in the same scroll context as every
-/// surface that presents Open-Meteo-derived weather data.
+/// surface that presents processed weather data.
 class WeatherDataAttribution extends ConsumerWidget {
-  const WeatherDataAttribution({super.key});
+  const WeatherDataAttribution({this.includesWbgt = false, super.key});
+
+  final bool includesWbgt;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -41,6 +43,15 @@ class WeatherDataAttribution extends ConsumerWidget {
               textStyle: textStyle,
               onOpen: (uri) => _openExternalLink(context, ref, uri),
             ),
+            if (includesWbgt)
+              _AttributionLink(
+                label: AppStrings.environmentMinistryWbgtDataAttribution,
+                semanticsLabel:
+                    AppStrings.environmentMinistryWbgtDataAttributionSemantics,
+                uri: AppLinks.environmentMinistryWbgt,
+                textStyle: textStyle,
+                onOpen: (uri) => _openExternalLink(context, ref, uri),
+              ),
             Semantics(
               label: AppStrings.weatherDataModifiedSemantics,
               child: ExcludeSemantics(

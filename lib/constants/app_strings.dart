@@ -237,11 +237,14 @@ class AppStrings {
   static const environmentMinistryWbgtAttribution = '環境省 熱中症予防情報サイト（暑さ指数）';
   static const openMeteoDataAttribution = '天気データ: Open‑Meteo';
   static const openMeteoLicense = 'CC BY 4.0';
-  static const weatherDataModified = '加工あり';
+  static const environmentMinistryWbgtDataAttribution = '暑さ指数: 環境省';
+  static const weatherDataModified = '編集・加工あり';
   static const openMeteoDataAttributionSemantics = '天気データの出典、Open-Meteo。外部リンク';
   static const openMeteoLicenseSemantics =
       'ライセンス、Creative Commons Attribution 4.0。外部リンク';
-  static const weatherDataModifiedSemantics = '天気データは加工されています';
+  static const environmentMinistryWbgtDataAttributionSemantics =
+      '暑さ指数の出典、環境省熱中症予防情報サイト。外部リンク';
+  static const weatherDataModifiedSemantics = '気象データは編集・加工されています';
   static const externalLinkOpenFailed = 'リンクを開けませんでした。';
   static const accountDelete = 'アカウント削除';
   static const accountDeleteTitle = 'アカウントを削除しますか？';
