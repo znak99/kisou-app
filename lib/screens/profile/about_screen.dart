@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
+import '../../config/app_links.dart';
 import '../../config/theme.dart';
 import '../../constants/app_strings.dart';
+import '../../providers/external_link_provider.dart';
 import '../../widgets/brand_logo.dart';
 
-class AboutKisouScreen extends StatelessWidget {
+class AboutKisouScreen extends ConsumerWidget {
   const AboutKisouScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       appBar: AppBar(title: const Text(AppStrings.aboutKisou)),
       body: SafeArea(
@@ -74,6 +77,26 @@ class AboutKisouScreen extends StatelessWidget {
                       ),
                     ),
                   ),
+                  const Divider(),
+                  _AboutRow(
+                    icon: Icons.cloud_outlined,
+                    title: AppStrings.openMeteoAttribution,
+                    onTap: () => _openExternalLink(
+                      context,
+                      ref,
+                      AppLinks.openMeteoTerms,
+                    ),
+                  ),
+                  const Divider(),
+                  _AboutRow(
+                    icon: Icons.device_thermostat_outlined,
+                    title: AppStrings.environmentMinistryWbgtAttribution,
+                    onTap: () => _openExternalLink(
+                      context,
+                      ref,
+                      AppLinks.environmentMinistryWbgt,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -81,6 +104,24 @@ class AboutKisouScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _openExternalLink(
+    BuildContext context,
+    WidgetRef ref,
+    Uri uri,
+  ) async {
+    var opened = false;
+    try {
+      opened = await ref.read(externalUrlLauncherProvider)(uri);
+    } catch (_) {
+      // Show the same recovery message for launcher errors and false results.
+    }
+    if (!opened && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text(AppStrings.externalLinkOpenFailed)),
+      );
+    }
   }
 }
 

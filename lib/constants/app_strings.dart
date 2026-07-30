@@ -232,6 +232,10 @@ class AppStrings {
   static const aboutDescription = 'KISOUは、天気とあなたの体感記録から、その日に合う服装を提案するアプリです。';
   static const versionLabel = 'バージョン';
   static const openSourceLicenses = 'オープンソースライセンス';
+  static const weatherDataSources = '気象データの出典';
+  static const openMeteoAttribution = 'Open-Meteo（CC BY 4.0）';
+  static const environmentMinistryWbgtAttribution = '環境省 熱中症予防情報サイト（暑さ指数）';
+  static const externalLinkOpenFailed = 'リンクを開けませんでした。';
   static const accountDelete = 'アカウント削除';
   static const accountDeleteTitle = 'アカウントを削除しますか？';
   static const editNickname = 'ニックネームを変更';

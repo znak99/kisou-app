@@ -128,6 +128,9 @@ The mapping from API code (`"THIN_LONG"`) → enum → Japanese display name →
 - Send exact coordinates for the future forecast in the
   `POST /forecast/outlook` JSON body, never in URL query parameters
 - Never use raw `Map<String, dynamic>` beyond the parsing layer
+- Keep weather-data attribution visible in the About screen. Open-Meteo data
+  links to its CC BY 4.0 terms, and summer WBGT data links to Japan's Ministry
+  of the Environment source page
 
 ## Theming & Design
 

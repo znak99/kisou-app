@@ -770,4 +770,6 @@ GET /home:
   본문으로 전송해 프록시·access log의 URL에 위치가 남지 않게 합니다. API는
   모든 access log query를 제거하고 애플리케이션 로그에도 좌표를 기록하지
   않습니다.
+- `KISOUについて` 화면에는 Open-Meteo의 CC BY 4.0 이용 조건과 환경성
+  열중증 예방정보 사이트의 WBGT 데이터 출처 링크를 항상 표시합니다.
 - 운영 API는 별도 MacBook 서버의 Docker Compose에서 실행되며 Cloudflare Tunnel을 통해 공개됩니다.

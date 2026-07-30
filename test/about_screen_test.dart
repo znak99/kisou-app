@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:kisou_app/config/app_links.dart';
 import 'package:kisou_app/config/theme.dart';
 import 'package:kisou_app/constants/app_strings.dart';
+import 'package:kisou_app/providers/external_link_provider.dart';
 import 'package:kisou_app/screens/profile/about_screen.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
@@ -23,8 +26,20 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
     addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
 
+    Uri? launchedUri;
     await tester.pumpWidget(
-      MaterialApp(theme: KisouTheme.light(), home: const AboutKisouScreen()),
+      ProviderScope(
+        overrides: [
+          externalUrlLauncherProvider.overrideWithValue((uri) async {
+            launchedUri = uri;
+            return true;
+          }),
+        ],
+        child: MaterialApp(
+          theme: KisouTheme.light(),
+          home: const AboutKisouScreen(),
+        ),
+      ),
     );
     await tester.pumpAndSettle();
 
@@ -32,6 +47,25 @@ void main() {
     expect(find.text(AppStrings.aboutDescription), findsOneWidget);
     expect(find.text('1.2.3 (45)'), findsOneWidget);
     expect(find.text(AppStrings.openSourceLicenses), findsOneWidget);
+    expect(find.text(AppStrings.openMeteoAttribution), findsOneWidget);
+    expect(
+      find.text(AppStrings.environmentMinistryWbgtAttribution),
+      findsOneWidget,
+    );
+
+    await tester.ensureVisible(find.text(AppStrings.openMeteoAttribution));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(AppStrings.openMeteoAttribution));
+    await tester.pump();
+    expect(launchedUri, AppLinks.openMeteoTerms);
+
+    await tester.ensureVisible(
+      find.text(AppStrings.environmentMinistryWbgtAttribution),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(AppStrings.environmentMinistryWbgtAttribution));
+    await tester.pump();
+    expect(launchedUri, AppLinks.environmentMinistryWbgt);
     expect(tester.takeException(), isNull);
   });
 }
