@@ -259,6 +259,7 @@ class AppStrings {
   static const logoutConfirm = 'ログアウトしますか？';
   static const logoutConfirmBody = 'この端末でKISOUからログアウトします。記録は削除されません。';
   static const logoutAction = 'ログアウト';
+  static const logoutFailed = 'ログアウトできませんでした。もう一度お試しください。';
   static const sensitivityResetConfirm = '感度を変更すると補正値がリセットされます。よろしいですか？';
   static const accountDeleteConfirm = 'すべての記録と設定が完全に削除され、元に戻せません。';
   static const deleteAction = '削除する';
@@ -268,6 +269,69 @@ class AppStrings {
       'KISOUをアンインストールしてから再インストールしてください。';
   static const accountDeleteLocalCleanupTitle = '端末内データを消去できませんでした';
   static const accountDeleteLocalCleanupRetry = '端末データの消去を再試行';
+  static const accountDeletionCredentials = '削除用情報';
+  static const accountDeletionCredentialsDescription = 'アプリを使えないときのアカウント削除';
+  static const accountDeletionCredentialsIntroTitle = '削除用コードを発行しますか？';
+  static const accountDeletionCredentialsIntroBody =
+      'サポートIDと削除用コードを安全な場所に保存すると、'
+      'この端末を使えない場合もWebからアカウントを削除できます。';
+  static const accountDeletionCredentialsOpen = '発行画面を開く';
+  static const accountDeletionCredentialsLater = 'あとで';
+  static const accountDeletionSupportId = 'サポートID';
+  static const accountDeletionRecoveryCode = 'アカウント削除用コード';
+  static const accountDeletionNotIssued = 'まだ発行されていません';
+  static const accountDeletionLocalCodeMissing =
+      'この端末にコードがありません。新しいコードに置き換えてください。';
+  static const accountDeletionCodeHidden = 'コードは非表示です';
+  static const accountDeletionShowCode = 'コードを表示';
+  static const accountDeletionHideCode = 'コードを隠す';
+  static const accountDeletionCopySupportId = 'サポートIDをコピー';
+  static const accountDeletionCopyCode = '削除用コードをコピー';
+  static const accountDeletionSupportIdCopied = 'サポートIDをコピーしました';
+  static const accountDeletionCodeCopied = '削除用コードをコピーしました。60秒後にクリップボードから消去します';
+  static const accountDeletionCopyFailed = 'コピーできませんでした。';
+  static const accountDeletionIssue = '削除用コードを発行';
+  static const accountDeletionReplace = '新しいコードに置き換える';
+  static const accountDeletionReplaceTitle = '削除用コードを置き換えますか？';
+  static const accountDeletionReplaceBody =
+      '以前に保存した削除用コードはすぐに使えなくなります。'
+      '新しいコードを改めて安全な場所に保存してください。';
+  static const accountDeletionIssueTitle = '削除用コードを発行しますか？';
+  static const accountDeletionIssueBody =
+      'サポートIDと削除用コードの両方を知っている人は、'
+      'Webからこのアカウントを完全に削除できます。';
+  static const accountDeletionIssueDone = '削除用コードを発行しました。安全な場所に保存してください';
+  static const accountDeletionReplaceDone = '削除用コードを置き換えました。以前のコードは使えません';
+  static const accountDeletionOperationFailed =
+      '削除用情報を更新できませんでした。通信状態を確認してもう一度お試しください。';
+  static const accountDeletionLoadFailed = '削除用情報を読み込めませんでした。';
+  static const accountDeletionLocalStoreUnavailable =
+      '端末の削除用コードを読み出せません。まず再読み込みをお試しください。'
+      '改善しない場合は、端末のコードだけを破棄して新しいコードに置き換えられます。';
+  static const accountDeletionDiscardLocal = '端末のコードを破棄';
+  static const accountDeletionDiscardLocalTitle = '端末のコードを破棄しますか？';
+  static const accountDeletionDiscardLocalBody =
+      '端末に残っている削除用コードを復元できなくなります。'
+      'サーバーのアカウントは削除されません。続行後、新しいコードに置き換えてください。';
+  static const accountDeletionDiscardLocalDone =
+      '端末のコードを破棄しました。新しいコードに置き換えてください。';
+  static const accountDeletionRetry = '再読み込み';
+  static const accountDeletionBackupWarningTitle = '必ず別の安全な場所に保存してください';
+  static const accountDeletionBackupWarningBody =
+      'アプリの再インストール、端末の紛失・故障、機種変更では、'
+      'この端末内のコードを失うことがあります。パスワード管理アプリなどに'
+      'サポートIDと削除用コードを保存してください。メールや他人との共有は避けてください。';
+  static const accountDeletionPermissionWarning =
+      'このコードはログインやデータの閲覧には使えませんが、'
+      'サポートIDと一緒に持つ人はアカウントを完全に削除できます。';
+  static const accountDeletionBackupConfirmed = '安全な場所に保存済み';
+  static const accountDeletionBackupUnconfirmed = 'バックアップ未確認';
+  static const accountDeletionMarkBackupConfirmed = '安全な場所に保存しました';
+  static const accountDeletionBackupConfirmedDone = '保存済みとして記録しました';
+  static const accountDeletionRevealFailed =
+      'この端末の削除用コードを読み出せません。新しいコードに置き換えてください。';
+  static const accountDeletionRefreshHint =
+      'コピーしただけでは保存済みになりません。別の安全な場所に保存してから確認してください。';
   static const currentLocationOption = '現在地を使用';
   static const manualLocationOption = '手動で選択';
   static const openLocationServices = '位置情報サービスを開く';

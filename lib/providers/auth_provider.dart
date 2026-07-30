@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../services/auth_service.dart';
 import '../utils/api_error.dart';
+import 'account_deletion_credential_provider.dart';
 import 'forecast_provider.dart';
 import 'api_provider.dart';
 import 'feedback_provider.dart';
@@ -118,13 +119,24 @@ class AuthController extends AsyncNotifier<AuthState> {
   }
 
   Future<void> logout() async {
+    final previousState =
+        state.value ?? const AuthState.authenticated(isNewUser: false);
     state = const AsyncLoading<AuthState>();
-    final authService = ref.read(authServiceProvider);
-    await authService.logoutServer(dio: ref.read(apiClientProvider));
-    await authService.clearTokens();
-    await authService.clearOnboardingCompleted();
-    _invalidateUserScopedData();
-    state = const AsyncData(AuthState.unauthenticated());
+    try {
+      // Remove the account-bound deletion code before permitting an account
+      // switch on a shared device. Linking keeps it because the user ID stays
+      // the same; a full logout does not.
+      await ref.read(accountDeletionCredentialStoreProvider).delete();
+      final authService = ref.read(authServiceProvider);
+      await authService.logoutServer(dio: ref.read(apiClientProvider));
+      await authService.clearTokens();
+      await authService.clearOnboardingCompleted();
+      _invalidateUserScopedData();
+      state = const AsyncData(AuthState.unauthenticated());
+    } catch (error, stackTrace) {
+      state = AsyncData(previousState);
+      Error.throwWithStackTrace(error, stackTrace);
+    }
   }
 
   Future<void> expireSession() async {
@@ -195,6 +207,7 @@ class AuthController extends AsyncNotifier<AuthState> {
     ref.invalidate(forecastOutlookProvider);
     ref.invalidate(feedbackProvider);
     ref.invalidate(userProvider);
+    ref.invalidate(accountDeletionCredentialProvider);
     ref.invalidate(shellTabProvider);
   }
 
@@ -212,6 +225,10 @@ class AuthController extends AsyncNotifier<AuthState> {
         ref.read(authServiceProvider),
         ref.read(apiClientProvider),
       );
+      // A login from the unauthenticated/session-expired boundary may select a
+      // different account. Remove any prior account's device-local code only
+      // after the new login succeeds.
+      await ref.read(accountDeletionCredentialStoreProvider).delete();
       await ref.read(authServiceProvider).setOnboardingCompleted(!isNewUser);
       // Switching accounts: drop the prior account's cached data.
       _invalidateUserScopedData();

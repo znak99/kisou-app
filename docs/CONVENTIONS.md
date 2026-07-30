@@ -102,6 +102,28 @@ The mapping from API code (`"THIN_LONG"`) → enum → Japanese display name →
 - Auth interceptor adds `Authorization: Bearer <token>` to all requests
 - On a 401, refresh once with the stored rotating refresh token and retry the request; simultaneous 401s share one refresh operation
 - Store access/refresh tokens and `device_secret` only in `flutter_secure_storage`
+- Keep the plaintext external account-deletion code out of user/auth models,
+  Riverpod state, logs, and `SharedPreferences`. Store it through the dedicated
+  deletion-credential repository with its support ID and server version; use a
+  non-synchronizing, device-bound iOS Keychain accessibility class
+- A sensitive clipboard helper may retain only a one-way fingerprint for
+  conditional cleanup, never the code itself. Serialize clipboard writes so an
+  older cleanup cannot overwrite a newer copy. After every asynchronous secure
+  read or clipboard write, re-check that the screen is mounted, resumed, and
+  still owns the current operation before displaying or retaining the value
+- Do not turn an ambiguous Keychain/Keystore `PlatformException` into silent
+  credential loss. Preserve the local entry, offer retry first, and require an
+  explicit destructive confirmation before discarding it for code replacement
+- Never issue or rotate a deletion code as a side effect of a GET, app launch,
+  or screen entry. Require an explicit user confirmation, and invalidate the
+  prior local backup acknowledgement and all in-flight plaintext reads whenever
+  the version changes. A stale read may return no value, but must not delete the
+  newer stored credential
+- Preserve the deletion credential when an anonymous account is linked because
+  its server user ID is unchanged. Remove it before a full logout so a later
+  account on the same device cannot inherit the prior account's local code.
+  After a session-expired login succeeds, remove the prior local credential
+  before exposing the newly selected account
 - After account deletion, clear all secure-storage credentials and local
   preferences immediately. Route onboarding and profile through one deletion
   coordinator, keep local-cleanup failure visible after the auth screen

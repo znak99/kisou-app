@@ -23,6 +23,7 @@ import '../../utils/geocode.dart';
 import '../../widgets/error_state.dart';
 import '../analysis/analysis_screen.dart';
 import 'about_screen.dart';
+import 'account_deletion_credentials_screen.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -239,6 +240,18 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
       const SizedBox(height: KisouTheme.gapS),
       _TileCard(
         children: [
+          _SettingRow(
+            icon: Icons.key_outlined,
+            title: AppStrings.accountDeletionCredentials,
+            value: AppStrings.accountDeletionCredentialsDescription,
+            onTap: _isSaving
+                ? null
+                : () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const AccountDeletionCredentialsScreen(),
+                    ),
+                  ),
+          ),
           if (!user.isAnonymous)
             _SettingRow(
               icon: Icons.logout,
@@ -888,6 +901,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
     _startSaving(_ProfileAction.logout);
     try {
       await ref.read(authProvider.notifier).logout();
+    } catch (_) {
+      if (mounted) {
+        _showMessage(AppStrings.logoutFailed);
+      }
     } finally {
       if (mounted) {
         _stopSaving();

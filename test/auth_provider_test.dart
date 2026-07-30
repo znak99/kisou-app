@@ -2,11 +2,13 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:kisou_app/providers/account_deletion_credential_provider.dart';
 import 'package:kisou_app/providers/api_provider.dart';
 import 'package:kisou_app/providers/auth_provider.dart';
 import 'package:kisou_app/providers/shell_provider.dart';
 import 'package:kisou_app/providers/theme_provider.dart';
 import 'package:kisou_app/services/auth_service.dart';
+import 'package:kisou_app/services/account_deletion_credential_store.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -14,10 +16,12 @@ void main() {
 
   test('login with new user routes to onboarding state', () async {
     final authService = _LoginFakeAuthService(isNewUser: true);
+    final deletionStore = _TrackingDeletionStore();
     final container = ProviderContainer(
       overrides: [
         authServiceProvider.overrideWithValue(authService),
         apiClientProvider.overrideWithValue(Dio()),
+        accountDeletionCredentialStoreProvider.overrideWithValue(deletionStore),
       ],
     );
     addTearDown(container.dispose);
@@ -29,14 +33,17 @@ void main() {
     expect(state.isAuthenticated, isTrue);
     expect(state.isNewUser, isTrue);
     expect(authService.onboardingCompletedValue, isFalse);
+    expect(deletionStore.deleted, isTrue);
   });
 
   test('login with existing user routes to home state', () async {
     final authService = _LoginFakeAuthService(isNewUser: false);
+    final deletionStore = _TrackingDeletionStore();
     final container = ProviderContainer(
       overrides: [
         authServiceProvider.overrideWithValue(authService),
         apiClientProvider.overrideWithValue(Dio()),
+        accountDeletionCredentialStoreProvider.overrideWithValue(deletionStore),
       ],
     );
     addTearDown(container.dispose);
@@ -50,6 +57,7 @@ void main() {
     expect(state.isAuthenticated, isTrue);
     expect(state.isNewUser, isFalse);
     expect(authService.onboardingCompletedValue, isTrue);
+    expect(deletionStore.deleted, isTrue);
   });
 
   test('onboarding completion routes to home state and stores flag', () async {
@@ -73,10 +81,12 @@ void main() {
 
   test('switching accounts resets the selected shell tab', () async {
     final authService = _LoginFakeAuthService(isNewUser: false);
+    final deletionStore = _TrackingDeletionStore();
     final container = ProviderContainer(
       overrides: [
         authServiceProvider.overrideWithValue(authService),
         apiClientProvider.overrideWithValue(Dio()),
+        accountDeletionCredentialStoreProvider.overrideWithValue(deletionStore),
       ],
     );
     addTearDown(container.dispose);
@@ -90,6 +100,29 @@ void main() {
         .loginWithDevelopmentExistingUser();
 
     expect(container.read(shellTabProvider), ShellTab.home);
+    expect(deletionStore.deleted, isTrue);
+  });
+
+  test('full logout clears the account-bound deletion credential', () async {
+    final authService = _LoginFakeAuthService(isNewUser: false);
+    final deletionStore = _TrackingDeletionStore();
+    final container = ProviderContainer(
+      overrides: [
+        authServiceProvider.overrideWithValue(authService),
+        apiClientProvider.overrideWithValue(Dio()),
+        accountDeletionCredentialStoreProvider.overrideWithValue(deletionStore),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await container.read(authProvider.future);
+    await container
+        .read(authProvider.notifier)
+        .loginWithDevelopmentExistingUser();
+    await container.read(authProvider.notifier).logout();
+
+    expect(deletionStore.deleted, isTrue);
+    expect(container.read(authProvider).requireValue.isAuthenticated, isFalse);
   });
 
   test('completed account deletion clears local data and signs out', () async {
@@ -191,5 +224,23 @@ class _LoginFakeAuthService extends AuthService {
       throw StateError('local cleanup failed');
     }
     didClearLocalAccountData = true;
+  }
+
+  @override
+  Future<void> logoutServer({required Dio dio}) async {}
+
+  @override
+  Future<void> clearTokens() async {}
+
+  @override
+  Future<void> clearOnboardingCompleted() async {}
+}
+
+class _TrackingDeletionStore extends AccountDeletionCredentialStore {
+  var deleted = false;
+
+  @override
+  Future<void> delete() async {
+    deleted = true;
   }
 }

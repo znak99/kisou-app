@@ -7,6 +7,7 @@ import '../../models/location.dart';
 import '../../models/user.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/user_provider.dart';
+import '../profile/account_deletion_credentials_screen.dart';
 import 'steps/gender_step.dart';
 import 'steps/location_step.dart';
 import 'steps/nickname_step.dart';
@@ -167,6 +168,17 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       if (!mounted) {
         return;
       }
+      final openCredentials = await _showDeletionCredentialIntroduction();
+      if (openCredentials && mounted) {
+        await Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => const AccountDeletionCredentialsScreen(),
+          ),
+        );
+      }
+      if (!mounted) {
+        return;
+      }
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text(AppStrings.onboardingComplete)),
       );
@@ -180,6 +192,28 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         setState(() => _isSaving = false);
       }
     }
+  }
+
+  Future<bool> _showDeletionCredentialIntroduction() async {
+    final result = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text(AppStrings.accountDeletionCredentialsIntroTitle),
+        content: const Text(AppStrings.accountDeletionCredentialsIntroBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text(AppStrings.accountDeletionCredentialsLater),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text(AppStrings.accountDeletionCredentialsOpen),
+          ),
+        ],
+      ),
+    );
+    return result ?? false;
   }
 
   @override

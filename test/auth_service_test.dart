@@ -84,11 +84,14 @@ void main() {
         'onboarding_completed': true,
         'theme_mode': 'dark',
         'outlook_quota_date': '2026-07-31',
+        'account_deletion_credential_backup_confirmation_v1':
+            'KSO-1234-5678-9ABC-DEFG-HJKM:1',
       });
       FlutterSecureStorage.setMockInitialValues({
         'jwt_token': 'access-token',
         'refresh_token': 'refresh-token',
         'device_secret': 'anonymous-secret',
+        'account_deletion_credential_v1': 'encrypted-delete-code',
       });
 
       const storage = FlutterSecureStorage();
@@ -106,6 +109,7 @@ void main() {
     () async {
       FlutterSecureStorage.setMockInitialValues({
         'device_secret': 'anonymous-secret',
+        'account_deletion_credential_v1': 'encrypted-delete-code',
       });
       const storage = FlutterSecureStorage();
       final service = AuthService(storage: storage);
@@ -125,6 +129,10 @@ void main() {
       );
 
       expect(await storage.read(key: 'device_secret'), isNull);
+      expect(
+        await storage.read(key: 'account_deletion_credential_v1'),
+        'encrypted-delete-code',
+      );
     },
   );
 

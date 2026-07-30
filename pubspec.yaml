@@ -49,6 +49,7 @@ dependencies:
   geocoding: ^3.0.0
   connectivity_plus: 6.1.5
   package_info_plus: ^9.0.1
+  crypto: ^3.0.7
 
 dev_dependencies:
   flutter_test:

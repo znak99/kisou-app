@@ -17,8 +17,8 @@ Flutter mobile app for **キソウ**, a weather-based personalized clothing reco
   with the Ministry of the Environment source shown in context when WBGT appears
 - Feedback bottom sheet for a recent date, outside time slots, actual clothing, and comfort feedback
 - Feedback submitted/edit state for today
-- Menu screen for account linking, profile, sensitivity, location, data reset, theme, privacy, logout, and account deletion
-- Access/refresh tokens and the anonymous credential stored with `flutter_secure_storage`
+- Menu screen for account linking, profile, sensitivity, location, data reset, theme, privacy, logout, in-app deletion, and external-deletion credentials
+- Access/refresh tokens, the anonymous credential, and the device-bound external-deletion code stored with `flutter_secure_storage`
 - Automatic refresh-token rotation on 401, then session-expiration handling if renewal fails
 - Network, timeout, and missing-location error messages with retry or settings actions
 

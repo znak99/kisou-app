@@ -328,8 +328,10 @@ void main() {
         matching: find.byType(Scrollable),
       ),
     );
-    // 게스트 계정은 복구 경로가 없으므로 로그아웃을 노출하지 않는다.
+    // 게스트 계정은 세션 복구형 로그아웃을 노출하지 않지만 외부 삭제용
+    // 자격정보에는 접근할 수 있다.
     expect(find.text(AppStrings.logout), findsNothing);
+    expect(find.text(AppStrings.accountDeletionCredentials), findsOneWidget);
     expect(find.text(AppStrings.accountDelete), findsOneWidget);
     expect(find.text(AppStrings.profileCategorySupport), findsOneWidget);
     expect(find.text(AppStrings.aboutKisou), findsOneWidget);
