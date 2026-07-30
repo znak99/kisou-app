@@ -65,6 +65,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text(AppStrings.forecastOutlookQuota(2)), findsOneWidget);
+    expect(find.text(AppStrings.openMeteoDataAttribution), findsOneWidget);
+    expect(find.text(AppStrings.openMeteoLicense), findsOneWidget);
+    expect(find.text(AppStrings.weatherDataModified), findsOneWidget);
   });
 }
 

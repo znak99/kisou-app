@@ -97,6 +97,9 @@ void main() {
     expect(find.text(AppStrings.yesterday), findsOneWidget);
     expect(find.text(AppStrings.twoDaysAgo), findsOneWidget);
     expect(find.text('昨日より3°'), findsOneWidget);
+    expect(find.text(AppStrings.openMeteoDataAttribution), findsOneWidget);
+    expect(find.text(AppStrings.openMeteoLicense), findsOneWidget);
+    expect(find.text(AppStrings.weatherDataModified), findsOneWidget);
     // The feedback action lives in the shared top toolbar.
     expect(find.text(AppStrings.feedbackButton), findsOneWidget);
 
@@ -164,6 +167,9 @@ void main() {
     expect(find.text(AppStrings.forecastUpcomingSection), findsOneWidget);
     await tester.drag(find.byType(ListView).last, const Offset(0, -700));
     await tester.pumpAndSettle();
+    expect(find.text(AppStrings.openMeteoDataAttribution), findsOneWidget);
+    expect(find.text(AppStrings.openMeteoLicense), findsOneWidget);
+    expect(find.text(AppStrings.weatherDataModified), findsOneWidget);
     // 오늘 피드백 미기록 → 유도 카드.
     expect(find.text(AppStrings.forecastNudgeTitle), findsOneWidget);
     expect(find.text(AppStrings.forecastNudgeAction), findsOneWidget);
@@ -261,6 +267,9 @@ void main() {
     );
     expect(find.text(AppStrings.forecastFeelingLine('COOL')), findsOneWidget);
     expect(find.textContaining('東京・'), findsOneWidget);
+    expect(find.text(AppStrings.openMeteoDataAttribution), findsOneWidget);
+    expect(find.text(AppStrings.openMeteoLicense), findsOneWidget);
+    expect(find.text(AppStrings.weatherDataModified), findsOneWidget);
   });
 
   testWidgets('shows complete settings list from home', (

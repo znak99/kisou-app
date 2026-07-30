@@ -20,6 +20,7 @@ import '../../widgets/clothing_icon.dart';
 import '../../widgets/feeling_headline.dart';
 import '../../widgets/recommendation_card.dart';
 import '../../widgets/today_weather_detail.dart';
+import '../../widgets/weather_data_attribution.dart';
 import '../../widgets/weather_comparison.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -186,6 +187,8 @@ class _HomeContent extends ConsumerWidget {
           const SizedBox(height: KisouTheme.gapM),
           // 4. Weather comparison
           WeatherComparison(comparison: home.weatherComparison),
+          const SizedBox(height: KisouTheme.gapXs),
+          const WeatherDataAttribution(),
         ],
       ),
     );

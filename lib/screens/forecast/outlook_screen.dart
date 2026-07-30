@@ -11,6 +11,7 @@ import '../../models/location.dart';
 import '../../providers/forecast_provider.dart';
 import '../../utils/jp_date.dart';
 import '../../widgets/recommendation_card.dart';
+import '../../widgets/weather_data_attribution.dart';
 
 /// Free lookups per day (JST). The unreleased rewarded-ad copy is visible only
 /// in development builds.
@@ -658,6 +659,8 @@ class _OutlookResult extends StatelessWidget {
             ),
           ],
         ),
+        const SizedBox(height: KisouTheme.gapXs),
+        const WeatherDataAttribution(),
       ],
     );
   }

@@ -14,6 +14,7 @@ import '../../utils/api_error.dart';
 import '../../utils/jp_date.dart';
 import '../../widgets/feedback_sheet.dart';
 import '../../widgets/recommendation_card.dart';
+import '../../widgets/weather_data_attribution.dart';
 
 /// 予報 tab: tomorrow's outfit and a feedback nudge. The date/place lookup
 /// lives on its own page ([OutlookScreen]), reached from the tab's toolbar.
@@ -40,6 +41,8 @@ class ForecastScreen extends ConsumerWidget {
           _SectionTitle(title: AppStrings.forecastUpcomingSection),
           SizedBox(height: KisouTheme.gapS),
           _UpcomingStrip(),
+          SizedBox(height: KisouTheme.gapXs),
+          WeatherDataAttribution(),
           SizedBox(height: KisouTheme.gapL),
           _FeedbackNudge(),
         ],

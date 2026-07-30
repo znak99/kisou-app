@@ -13,6 +13,7 @@ Flutter mobile app for **キソウ**, a weather-based personalized clothing reco
 - Home screen with three API-provided recommendation combinations
 - Weather comparison for today, yesterday, and two days ago
 - Forecast tab with tomorrow recommendation, D+2 through D+4 weather, and future date/place estimates
+- Linked Open-Meteo source and CC BY 4.0 attribution beside every weather-data surface
 - Feedback bottom sheet for a recent date, outside time slots, actual clothing, and comfort feedback
 - Feedback submitted/edit state for today
 - Menu screen for account linking, profile, sensitivity, location, data reset, theme, privacy, logout, and account deletion
