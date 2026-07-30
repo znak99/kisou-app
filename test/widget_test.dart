@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:kisou_app/app.dart';
+import 'package:kisou_app/config/theme.dart';
 import 'package:kisou_app/constants/app_strings.dart';
 import 'package:kisou_app/providers/api_provider.dart';
 import 'package:kisou_app/screens/onboarding/onboarding_screen.dart';
@@ -420,21 +421,37 @@ void main() {
     expect(tester.testTextInput.isVisible, isFalse);
   });
 
-  testWidgets('feeling lead stays white in light and dark themes', (
+  testWidgets('feeling card keeps original gradient and black foreground', (
     WidgetTester tester,
   ) async {
-    for (final brightness in [Brightness.light, Brightness.dark]) {
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: ThemeData(brightness: brightness),
-          home: const Scaffold(body: FeelingHeadline(feeling: 'PERFECT')),
-        ),
-      );
-      await tester.pump();
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(body: FeelingHeadline(feeling: 'PERFECT')),
+      ),
+    );
 
-      final lead = tester.widget<Text>(find.text(AppStrings.feelingLead));
-      expect(lead.style?.color, Colors.white);
-    }
+    final lead = tester.widget<Text>(find.text(AppStrings.feelingLead));
+    final phrase = tester.widget<Text>(find.text(AppStrings.feelingPerfect));
+    final icon = tester.widget<Icon>(
+      find.byIcon(Icons.sentiment_satisfied_rounded),
+    );
+    expect(lead.style?.color, KisouTheme.feelingForeground);
+    expect(phrase.style?.color, KisouTheme.feelingForeground);
+    expect(icon.color, KisouTheme.feelingForeground);
+
+    final card = tester.widget<Container>(
+      find.descendant(
+        of: find.byType(FeelingHeadline),
+        matching: find.byType(Container),
+      ),
+    );
+    final decoration = card.decoration! as BoxDecoration;
+    final gradient = decoration.gradient! as LinearGradient;
+    final feelingColor = KisouTheme.feelingColor('PERFECT');
+    expect(gradient.colors, [
+      Color.lerp(feelingColor, Colors.white, 0.12),
+      feelingColor,
+    ]);
   });
 
   testWidgets('재방문 사용자: 홈 응답이 늦어도 1.2초 뒤 앱 화면으로 전환한다', (

@@ -67,7 +67,7 @@ class FeelingHeadline extends StatelessWidget {
                     Text(
                       lead,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: KisouTheme.feelingLeadForeground,
+                        color: KisouTheme.feelingForeground,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
