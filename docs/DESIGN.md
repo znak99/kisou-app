@@ -655,8 +655,10 @@ GET /home:
 
 **프라이버시 폴리시**
 
-- GitHub Pages로 호스팅 (무료)
-- 앱 내에서도 같은 URL을 WebView로 표시
+- ChatGPT Sites의 공개 URL
+  `https://kisou-pages.znak-llm.chatgpt.site/privacy/`에서 호스팅
+- 메뉴의 `プライバシーポリシー`에서 같은 HTTPS URL을 시스템 기본
+  외부 브라우저로 표시하고, 열기 실패 시 일본어 오류 안내 제공
 - 포함 내용: 수집 항목, 이용 목적, 제3자 제공 여부, 보관 기간, 사용자 권리, 문의처
 
 **위치정보**

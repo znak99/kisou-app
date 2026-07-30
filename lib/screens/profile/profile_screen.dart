@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:url_launcher/url_launcher.dart';
 
+import '../../config/app_links.dart';
 import '../../config/api_config.dart';
 import '../../config/theme.dart';
 import '../../constants/app_strings.dart';
@@ -12,6 +12,7 @@ import '../../models/location.dart';
 import '../../models/user.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/analysis_provider.dart';
+import '../../providers/external_link_provider.dart';
 import '../../providers/feedback_provider.dart';
 import '../../providers/forecast_provider.dart';
 import '../../providers/home_provider.dart';
@@ -43,14 +44,13 @@ enum _ProfileAction {
 
 class _ProfileScreenState extends ConsumerState<ProfileScreen>
     with WidgetsBindingObserver {
-  static final _privacyPolicyUri = Uri.parse('https://example.com/privacy');
-
   var _isSaving = false;
   _ProfileAction? _savingAction;
   var _menuHasOverflow = false;
   var _menuScrollProgress = 1.0;
   var _waitingForLocationSettings = false;
   var _locationResumeInProgress = false;
+  var _openingPrivacyPolicy = false;
 
   @override
   void initState() {
@@ -275,7 +275,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
           _SettingRow(
             icon: Icons.privacy_tip_outlined,
             title: AppStrings.privacyPolicy,
-            onTap: _isSaving ? null : _openPrivacyPolicy,
+            loading: _openingPrivacyPolicy,
+            onTap: _isSaving || _openingPrivacyPolicy
+                ? null
+                : _openPrivacyPolicy,
           ),
         ],
       ),
@@ -851,18 +854,23 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
   }
 
   Future<void> _openPrivacyPolicy() async {
+    if (_openingPrivacyPolicy) {
+      return;
+    }
+    setState(() => _openingPrivacyPolicy = true);
+    var opened = false;
     try {
-      final opened = await launchUrl(
-        _privacyPolicyUri,
-        mode: LaunchMode.externalApplication,
+      opened = await ref.read(externalUrlLauncherProvider)(
+        AppLinks.privacyPolicy,
       );
-      if (opened) {
-        return;
-      }
     } catch (_) {
       // Fall through to the same user-facing failure message as a false result.
+    } finally {
+      if (mounted) {
+        setState(() => _openingPrivacyPolicy = false);
+      }
     }
-    if (mounted) {
+    if (!opened && mounted) {
       _showMessage(AppStrings.privacyPolicyOpenFailed);
     }
   }

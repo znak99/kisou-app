@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -6,9 +8,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:kisou_app/app.dart';
+import 'package:kisou_app/config/app_links.dart';
 import 'package:kisou_app/config/theme.dart';
 import 'package:kisou_app/constants/app_strings.dart';
 import 'package:kisou_app/providers/api_provider.dart';
+import 'package:kisou_app/providers/external_link_provider.dart';
 import 'package:kisou_app/screens/onboarding/onboarding_screen.dart';
 import 'package:kisou_app/services/auth_service.dart';
 import 'package:kisou_app/utils/jp_date.dart';
@@ -320,6 +324,173 @@ void main() {
       find.byType(LinearProgressIndicator),
     );
     expect(completedProgress.value!, closeTo(1, 0.001));
+  });
+
+  testWidgets('opens the published privacy policy in an external browser', (
+    WidgetTester tester,
+  ) async {
+    Uri? launchedUri;
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authServiceProvider.overrideWithValue(
+            _FakeAuthService(
+              hasTokenValue: true,
+              onboardingCompletedValue: true,
+            ),
+          ),
+          apiClientProvider.overrideWithValue(_createAppDio()),
+          externalUrlLauncherProvider.overrideWithValue((uri) async {
+            launchedUri = uri;
+            return true;
+          }),
+        ],
+        child: const KisouApp(),
+      ),
+    );
+    await pumpPastSplash(tester);
+    await tester.tap(find.text(AppStrings.tabProfile));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text(AppStrings.privacyPolicy),
+      300,
+      scrollable: find.descendant(
+        of: find.byType(ListView),
+        matching: find.byType(Scrollable),
+      ),
+    );
+
+    await tester.tap(find.text(AppStrings.privacyPolicy));
+    await tester.pump();
+
+    expect(
+      AppLinks.privacyPolicy.toString(),
+      'https://kisou-pages.znak-llm.chatgpt.site/privacy/',
+    );
+    expect(launchedUri, AppLinks.privacyPolicy);
+    expect(launchedUri!.scheme, 'https');
+    expect(launchedUri!.host, 'kisou-pages.znak-llm.chatgpt.site');
+    expect(launchedUri!.path, '/privacy/');
+    expect(find.text(AppStrings.privacyPolicyOpenFailed), findsNothing);
+  });
+
+  testWidgets('shows an error when the privacy policy cannot be opened', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authServiceProvider.overrideWithValue(
+            _FakeAuthService(
+              hasTokenValue: true,
+              onboardingCompletedValue: true,
+            ),
+          ),
+          apiClientProvider.overrideWithValue(_createAppDio()),
+          externalUrlLauncherProvider.overrideWithValue((_) async => false),
+        ],
+        child: const KisouApp(),
+      ),
+    );
+    await pumpPastSplash(tester);
+    await tester.tap(find.text(AppStrings.tabProfile));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text(AppStrings.privacyPolicy),
+      300,
+      scrollable: find.descendant(
+        of: find.byType(ListView),
+        matching: find.byType(Scrollable),
+      ),
+    );
+
+    await tester.tap(find.text(AppStrings.privacyPolicy));
+    await tester.pump();
+
+    expect(find.text(AppStrings.privacyPolicyOpenFailed), findsOneWidget);
+  });
+
+  testWidgets('shows an error when opening the privacy policy throws', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authServiceProvider.overrideWithValue(
+            _FakeAuthService(
+              hasTokenValue: true,
+              onboardingCompletedValue: true,
+            ),
+          ),
+          apiClientProvider.overrideWithValue(_createAppDio()),
+          externalUrlLauncherProvider.overrideWithValue(
+            (_) => Future<bool>.error(StateError('launcher failed')),
+          ),
+        ],
+        child: const KisouApp(),
+      ),
+    );
+    await pumpPastSplash(tester);
+    await tester.tap(find.text(AppStrings.tabProfile));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text(AppStrings.privacyPolicy),
+      300,
+      scrollable: find.descendant(
+        of: find.byType(ListView),
+        matching: find.byType(Scrollable),
+      ),
+    );
+
+    await tester.tap(find.text(AppStrings.privacyPolicy));
+    await tester.pump();
+
+    expect(find.text(AppStrings.privacyPolicyOpenFailed), findsOneWidget);
+  });
+
+  testWidgets('ignores repeated privacy policy taps while opening', (
+    WidgetTester tester,
+  ) async {
+    final launchResult = Completer<bool>();
+    var launchCount = 0;
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authServiceProvider.overrideWithValue(
+            _FakeAuthService(
+              hasTokenValue: true,
+              onboardingCompletedValue: true,
+            ),
+          ),
+          apiClientProvider.overrideWithValue(_createAppDio()),
+          externalUrlLauncherProvider.overrideWithValue((_) {
+            launchCount += 1;
+            return launchResult.future;
+          }),
+        ],
+        child: const KisouApp(),
+      ),
+    );
+    await pumpPastSplash(tester);
+    await tester.tap(find.text(AppStrings.tabProfile));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text(AppStrings.privacyPolicy),
+      300,
+      scrollable: find.descendant(
+        of: find.byType(ListView),
+        matching: find.byType(Scrollable),
+      ),
+    );
+
+    await tester.tap(find.text(AppStrings.privacyPolicy));
+    await tester.tap(find.text(AppStrings.privacyPolicy));
+    await tester.pump();
+
+    expect(launchCount, 1);
+    launchResult.complete(true);
+    await tester.pumpAndSettle();
+    expect(find.text(AppStrings.privacyPolicyOpenFailed), findsNothing);
   });
 
   testWidgets('shows timeout error on home load failure', (
