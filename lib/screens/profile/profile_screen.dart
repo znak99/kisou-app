@@ -909,10 +909,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
     _startSaving(_ProfileAction.delete);
     try {
       await ref.read(userProvider.notifier).deleteMe();
-      await ref.read(authProvider.notifier).logout();
+      await ref.read(authProvider.notifier).completeAccountDeletion();
     } catch (error) {
       _showMessage(
-        classifyApiError(error) == ApiErrorKind.unknown
+        error is LocalAccountCleanupException
+            ? AppStrings.accountDeleteLocalCleanupFailed
+            : classifyApiError(error) == ApiErrorKind.unknown
             ? AppStrings.deleteFailed
             : apiErrorMessage(error),
       );

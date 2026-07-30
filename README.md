@@ -58,17 +58,29 @@ flutter run --flavor dev \
 flutter run --flavor dev --dart-define-from-file=config/dev.json
 
 # Android production-config verification App Bundle
-bash scripts/build_android_release.sh
+KISOU_ALLOW_EPHEMERAL_SIGNING=1 bash scripts/build_android_release.sh
 
 # iOS production archive (macOS/Xcode signing required)
 flutter build ipa --release --flavor prod \
   --dart-define-from-file=config/prod.json
 ```
 
-The current Android release build is still signed with the debug key so local
-and CI verification can run. It is not a store-uploadable artifact; the
-`실기기·출시 준비` work must configure the owner-controlled upload key before
-distribution.
+Android release builds never fall back to the debug key. Without owner signing
+configuration, the build fails before producing an artifact. For local or CI
+compilation checks only, explicitly set `KISOU_ALLOW_EPHEMERAL_SIGNING=1`; this
+creates a two-day temporary certificate and a clearly named
+`build/verification/KISOU-prod-EPHEMERAL-NOT-FOR-STORE.aab`. CI deletes its
+temporary AAB after verification.
+
+For a distributable AAB, copy `android/key.properties.example` to the ignored
+`android/key.properties`, use an owner-controlled upload keystore outside the
+repository, and pin its SHA-256 certificate fingerprint. Alternatively, set an
+absolute `KISOU_ANDROID_KEY_PROPERTIES_PATH`, or provide all five
+`KISOU_ANDROID_*` signing variables documented by the build script. Then run
+`bash scripts/build_android_release.sh`; the signer, production application ID,
+production API URL, archive integrity, and absence of development markers are
+verified. The pinned fingerprint must also be checked against the upload
+certificate registered in Play Console before distribution.
 
 ### Available defines
 
@@ -148,8 +160,8 @@ flutter test --dart-define-from-file=config/prod.json \
 
 GitHub Actions runs analysis, both test modes, and a production-config Android
 App Bundle build on every `main`/`develop` push and pull request into `main`.
-That CI artifact verifies configuration and compilation only; it is not
-published or treated as store-signed.
+CI uses an ephemeral two-day certificate, verifies the bundle, and deletes it.
+It never accepts owner signing material and never publishes a store artifact.
 
 Common manual checks:
 

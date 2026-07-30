@@ -37,6 +37,9 @@ class ThemeModeController extends Notifier<ThemeMode> {
 
   Future<void> _load() async {
     final prefs = await SharedPreferences.getInstance();
+    if (!ref.mounted) {
+      return;
+    }
     final mode = themeModeFromPreferences(prefs);
     if (mode != state) {
       state = mode;
@@ -47,5 +50,11 @@ class ThemeModeController extends Notifier<ThemeMode> {
     state = mode;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_themeModeKey, mode.name);
+  }
+
+  /// The persisted preference has already been removed with account data.
+  /// Reset only in-memory state so deletion does not recreate the key.
+  void resetAfterAccountDeletion() {
+    state = ThemeMode.system;
   }
 }

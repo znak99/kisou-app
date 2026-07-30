@@ -8,6 +8,7 @@ import 'api_provider.dart';
 import 'feedback_provider.dart';
 import 'home_provider.dart';
 import 'shell_provider.dart';
+import 'theme_provider.dart';
 import 'user_provider.dart';
 
 enum AuthStatus { unauthenticated, authenticated }
@@ -129,6 +130,30 @@ class AuthController extends AsyncNotifier<AuthState> {
     state = const AsyncData(AuthState.unauthenticated());
   }
 
+  /// Finalizes a successful server-side account deletion without issuing a
+  /// logout request against an account that no longer exists.
+  Future<void> completeAccountDeletion() async {
+    state = const AsyncLoading<AuthState>();
+    Object? cleanupError;
+    StackTrace? cleanupStackTrace;
+    try {
+      await ref.read(authServiceProvider).clearLocalAccountData();
+      ref.read(themeModeProvider.notifier).resetAfterAccountDeletion();
+    } catch (error, stackTrace) {
+      cleanupError = error;
+      cleanupStackTrace = stackTrace;
+    } finally {
+      _invalidateUserScopedData();
+      state = const AsyncData(AuthState.unauthenticated());
+    }
+    if (cleanupError != null) {
+      Error.throwWithStackTrace(
+        LocalAccountCleanupException(cleanupError),
+        cleanupStackTrace!,
+      );
+    }
+  }
+
   /// Drops all cached per-user data so a subsequent account never sees the
   /// previous user's home/forecast/feedback/profile — audit B6.
   void _invalidateUserScopedData() {
@@ -161,4 +186,10 @@ class AuthController extends AsyncNotifier<AuthState> {
       return AuthState.authenticated(isNewUser: isNewUser);
     });
   }
+}
+
+class LocalAccountCleanupException implements Exception {
+  const LocalAccountCleanupException(this.cause);
+
+  final Object cause;
 }

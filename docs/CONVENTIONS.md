@@ -102,6 +102,9 @@ The mapping from API code (`"THIN_LONG"`) → enum → Japanese display name →
 - Auth interceptor adds `Authorization: Bearer <token>` to all requests
 - On a 401, refresh once with the stored rotating refresh token and retry the request; simultaneous 401s share one refresh operation
 - Store access/refresh tokens and `device_secret` only in `flutter_secure_storage`
+- After account deletion, clear all secure-storage credentials and local
+  preferences immediately; after a successful social-account link, remove the
+  obsolete anonymous `device_secret`
 - API base URL is loaded from the matching `config/dev.json` or
   `config/prod.json`; release builds must fail before networking when the
   environment is not production or the production URL is not safe HTTPS
@@ -117,6 +120,10 @@ The mapping from API code (`"THIN_LONG"`) → enum → Japanese display name →
   dev Info.plist only; a production archive must use the `prod` scheme
 - Isolate iOS UserDefaults and Keychain with distinct bundle IDs and private
   default access groups; do not add a dev/prod shared Keychain group
+- Never fall back to the Android debug key for a release. Keep owner upload
+  keystores outside Git, pin the certificate SHA-256 fingerprint, and verify it
+  against Play Console before distribution. Ephemeral signing is only an
+  explicit compilation check and its artifact must not be uploaded
 - All API responses are parsed into model classes
 - Never use raw `Map<String, dynamic>` beyond the parsing layer
 

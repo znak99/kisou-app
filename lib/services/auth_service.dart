@@ -111,6 +111,15 @@ class AuthService {
     await preferences.remove(_onboardingCompletedKey);
   }
 
+  /// Removes every local credential and preference after the server has
+  /// permanently deleted the account. This intentionally differs from logout,
+  /// which keeps the anonymous restoration secret.
+  Future<void> clearLocalAccountData() async {
+    await _storage.deleteAll();
+    final preferences = await _preferencesFactory();
+    await preferences.clear();
+  }
+
   Future<String> signInWithApple() async {
     final credential = await SignInWithApple.getAppleIDCredential(
       scopes: [
@@ -260,6 +269,8 @@ class AuthService {
       '/auth/link',
       data: {'provider': provider.apiValue, 'token': token},
     );
+    // The anonymous identity is invalid after a successful provider link.
+    await _storage.delete(key: _deviceSecretKey);
   }
 
   Future<void> linkWithApple({required Dio dio}) async {

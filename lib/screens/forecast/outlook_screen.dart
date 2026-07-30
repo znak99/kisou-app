@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../config/api_config.dart';
 import '../../config/theme.dart';
 import '../../constants/app_strings.dart';
 import '../../constants/major_cities.dart';
@@ -11,8 +12,8 @@ import '../../providers/forecast_provider.dart';
 import '../../utils/jp_date.dart';
 import '../../widgets/recommendation_card.dart';
 
-/// Free lookups per day (JST). The rewarded-ad "+1" is planned but not wired
-/// yet, so the intro copy marks it 準備中.
+/// Free lookups per day (JST). The unreleased rewarded-ad copy is visible only
+/// in development builds.
 const _freeLookupsPerDay = 3;
 const _quotaDateKey = 'outlook_quota_date';
 const _quotaUsedKey = 'outlook_quota_used';
@@ -223,17 +224,19 @@ class _OutlookScreenState extends ConsumerState<OutlookScreen> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 2),
-                Padding(
-                  padding: const EdgeInsets.only(left: 21),
-                  child: Text(
-                    AppStrings.forecastOutlookAdNote,
-                    style: textTheme.bodySmall?.copyWith(
-                      color: c.softInk,
-                      fontSize: 11,
+                if (ApiConfig.developmentFeaturesEnabled) ...[
+                  const SizedBox(height: 2),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 21),
+                    child: Text(
+                      AppStrings.forecastOutlookAdNote,
+                      style: textTheme.bodySmall?.copyWith(
+                        color: c.softInk,
+                        fontSize: 11,
+                      ),
                     ),
                   ),
-                ),
+                ],
                 const SizedBox(height: KisouTheme.gapL),
                 LayoutBuilder(
                   builder: (context, constraints) {

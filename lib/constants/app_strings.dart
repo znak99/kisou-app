@@ -99,7 +99,7 @@ class AppStrings {
   static const linkedWithApple = 'Apple連携済み';
   static const linkedWithGoogle = 'Google連携済み';
   static const anonymousAccount = 'ゲストアカウント';
-  static const anonymousAccountHelp = '機種変更前にアカウント連携が必要です。';
+  static const anonymousAccountHelp = '現在、機種変更時のデータ引き継ぎには対応していません。';
   static const developerOptions = '開発者向け';
   static const linkPrompt = 'アカウントを連携すると、機種変更時もデータを引き継げます';
   static const linkFailed = 'アカウント連携に失敗しました。';
@@ -246,6 +246,9 @@ class AppStrings {
   static const accountDeleteConfirm = 'すべての記録と設定が完全に削除され、元に戻せません。';
   static const deleteAction = '削除する';
   static const deleteFailed = '削除に失敗しました。もう一度お試しください。';
+  static const accountDeleteLocalCleanupFailed =
+      'アカウントは削除されましたが、端末内データを消去できませんでした。'
+      'KISOUをアンインストールしてから再インストールしてください。';
   static const currentLocationOption = '現在地を使用';
   static const manualLocationOption = '手動で選択';
   static const openLocationServices = '位置情報サービスを開く';

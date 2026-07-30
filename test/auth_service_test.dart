@@ -76,6 +76,58 @@ void main() {
     expect(await service.isOnboardingCompleted(), isFalse);
   });
 
+  test(
+    'account deletion clears credentials and all local preferences',
+    () async {
+      SharedPreferences.setMockInitialValues({
+        'has_launched_before': true,
+        'onboarding_completed': true,
+        'theme_mode': 'dark',
+        'outlook_quota_date': '2026-07-31',
+      });
+      FlutterSecureStorage.setMockInitialValues({
+        'jwt_token': 'access-token',
+        'refresh_token': 'refresh-token',
+        'device_secret': 'anonymous-secret',
+      });
+
+      const storage = FlutterSecureStorage();
+      final service = AuthService(storage: storage);
+      await service.clearLocalAccountData();
+
+      expect(await storage.readAll(), isEmpty);
+      final preferences = await SharedPreferences.getInstance();
+      expect(preferences.getKeys(), isEmpty);
+    },
+  );
+
+  test(
+    'successful account linking removes the obsolete anonymous secret',
+    () async {
+      FlutterSecureStorage.setMockInitialValues({
+        'device_secret': 'anonymous-secret',
+      });
+      const storage = FlutterSecureStorage();
+      final service = AuthService(storage: storage);
+      final dio = Dio();
+      dio.interceptors.add(
+        InterceptorsWrapper(
+          onRequest: (options, handler) {
+            handler.resolve(Response<void>(requestOptions: options));
+          },
+        ),
+      );
+
+      await service.linkAccount(
+        dio: dio,
+        provider: AuthLoginProvider.apple,
+        token: 'identity-token',
+      );
+
+      expect(await storage.read(key: 'device_secret'), isNull);
+    },
+  );
+
   test('development existing login sends fixed token', () async {
     final tokens = <String>[];
     final dio = _createLoginDio(tokens, isNewUser: false);

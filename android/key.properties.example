@@ -1,0 +1,8 @@
+# Copy this file to key.properties. Keep the real file and keystore outside Git.
+# Paths are resolved from the android directory; an absolute path is preferred.
+storeFile=/absolute/path/outside-the-repository/kisou-upload-keystore.jks
+storePassword=replace-with-owner-controlled-password
+keyAlias=kisou-upload
+keyPassword=replace-with-owner-controlled-password
+# Obtain with: keytool -list -v -keystore <file> -alias <alias>
+certificateSha256=replace-with-64-hex-sha256-fingerprint

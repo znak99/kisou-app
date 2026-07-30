@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../config/api_config.dart';
 import '../config/theme.dart';
 import '../providers/feedback_provider.dart';
 import '../providers/forecast_provider.dart';
@@ -19,7 +20,7 @@ import 'home/home_screen.dart';
 import 'profile/profile_screen.dart';
 
 /// Root scaffold after login/onboarding: three tabs behind a persistent
-/// bottom navigation, with an ad slot pinned above it on every tab.
+/// bottom navigation. The unfinished ad placeholder is development-only.
 class RootShell extends ConsumerStatefulWidget {
   const RootShell({super.key});
 
@@ -122,7 +123,7 @@ class _RootShellState extends ConsumerState<RootShell>
       bottomNavigationBar: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const AdSlot(),
+          if (ApiConfig.developmentFeaturesEnabled) const AdSlot(),
           SafeArea(
             top: false,
             child: AppBottomNav(

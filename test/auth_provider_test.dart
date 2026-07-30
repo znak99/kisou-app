@@ -1,12 +1,17 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kisou_app/providers/api_provider.dart';
 import 'package:kisou_app/providers/auth_provider.dart';
 import 'package:kisou_app/providers/shell_provider.dart';
+import 'package:kisou_app/providers/theme_provider.dart';
 import 'package:kisou_app/services/auth_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   test('login with new user routes to onboarding state', () async {
     final authService = _LoginFakeAuthService(isNewUser: true);
     final container = ProviderContainer(
@@ -86,6 +91,26 @@ void main() {
 
     expect(container.read(shellTabProvider), ShellTab.home);
   });
+
+  test('completed account deletion clears local data and signs out', () async {
+    SharedPreferences.setMockInitialValues({});
+    final authService = _LoginFakeAuthService(isNewUser: false);
+    final container = ProviderContainer(
+      overrides: [
+        authServiceProvider.overrideWithValue(authService),
+        apiClientProvider.overrideWithValue(Dio()),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await container.read(authProvider.future);
+    await container.read(authProvider.notifier).completeAccountDeletion();
+
+    expect(authService.didClearLocalAccountData, isTrue);
+    expect(container.read(authProvider).requireValue.isAuthenticated, isFalse);
+    expect(container.read(shellTabProvider), ShellTab.home);
+    expect(container.read(themeModeProvider), ThemeMode.system);
+  });
 }
 
 class _LoginFakeAuthService extends AuthService {
@@ -93,6 +118,7 @@ class _LoginFakeAuthService extends AuthService {
 
   final bool isNewUser;
   bool onboardingCompletedValue = false;
+  bool didClearLocalAccountData = false;
 
   @override
   Future<void> clearKeychainOnFirstLaunch() async {}
@@ -115,5 +141,10 @@ class _LoginFakeAuthService extends AuthService {
   @override
   Future<void> setOnboardingCompleted(bool isCompleted) async {
     onboardingCompletedValue = isCompleted;
+  }
+
+  @override
+  Future<void> clearLocalAccountData() async {
+    didClearLocalAccountData = true;
   }
 }
