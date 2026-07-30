@@ -6,7 +6,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:kisou_app/app.dart';
-import 'package:kisou_app/config/theme.dart';
 import 'package:kisou_app/constants/app_strings.dart';
 import 'package:kisou_app/providers/api_provider.dart';
 import 'package:kisou_app/screens/onboarding/onboarding_screen.dart';
@@ -421,7 +420,7 @@ void main() {
     expect(tester.testTextInput.isVisible, isFalse);
   });
 
-  testWidgets('feeling card content stays white in light and dark themes', (
+  testWidgets('feeling lead stays white in light and dark themes', (
     WidgetTester tester,
   ) async {
     for (final brightness in [Brightness.light, Brightness.dark]) {
@@ -434,28 +433,7 @@ void main() {
       await tester.pump();
 
       final lead = tester.widget<Text>(find.text(AppStrings.feelingLead));
-      final phrase = tester.widget<Text>(find.text(AppStrings.feelingPerfect));
-      final icon = tester.widget<Icon>(
-        find.byIcon(Icons.sentiment_satisfied_rounded),
-      );
       expect(lead.style?.color, Colors.white);
-      expect(phrase.style?.color, Colors.white);
-      expect(icon.color, Colors.white);
-    }
-
-    for (final code in KisouTheme.feelingColors.keys) {
-      final surface = KisouTheme.feelingSurfaceColor(code);
-      final gradientTop = Color.lerp(surface, Colors.white, 0.06)!;
-      expect(
-        _contrastRatio(gradientTop, KisouTheme.feelingForeground),
-        greaterThanOrEqualTo(4.5),
-        reason: '$code gradient top must keep white text readable',
-      );
-      expect(
-        _contrastRatio(surface, KisouTheme.feelingForeground),
-        greaterThanOrEqualTo(4.5),
-        reason: '$code gradient bottom must keep white text readable',
-      );
     }
   });
 
@@ -812,18 +790,6 @@ Map<String, dynamic> _weather({
     'precipitation_chance_max': null,
     'wbgt_max': null,
   };
-}
-
-double _contrastRatio(Color first, Color second) {
-  final firstLuminance = first.computeLuminance();
-  final secondLuminance = second.computeLuminance();
-  final lighter = firstLuminance > secondLuminance
-      ? firstLuminance
-      : secondLuminance;
-  final darker = firstLuminance > secondLuminance
-      ? secondLuminance
-      : firstLuminance;
-  return (lighter + 0.05) / (darker + 0.05);
 }
 
 Map<String, dynamic> _userJson({

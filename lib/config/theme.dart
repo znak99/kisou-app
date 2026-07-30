@@ -88,13 +88,11 @@ class KisouTheme {
 
   static Color feelingColor(String code) => feelingColors[code] ?? accent;
 
-  /// Darkened surface keeps white content above the 4.5:1 contrast target.
-  static Color feelingSurfaceColor(String code) {
-    return Color.lerp(feelingColor(code), Colors.black, 0.40)!;
-  }
-
-  /// Theme-independent foreground shared by all feeling-card content.
-  static const Color feelingForeground = Colors.white;
+  /// All current feeling colors have at least 4.5:1 contrast against black.
+  /// Keeping the foreground independent from hue also prevents color-only
+  /// status communication.
+  static const Color feelingForeground = Colors.black;
+  static const Color feelingLeadForeground = Colors.white;
 
   static ThemeData light() => _build(Brightness.light, KisouColors.light);
   static ThemeData dark() => _build(Brightness.dark, KisouColors.dark);

@@ -32,7 +32,7 @@ class FeelingHeadline extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = KisouTheme.feelingSurfaceColor(feeling);
+    final color = KisouTheme.feelingColor(feeling);
     final phrase = _phrases[feeling] ?? AppStrings.feelingPerfect;
     final icon = _icons[feeling] ?? Icons.sentiment_satisfied_rounded;
     const lead = AppStrings.feelingLead;
@@ -46,7 +46,7 @@ class FeelingHeadline extends StatelessWidget {
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
-              colors: [Color.lerp(color, Colors.white, 0.06)!, color],
+              colors: [Color.lerp(color, Colors.white, 0.12)!, color],
             ),
             borderRadius: BorderRadius.circular(KisouTheme.rLg),
             boxShadow: [
@@ -67,7 +67,7 @@ class FeelingHeadline extends StatelessWidget {
                     Text(
                       lead,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: KisouTheme.feelingForeground,
+                        color: KisouTheme.feelingLeadForeground,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
