@@ -92,6 +92,7 @@ class KisouTheme {
   /// Keeping the foreground independent from hue also prevents color-only
   /// status communication.
   static const Color feelingForeground = Colors.black;
+  static const Color feelingLeadForeground = Colors.white;
 
   static ThemeData light() => _build(Brightness.light, KisouColors.light);
   static ThemeData dark() => _build(Brightness.dark, KisouColors.dark);

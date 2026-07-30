@@ -39,10 +39,15 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     super.dispose();
   }
 
+  void _dismissKeyboard() {
+    FocusManager.instance.primaryFocus?.unfocus();
+  }
+
   void _goNext() {
     if (_currentStep >= _stepCount - 1) {
       return;
     }
+    _dismissKeyboard();
     final nextStep = _currentStep + 1;
     setState(() {
       _currentStep = nextStep;
@@ -61,6 +66,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     if (_currentStep == 0) {
       return;
     }
+    _dismissKeyboard();
     final previousStep = _currentStep - 1;
     setState(() {
       _currentStep = previousStep;

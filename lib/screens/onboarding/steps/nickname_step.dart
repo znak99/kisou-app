@@ -28,6 +28,18 @@ class _NicknameStepState extends State<NicknameStep> {
     return trimmed.isNotEmpty && trimmed.length < 2;
   }
 
+  void _dismissKeyboard() {
+    FocusManager.instance.primaryFocus?.unfocus();
+  }
+
+  void _submit() {
+    if (!_canContinue) {
+      return;
+    }
+    _dismissKeyboard();
+    widget.onNext(_controller.text.trim());
+  }
+
   @override
   void initState() {
     super.initState();
@@ -77,6 +89,8 @@ class _NicknameStepState extends State<NicknameStep> {
                       prefixIcon: Icon(Icons.badge_rounded),
                     ),
                     onChanged: (_) => setState(() {}),
+                    onSubmitted: (_) => _dismissKeyboard(),
+                    onTapOutside: (_) => _dismissKeyboard(),
                   ),
                   if (_showMinLengthHint) ...[
                     const SizedBox(height: KisouTheme.gapXs),
@@ -102,9 +116,7 @@ class _NicknameStepState extends State<NicknameStep> {
                   ],
                   const Spacer(),
                   FilledButton.icon(
-                    onPressed: _canContinue
-                        ? () => widget.onNext(_controller.text.trim())
-                        : null,
+                    onPressed: _canContinue ? _submit : null,
                     icon: const Icon(Icons.arrow_forward_rounded, size: 20),
                     label: const Text(AppStrings.next),
                   ),

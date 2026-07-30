@@ -11,6 +11,7 @@ import 'package:kisou_app/providers/api_provider.dart';
 import 'package:kisou_app/screens/onboarding/onboarding_screen.dart';
 import 'package:kisou_app/services/auth_service.dart';
 import 'package:kisou_app/utils/jp_date.dart';
+import 'package:kisou_app/widgets/feeling_headline.dart';
 
 void main() {
   setUp(() {
@@ -384,11 +385,56 @@ void main() {
 
     await tester.enterText(find.byType(TextField), 'たろう');
     await tester.pump();
+    expect(tester.testTextInput.isVisible, isTrue);
     await tester.tap(find.widgetWithText(FilledButton, AppStrings.next));
     await tester.pumpAndSettle();
 
+    expect(tester.testTextInput.isVisible, isFalse);
     expect(find.text('2/4'), findsOneWidget);
     expect(find.text(AppStrings.genderPrompt), findsOneWidget);
+  });
+
+  testWidgets('onboarding nickname keyboard closes on done and outside tap', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      const ProviderScope(child: MaterialApp(home: OnboardingScreen())),
+    );
+    await tester.pump();
+
+    final textField = find.byType(TextField);
+    await tester.tap(textField);
+    await tester.pump();
+    expect(tester.testTextInput.isVisible, isTrue);
+
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.pump();
+    expect(tester.testTextInput.isVisible, isFalse);
+
+    await tester.tap(textField);
+    await tester.pump();
+    expect(tester.testTextInput.isVisible, isTrue);
+
+    await tester.tap(find.text(AppStrings.nicknamePrompt));
+    await tester.pump();
+    expect(tester.testTextInput.isVisible, isFalse);
+  });
+
+  testWidgets('feeling lead stays white in light and dark themes', (
+    WidgetTester tester,
+  ) async {
+    for (final brightness in [Brightness.light, Brightness.dark]) {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: ThemeData(brightness: brightness),
+          home: const Scaffold(body: FeelingHeadline(feeling: 'PERFECT')),
+        ),
+      );
+      await tester.pump();
+
+      final lead = tester.widget<Text>(find.text(AppStrings.feelingLead));
+      expect(lead.style?.color, Colors.white);
+    }
   });
 
   testWidgets('재방문 사용자: 홈 응답이 늦어도 1.2초 뒤 앱 화면으로 전환한다', (
