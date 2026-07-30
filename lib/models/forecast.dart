@@ -50,9 +50,7 @@ class ForecastTomorrow {
             return RecommendationItem.fromJson(item as Map<String, dynamic>);
           })
           .toList(growable: false),
-      weather: WeatherSummary.fromJson(
-        json['weather'] as Map<String, dynamic>,
-      ),
+      weather: WeatherSummary.fromJson(json['weather'] as Map<String, dynamic>),
       todayWeather: WeatherSummary.fromJson(
         json['today_weather'] as Map<String, dynamic>,
       ),
@@ -110,7 +108,7 @@ class ClimateStats {
   final int sampleDays;
 }
 
-/// GET /forecast/outlook — recommendation for an arbitrary future date/place.
+/// POST /forecast/outlook — recommendation for an arbitrary future date/place.
 /// `forecast` mode carries [weather]; `climatology` mode carries [climate].
 class ForecastOutlook {
   const ForecastOutlook({

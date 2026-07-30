@@ -21,13 +21,9 @@ class ForecastService {
     required double latitude,
     required double longitude,
   }) async {
-    final response = await _dio.get<Map<String, dynamic>>(
+    final response = await _dio.post<Map<String, dynamic>>(
       '/forecast/outlook',
-      queryParameters: {
-        'date': date,
-        'latitude': latitude,
-        'longitude': longitude,
-      },
+      data: {'date': date, 'latitude': latitude, 'longitude': longitude},
     );
     final data = response.data;
     if (data == null) {

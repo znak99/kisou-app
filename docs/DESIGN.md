@@ -766,4 +766,8 @@ GET /home:
   `KISOU-prod-EPHEMERAL-NOT-FOR-STORE.aab`로 구분합니다.
 - 실제 배포 전에는 소유자 upload 인증서 지문을 Play Console 등록값과
   대조하고 소유자 서명 AAB를 실기기·내부 테스트 트랙에서 최종 검증합니다.
+- 날짜 지정 예측의 정확 좌표와 날짜는 `POST /forecast/outlook`의 JSON
+  본문으로 전송해 프록시·access log의 URL에 위치가 남지 않게 합니다. API는
+  모든 access log query를 제거하고 애플리케이션 로그에도 좌표를 기록하지
+  않습니다.
 - 운영 API는 별도 MacBook 서버의 Docker Compose에서 실행되며 Cloudflare Tunnel을 통해 공개됩니다.

@@ -943,11 +943,12 @@ void _resolveAppRequest(
         ),
       );
     case '/forecast/outlook':
+      final requestData = options.data as Map<String, dynamic>;
       handler.resolve(
         Response<Map<String, dynamic>>(
           requestOptions: options,
           data: {
-            'date': options.queryParameters['date'],
+            'date': requestData['date'],
             'mode': 'climatology',
             'feeling': 'COOL',
             'comfort_min': 12,

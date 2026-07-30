@@ -125,6 +125,8 @@ The mapping from API code (`"THIN_LONG"`) → enum → Japanese display name →
   against Play Console before distribution. Ephemeral signing is only an
   explicit compilation check and its artifact must not be uploaded
 - All API responses are parsed into model classes
+- Send exact coordinates for the future forecast in the
+  `POST /forecast/outlook` JSON body, never in URL query parameters
 - Never use raw `Map<String, dynamic>` beyond the parsing layer
 
 ## Theming & Design
