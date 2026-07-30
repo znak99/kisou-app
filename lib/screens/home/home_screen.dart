@@ -166,7 +166,7 @@ class _HomeContent extends ConsumerWidget {
       },
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
         children: [
           _Greeting(user: user),
           const SizedBox(height: KisouTheme.gapL),
