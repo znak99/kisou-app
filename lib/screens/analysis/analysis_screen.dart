@@ -8,6 +8,7 @@ import '../../providers/analysis_provider.dart';
 import '../../utils/api_error.dart';
 import '../../utils/jp_date.dart';
 import '../../widgets/error_state.dart';
+import '../../widgets/weather_data_attribution.dart';
 
 class AnalysisScreen extends ConsumerWidget {
   const AnalysisScreen({super.key});
@@ -76,6 +77,8 @@ class _AnalysisContent extends ConsumerWidget {
             ),
             const SizedBox(height: KisouTheme.gapS),
             _HistoryCard(history: analysis.history),
+            const SizedBox(height: KisouTheme.gapXs),
+            const WeatherDataAttribution(),
           ],
         ],
       ),

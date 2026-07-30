@@ -27,6 +27,7 @@ void main() {
     expect(find.text(AppStrings.analysisEmptyTitle), findsOneWidget);
     expect(find.text(AppStrings.analysisEmptyBody), findsOneWidget);
     expect(find.text(AppStrings.analysisAverageNotice), findsNothing);
+    expect(find.text(AppStrings.openMeteoDataAttribution), findsNothing);
   });
 
   testWidgets('4 records explain average prediction and remaining count', (
@@ -38,6 +39,7 @@ void main() {
     expect(find.text(AppStrings.analysisAverageNotice), findsOneWidget);
     expect(find.text('くわしい分析まであと1回です'), findsOneWidget);
     expect(find.text(AppStrings.analysisDetailedTitle), findsNothing);
+    expect(find.text(AppStrings.openMeteoDataAttribution), findsNothing);
   });
 
   testWidgets('5 records unlock detailed personal history', (tester) async {
@@ -46,6 +48,14 @@ void main() {
     expect(find.text(AppStrings.analysisAverageNotice), findsNothing);
     expect(find.text(AppStrings.analysisDetailedTitle), findsOneWidget);
     expect(find.text('7/5（日）'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text(AppStrings.openMeteoDataAttribution),
+      240,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text(AppStrings.openMeteoDataAttribution), findsOneWidget);
+    expect(find.text(AppStrings.openMeteoLicense), findsOneWidget);
+    expect(find.text(AppStrings.weatherDataModified), findsOneWidget);
   });
 
   testWidgets('analysis supports the approved portrait phone matrix', (
@@ -67,6 +77,11 @@ void main() {
       tester.view.devicePixelRatio = 1;
       tester.platformDispatcher.textScaleFactorTestValue = scale;
       await _pumpAnalysis(tester, _analysisJson(total: 5));
+      await tester.scrollUntilVisible(
+        find.text(AppStrings.openMeteoDataAttribution),
+        240,
+        scrollable: find.byType(Scrollable).first,
+      );
       expect(
         tester.takeException(),
         isNull,
@@ -82,7 +97,12 @@ void main() {
     tester,
   ) async {
     final handle = tester.ensureSemantics();
-    await _pumpAnalysis(tester, _analysisJson(total: 4));
+    await _pumpAnalysis(tester, _analysisJson(total: 5));
+    await tester.scrollUntilVisible(
+      find.text(AppStrings.openMeteoDataAttribution),
+      240,
+      scrollable: find.byType(Scrollable).first,
+    );
 
     await expectLater(tester, meetsGuideline(textContrastGuideline));
     await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
