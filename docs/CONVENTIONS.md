@@ -108,11 +108,15 @@ The mapping from API code (`"THIN_LONG"`) → enum → Japanese display name →
 - Gate every development-only UI, network log, preview, and fake-auth method
   on both debug mode and the development environment; hiding a button alone is
   not sufficient
-- Android development commands use the `dev` flavor so test credentials and
-  preferences cannot overwrite the installed production app
-- Keep Android flavor and Dart environment paired (`dev`/`development`,
-  `prod`/`production`); runtime validation must reject missing or mismatched
-  pairs before any network or storage access
+- Android and iOS development commands use the `dev` flavor so test
+  credentials and preferences cannot overwrite the installed production app
+- Keep the native flavor and Dart environment paired (`dev`/`development`,
+  `prod`/`production`) on Android and iOS; runtime validation must reject
+  missing or mismatched pairs before any network or storage access
+- Keep iOS local-network permission and local HTTP transport allowance in the
+  dev Info.plist only; a production archive must use the `prod` scheme
+- Isolate iOS UserDefaults and Keychain with distinct bundle IDs and private
+  default access groups; do not add a dev/prod shared Keychain group
 - All API responses are parsed into model classes
 - Never use raw `Map<String, dynamic>` beyond the parsing layer
 

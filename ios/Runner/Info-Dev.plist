@@ -26,6 +26,13 @@
 		<string>$(FLUTTER_BUILD_NUMBER)</string>
 		<key>LSRequiresIPhoneOS</key>
 		<true/>
+		<key>NSAppTransportSecurity</key>
+		<dict>
+			<key>NSAllowsLocalNetworking</key>
+			<true/>
+		</dict>
+		<key>NSLocalNetworkUsageDescription</key>
+		<string>開発中の端末からローカルのKISOU APIに接続するために使用します。</string>
 		<key>NSLocationWhenInUseUsageDescription</key>
 		<string>正確な天気情報を表示するために現在地を使用します。</string>
 		<key>UIApplicationSceneManifest</key>
@@ -57,8 +64,6 @@
 		<string>Main</string>
 		<key>UIStatusBarHidden</key>
 		<false/>
-		<!-- Portrait-only: the UI is designed for portrait; allowing landscape
-		     caused overflow (esp. with the keyboard up) — audit B18. -->
 		<key>UISupportedInterfaceOrientations</key>
 		<array>
 			<string>UIInterfaceOrientationPortrait</string>

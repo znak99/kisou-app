@@ -54,9 +54,22 @@ void validateAppFlavor({
   };
   if (flavor == null || flavor != expectedFlavor) {
     throw StateError(
-      'Android flavor "$flavor" does not match APP_ENV="$environment".',
+      'Native flavor "$flavor" does not match APP_ENV="$environment".',
     );
   }
+}
+
+String secureStorageServiceForEnvironment(String environment) {
+  return switch (environment) {
+    // Keep the historical production service name so an app update does not
+    // sign existing iOS users out. The development app uses a separate
+    // service as an additional boundary on top of its distinct bundle ID.
+    'production' => 'flutter_secure_storage_service',
+    'development' => 'cloud.znak99.kisou.dev.secure-storage',
+    _ => throw StateError(
+      'APP_ENV must be valid before secure storage is initialized.',
+    ),
+  };
 }
 
 class ApiConfig {
@@ -91,6 +104,10 @@ class ApiConfig {
 
   static const bool developmentFeaturesEnabled = kDebugMode && isDevelopment;
 
+  static final String secureStorageService = secureStorageServiceForEnvironment(
+    environment,
+  );
+
   // Triple-gated: debug mode, development environment, and explicit opt-in.
   static const bool showDevelopmentLogin =
       developmentFeaturesEnabled &&
@@ -103,7 +120,9 @@ class ApiConfig {
       environment: environment,
       flavor: appFlavor,
       flavorRequired:
-          !kIsWeb && defaultTargetPlatform == TargetPlatform.android,
+          !kIsWeb &&
+          (defaultTargetPlatform == TargetPlatform.android ||
+              defaultTargetPlatform == TargetPlatform.iOS),
     );
   }
 

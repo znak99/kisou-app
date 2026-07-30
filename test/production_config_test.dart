@@ -11,6 +11,10 @@ void main() {
       expect(ApiConfig.baseUrl, 'https://kisou.znak99.cloud');
       expect(ApiConfig.developmentFeaturesEnabled, isFalse);
       expect(ApiConfig.showDevelopmentLogin, isFalse);
+      expect(
+        ApiConfig.secureStorageService,
+        'flutter_secure_storage_service',
+      );
     },
     skip: ApiConfig.environment != 'production',
   );

@@ -24,12 +24,17 @@ void main() {
     'clears secure storage on first launch and stores launch flag',
     () async {
       SharedPreferences.setMockInitialValues({});
-      FlutterSecureStorage.setMockInitialValues({'jwt_token': 'stale-token'});
+      FlutterSecureStorage.setMockInitialValues({
+        'jwt_token': 'stale-token',
+        'refresh_token': 'stale-refresh-token',
+        'device_secret': 'stale-device-secret',
+      });
 
-      final service = AuthService();
+      const storage = FlutterSecureStorage();
+      final service = AuthService(storage: storage);
       await service.clearKeychainOnFirstLaunch();
 
-      expect(await service.readToken(), isNull);
+      expect(await storage.readAll(), isEmpty);
       final preferences = await SharedPreferences.getInstance();
       expect(preferences.getBool('has_launched_before'), isTrue);
     },
@@ -44,6 +49,19 @@ void main() {
 
     expect(await service.readToken(), 'saved-token');
   });
+
+  test(
+    'does not mark first launch complete when secure deletion fails',
+    () async {
+      SharedPreferences.setMockInitialValues({});
+      final service = AuthService(storage: const _FailingDeleteAllStorage());
+
+      await expectLater(service.clearKeychainOnFirstLaunch(), throwsStateError);
+
+      final preferences = await SharedPreferences.getInstance();
+      expect(preferences.getBool('has_launched_before'), isNull);
+    },
+  );
 
   test('stores onboarding completed flag', () async {
     SharedPreferences.setMockInitialValues({});
@@ -99,6 +117,22 @@ void main() {
     );
     expect(() => service.linkWithDevelopment(dio: dio), throwsStateError);
   });
+}
+
+class _FailingDeleteAllStorage extends FlutterSecureStorage {
+  const _FailingDeleteAllStorage();
+
+  @override
+  Future<void> deleteAll({
+    AppleOptions? iOptions,
+    AndroidOptions? aOptions,
+    LinuxOptions? lOptions,
+    WebOptions? webOptions,
+    AppleOptions? mOptions,
+    WindowsOptions? wOptions,
+  }) {
+    return Future<void>.error(StateError('secure deletion failed'));
+  }
 }
 
 Dio _createLoginDio(List<String> tokens, {required bool isNewUser}) {

@@ -55,10 +55,14 @@ flutter run --flavor dev \
   --dart-define=API_BASE_URL=http://10.0.2.2:8000
 
 # iOS development
-flutter run --dart-define-from-file=config/dev.json
+flutter run --flavor dev --dart-define-from-file=config/dev.json
 
 # Android production-config verification App Bundle
 bash scripts/build_android_release.sh
+
+# iOS production archive (macOS/Xcode signing required)
+flutter build ipa --release --flavor prod \
+  --dart-define-from-file=config/prod.json
 ```
 
 The current Android release build is still signed with the debug key so local
@@ -84,10 +88,17 @@ Resolution rules (`lib/config/api_config.dart`):
   fragment를 포함할 수 없습니다. 이 검사는 release에서도 제거되지 않습니다.
 - 개발 로그인·개발 연동·스플래시 미리보기·Dio 로그는
   `kDebugMode && APP_ENV == development`일 때만 사용할 수 있습니다.
-- Android `dev` flavor는 `.dev` application ID와 `KISOU Dev` 표시명을
-  사용해 운영 앱의 보안 저장소와 로컬 설정을 공유하지 않습니다.
-- Android는 시작 시 `dev ↔ development`, `prod ↔ production` 조합을
-  강제하며 flavor와 `APP_ENV`가 다르거나 flavor가 없으면 즉시 중단합니다.
+- Android와 iOS의 `dev` flavor는 `.dev` 앱 식별자와 `KISOU Dev`
+  표시명을 사용해 운영 앱의 보안 저장소와 로컬 설정을 공유하지 않습니다.
+- iOS의 로컬 네트워크 권한과 HTTP 허용은 dev Info.plist에만 있으며,
+  prod Info.plist에는 포함되지 않습니다. 운영 Keychain service 이름은
+  기존 사용자 세션을 유지하고 dev는 별도 service를 사용합니다. 공용
+  Keychain access group은 사용하지 않습니다.
+- Android와 iOS는 시작 시 `dev ↔ development`, `prod ↔ production`
+  조합을 강제하며 flavor와 `APP_ENV`가 다르거나 flavor가 없으면
+  네트워크·저장소 초기화 전에 즉시 중단합니다.
+- release는 production만 허용하므로 배포 archive는 `prod` scheme만
+  지원합니다. dev scheme은 archive 대상에서 제외합니다.
 
 ### Testing on a physical device over the LAN
 
@@ -116,7 +127,7 @@ flutter run --flavor dev \
   --dart-define=API_BASE_URL=http://10.0.2.2:8000
 
 # iOS
-flutter run --dart-define-from-file=config/dev.json
+flutter run --flavor dev --dart-define-from-file=config/dev.json
 ```
 
 ## Verification

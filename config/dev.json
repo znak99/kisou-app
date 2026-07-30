@@ -1,5 +1,5 @@
 {
-  "_comment": "개발. Android: flutter run --flavor dev --dart-define-from-file=config/dev.json (에뮬레이터는 API_BASE_URL=10.0.2.2 override 필요), iOS: flavor 없이 같은 define 사용",
+  "_comment": "개발. Android/iOS 모두 flutter run --flavor dev --dart-define-from-file=config/dev.json 사용 (Android 에뮬레이터는 API_BASE_URL=10.0.2.2 override 필요)",
   "APP_ENV": "development",
   "API_BASE_URL": "http://127.0.0.1:8000",
   "SHOW_DEV_LOGIN": true

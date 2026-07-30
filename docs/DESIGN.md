@@ -731,12 +731,20 @@ GET /home:
   절대 HTTPS URL이어야 하며 사용자 정보·query·fragment를 거부합니다.
 - 개발 로그인 UI, 개발 인증 메서드, 스플래시 미리보기와 네트워크 로그는
   debug 모드와 development 환경이 동시에 맞을 때만 활성화합니다.
-- Android는 `dev` flavor를 `cloud.znak99.kisou.dev`와 `KISOU Dev`로
-  분리하고 `prod`는 스토어 식별자 `cloud.znak99.kisou`를 유지합니다.
-  시작 시 네이티브 flavor와 `APP_ENV`의 `dev ↔ development`,
-  `prod ↔ production` 일치를 강제해 운영 식별자로 개발 기능을 실행할 수
-  없습니다.
-  iOS 네이티브 식별자 분리는 별도 scheme·프로비저닝 검증 후 적용합니다.
+- Android와 iOS는 `dev` flavor를 `cloud.znak99.kisou.dev`와
+  `KISOU Dev`로 분리하고 `prod`는 스토어 식별자
+  `cloud.znak99.kisou`와 `KISOU`를 유지합니다. 시작 시 네이티브
+  flavor와 `APP_ENV`의 `dev ↔ development`, `prod ↔ production`
+  일치를 강제해 운영 식별자로 개발 기능을 실행할 수 없습니다.
+- iOS는 `Debug`·`Profile`·`Release` 각각의 dev/prod build
+  configuration과 공유 scheme을 사용합니다. dev 전용 Info.plist에만
+  로컬 네트워크 설명과 ATS의 로컬 HTTP 허용을 두고 prod Info.plist에는
+  두 권한을 포함하지 않습니다. release는 production만 허용하므로
+  archive는 prod scheme만 지원합니다.
+- iOS UserDefaults와 기본 Keychain access group은 서로 다른 bundle
+  ID로 격리합니다. 운영 secure-storage service 이름은 기존 세션을
+  보존하고 dev만 별도 service를 사용하며, dev/prod를 잇는 공용
+  Keychain group은 구성하지 않습니다.
 - `scripts/build_android_release.sh`와 CI의 AAB는 분석·전체 테스트·
   production define·prod flavor·release 컴파일을 검증하는 용도입니다.
   현재 Android debug key 서명을 실제 upload key로 교체하기 전에는

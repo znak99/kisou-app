@@ -81,7 +81,7 @@ void main() {
     });
   }
 
-  test('Android flavor must match the selected environment', () {
+  test('native flavor must match the selected environment', () {
     expect(
       () => validateAppFlavor(
         environment: 'development',
@@ -132,6 +132,21 @@ void main() {
         flavorRequired: false,
       ),
       returnsNormally,
+    );
+  });
+
+  test('secure storage services isolate development from production', () {
+    expect(
+      secureStorageServiceForEnvironment('development'),
+      'cloud.znak99.kisou.dev.secure-storage',
+    );
+    expect(
+      secureStorageServiceForEnvironment('production'),
+      'flutter_secure_storage_service',
+    );
+    expect(
+      () => secureStorageServiceForEnvironment('staging'),
+      throwsStateError,
     );
   });
 }

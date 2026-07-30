@@ -21,7 +21,11 @@ class AuthService {
     FlutterSecureStorage? storage,
     Future<SharedPreferences> Function()? preferencesFactory,
     bool developmentAuthEnabled = ApiConfig.developmentFeaturesEnabled,
-  }) : _storage = storage ?? const FlutterSecureStorage(),
+  }) : _storage =
+           storage ??
+           FlutterSecureStorage(
+             iOptions: IOSOptions(accountName: ApiConfig.secureStorageService),
+           ),
        _preferencesFactory =
            preferencesFactory ?? SharedPreferences.getInstance,
        _developmentAuthEnabled = developmentAuthEnabled;
