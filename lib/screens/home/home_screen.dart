@@ -13,8 +13,10 @@ import '../../providers/feedback_provider.dart';
 import '../../providers/home_provider.dart';
 import '../../providers/shell_provider.dart';
 import '../../providers/user_provider.dart';
+import '../analysis/analysis_screen.dart';
 import '../../utils/api_error.dart';
 import '../../widgets/error_state.dart';
+import '../../widgets/clothing_icon.dart';
 import '../../widgets/feeling_headline.dart';
 import '../../widgets/recommendation_card.dart';
 import '../../widgets/today_weather_detail.dart';
@@ -132,6 +134,25 @@ class _HomeContent extends ConsumerWidget {
       ..sort((a, b) => a.rank.compareTo(b.rank));
     final primary = recommendations.isNotEmpty ? recommendations.first : null;
     final secondary = recommendations.skip(1).take(2).toList(growable: false);
+    if (primary != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!context.mounted) {
+          return;
+        }
+        for (final (code, type) in [
+          (primary.outer, ClothingIconType.outer),
+          (primary.top, ClothingIconType.top),
+          (primary.bottom, ClothingIconType.bottom),
+        ]) {
+          precacheClothingIcon(
+            context: context,
+            code: code,
+            type: type,
+            size: 84,
+          );
+        }
+      });
+    }
 
     return RefreshIndicator(
       onRefresh: () async {
@@ -153,7 +174,12 @@ class _HomeContent extends ConsumerWidget {
           _RecommendationSection(primary: primary, secondary: secondary),
           const SizedBox(height: KisouTheme.gapL),
           // 2. Predicted feeling
-          FeelingHeadline(feeling: home.feeling),
+          FeelingHeadline(
+            feeling: home.feeling,
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(builder: (_) => const AnalysisScreen()),
+            ),
+          ),
           const SizedBox(height: KisouTheme.gapL),
           // 3. Today's weather
           TodayWeatherDetail(today: home.weatherComparison.today),
@@ -296,7 +322,9 @@ class _RecommendationSectionState extends State<_RecommendationSection> {
           ),
         if (secondary.length >= 2) ...[
           AnimatedSize(
-            duration: const Duration(milliseconds: 220),
+            duration: MediaQuery.disableAnimationsOf(context)
+                ? Duration.zero
+                : const Duration(milliseconds: 220),
             curve: Curves.easeInOut,
             alignment: Alignment.topCenter,
             child: _expanded

@@ -7,6 +7,14 @@ import 'package:kisou_app/screens/splash_view.dart';
 Widget _host(Widget child) =>
     MaterialApp(theme: KisouTheme.light(), home: child);
 
+Widget _reducedMotionHost(Widget child) => MaterialApp(
+  theme: KisouTheme.light(),
+  home: MediaQuery(
+    data: const MediaQueryData(disableAnimations: true),
+    child: child,
+  ),
+);
+
 void main() {
   testWidgets('로고만 보이고 메시지는 숨겨져 있다', (tester) async {
     await tester.pumpWidget(_host(const SplashView()));
@@ -57,5 +65,22 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text(AppStrings.splashLoading), findsNothing);
+  });
+
+  testWidgets('모션 줄이기에서는 페이드와 점 타이머를 실행하지 않는다', (tester) async {
+    await tester.pumpWidget(
+      _reducedMotionHost(const SplashView(showMessage: true)),
+    );
+    await tester.pump();
+
+    final opacity = tester.widget<AnimatedOpacity>(
+      find.byType(AnimatedOpacity),
+    );
+    expect(opacity.duration, Duration.zero);
+    expect(find.text('...'), findsOneWidget);
+
+    await tester.pump(const Duration(milliseconds: 1200));
+    expect(find.text('...'), findsOneWidget);
+    expect(tester.hasRunningAnimations, isFalse);
   });
 }

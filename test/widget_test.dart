@@ -102,6 +102,36 @@ void main() {
     expect(find.text(AppStrings.feedbackWhenTitle), findsOneWidget);
   });
 
+  testWidgets('home feeling card opens the personal analysis screen', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authServiceProvider.overrideWithValue(
+            _FakeAuthService(
+              hasTokenValue: true,
+              onboardingCompletedValue: true,
+            ),
+          ),
+          apiClientProvider.overrideWithValue(_createAppDio()),
+        ],
+        child: const KisouApp(),
+      ),
+    );
+    await pumpPastSplash(tester);
+    await tester.scrollUntilVisible(
+      find.text(AppStrings.feelingLead),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.text(AppStrings.feelingLead));
+    await tester.pumpAndSettle();
+
+    expect(find.text(AppStrings.analysisTitle), findsOneWidget);
+    expect(find.text(AppStrings.analysisAverageNotice), findsOneWidget);
+  });
+
   testWidgets('予報 탭: 내일 카드·피드백 유도·날짜 예상 입구가 보인다', (WidgetTester tester) async {
     await tester.pumpWidget(
       ProviderScope(
@@ -282,6 +312,7 @@ void main() {
     expect(find.text(AppStrings.logout), findsNothing);
     expect(find.text(AppStrings.accountDelete), findsOneWidget);
     expect(find.text(AppStrings.profileCategorySupport), findsOneWidget);
+    expect(find.text(AppStrings.aboutKisou), findsOneWidget);
     expect(find.text(AppStrings.privacyPolicy), findsOneWidget);
     await tester.drag(find.byType(ListView), const Offset(0, -300));
     await tester.pumpAndSettle();
@@ -439,10 +470,10 @@ void main() {
     expect(phrase.style?.color, KisouTheme.feelingForeground);
     expect(icon.color, KisouTheme.feelingForeground);
 
-    final card = tester.widget<Container>(
+    final card = tester.widget<Ink>(
       find.descendant(
         of: find.byType(FeelingHeadline),
-        matching: find.byType(Container),
+        matching: find.byType(Ink),
       ),
     );
     final decoration = card.decoration! as BoxDecoration;
@@ -452,6 +483,34 @@ void main() {
       Color.lerp(feelingColor, Colors.white, 0.12),
       feelingColor,
     ]);
+  });
+
+  testWidgets('home card expansion is immediate when motion is reduced', (
+    WidgetTester tester,
+  ) async {
+    tester.platformDispatcher.accessibilityFeaturesTestValue =
+        const FakeAccessibilityFeatures(disableAnimations: true);
+    addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authServiceProvider.overrideWithValue(
+            _FakeAuthService(
+              hasTokenValue: true,
+              onboardingCompletedValue: true,
+            ),
+          ),
+          apiClientProvider.overrideWithValue(_createAppDio()),
+        ],
+        child: const KisouApp(),
+      ),
+    );
+    await pumpPastSplash(tester);
+
+    expect(
+      tester.widget<AnimatedSize>(find.byType(AnimatedSize)).duration,
+      Duration.zero,
+    );
   });
 
   testWidgets('재방문 사용자: 홈 응답이 늦어도 1.2초 뒤 앱 화면으로 전환한다', (
@@ -664,6 +723,29 @@ void _resolveAppRequest(
         Response<Map<String, dynamic>>(
           requestOptions: options,
           data: {'exists': false, 'feedback': null},
+        ),
+      );
+    case '/analysis':
+      handler.resolve(
+        Response<Map<String, dynamic>>(
+          requestOptions: options,
+          data: {
+            'offset_value': 0,
+            'tendency': 'neutral',
+            'total_feedbacks': 4,
+            'feedback_counts': {'cold': 1, 'perfect': 2, 'hot': 1},
+            'history': [
+              for (var day = 1; day <= 4; day++)
+                {
+                  'date': '2026-05-0$day',
+                  'feedback_value': day == 1 ? 'cold' : 'perfect',
+                  'temp_high': 22,
+                  'temp_low': 14,
+                  'humidity': 55,
+                  'offset_at_time': 0,
+                },
+            ],
+          },
         ),
       );
     case '/forecast/tomorrow':

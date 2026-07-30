@@ -3,7 +3,8 @@
 ## Language & Framework
 
 - Flutter 3.x / Dart
-- Target platforms: iOS (primary), Android
+- Target platforms: iPhone and Android smartphones in portrait-up orientation
+- Landscape and tablet layouts are not supported
 - Minimum iOS version: 15.0
 - Minimum Android SDK: 24
 
@@ -52,6 +53,8 @@ lib/
 │   │   └── steps/         # Individual onboarding step widgets
 │   ├── home/
 │   │   └── home_screen.dart
+│   ├── analysis/
+│   │   └── analysis_screen.dart
 │   ├── forecast/
 │   │   ├── forecast_screen.dart
 │   │   └── outlook_screen.dart
@@ -159,3 +162,8 @@ File naming: `assets/icons/top_thin_long.png`, `assets/icons/outer_none.png`
 - Widget tests for key UI components
 - Unit tests for clothing tag mapping logic
 - Integration tests for API client (with mocked responses)
+- Responsive tests use 320×568, 360×800, 390×844, and 430×932 portrait
+  smartphone viewports at 100%, 130%, and 200% text scaling. Tablet and
+  landscape cases are intentionally excluded.
+- Stable changed screens must run Flutter's text-contrast, labeled-tap-target,
+  Android tap-target, and iOS tap-target guidelines where applicable.

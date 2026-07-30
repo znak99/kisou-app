@@ -5,6 +5,7 @@ import '../config/theme.dart';
 import '../constants/app_strings.dart';
 import '../models/feedback.dart';
 import '../models/user.dart';
+import '../providers/analysis_provider.dart';
 import '../providers/feedback_provider.dart';
 import '../providers/forecast_provider.dart';
 import '../providers/home_provider.dart';
@@ -144,6 +145,7 @@ class FeedbackActionButton extends ConsumerWidget {
       // stale too. invalidate (not refresh) so an unvisited 予報 tab doesn't
       // get initialized just to be refreshed (lazy-tab principle, audit B23).
       ref.invalidate(forecastTomorrowProvider);
+      ref.invalidate(analysisProvider);
       await Future.wait([
         ref.read(homeProvider.notifier).refresh(),
         // Feedback itself has already succeeded. A secondary profile refresh

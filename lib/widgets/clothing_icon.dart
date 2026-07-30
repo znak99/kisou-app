@@ -8,6 +8,57 @@ import '../constants/clothing_tags.dart';
 
 enum ClothingIconType { top, bottom, outer }
 
+String? clothingIconAssetPath({
+  required String? code,
+  required ClothingIconType type,
+}) {
+  return switch (type) {
+    ClothingIconType.top => ClothingTop.fromCode(code)?.iconAssetPath,
+    ClothingIconType.bottom => ClothingBottom.fromCode(code)?.iconAssetPath,
+    ClothingIconType.outer =>
+      code == null
+          ? outerNoneIconAssetPath
+          : ClothingOuter.fromCode(code)?.iconAssetPath,
+  };
+}
+
+ImageProvider<Object>? clothingIconImageProvider({
+  required BuildContext context,
+  required String? code,
+  required ClothingIconType type,
+  required double size,
+}) {
+  final path = clothingIconAssetPath(code: code, type: type);
+  if (path == null) {
+    return null;
+  }
+  final physicalEdge = (size * MediaQuery.devicePixelRatioOf(context))
+      .ceil()
+      .clamp(1, 384);
+  return ResizeImage.resizeIfNeeded(
+    physicalEdge,
+    physicalEdge,
+    AssetImage(path),
+  );
+}
+
+Future<void> precacheClothingIcon({
+  required BuildContext context,
+  required String? code,
+  required ClothingIconType type,
+  required double size,
+}) async {
+  final provider = clothingIconImageProvider(
+    context: context,
+    code: code,
+    type: type,
+    size: size,
+  );
+  if (provider != null) {
+    await precacheImage(provider, context);
+  }
+}
+
 class ClothingIcon extends StatelessWidget {
   const ClothingIcon({
     super.key,
@@ -38,7 +89,12 @@ class ClothingIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final label = _displayName;
-    final assetPath = _iconAssetPath;
+    final imageProvider = clothingIconImageProvider(
+      context: context,
+      code: code,
+      type: type,
+      size: size,
+    );
     final radius = size * 0.30;
     final largeText = usesLargeText(context);
     final effectiveWidth = largeText && showLabel
@@ -63,10 +119,12 @@ class ClothingIcon extends StatelessWidget {
                         : null),
             ),
             clipBehavior: Clip.antiAlias,
-            child: assetPath != null
-                ? Image.asset(
-                    assetPath,
+            child: imageProvider != null
+                ? Image(
+                    image: imageProvider,
                     fit: BoxFit.cover,
+                    filterQuality: FilterQuality.medium,
+                    gaplessPlayback: true,
                     errorBuilder: (context, error, stackTrace) =>
                         _fallbackLabel(context, label),
                   )
@@ -125,17 +183,6 @@ class ClothingIcon extends StatelessWidget {
             ? AppStrings.noOuter
             : ClothingOuter.fromCode(code)?.displayName ??
                   AppStrings.unknownClothing,
-    };
-  }
-
-  String? get _iconAssetPath {
-    return switch (type) {
-      ClothingIconType.top => ClothingTop.fromCode(code)?.iconAssetPath,
-      ClothingIconType.bottom => ClothingBottom.fromCode(code)?.iconAssetPath,
-      ClothingIconType.outer =>
-        code == null
-            ? outerNoneIconAssetPath
-            : ClothingOuter.fromCode(code)?.iconAssetPath,
     };
   }
 }

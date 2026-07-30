@@ -9,6 +9,12 @@ class GeocodedRegion {
   bool get isJapan => countryCode?.toUpperCase() == 'JP';
 }
 
+bool isUsableJapanLocation(GeocodedRegion? location) {
+  return location != null &&
+      location.isJapan &&
+      (location.regionName?.trim().isNotEmpty ?? false);
+}
+
 /// Reverse-geocodes coordinates and retains the ISO country code so callers
 /// can reject locations outside KISOU's Japan-only service area.
 Future<GeocodedRegion?> reverseGeocodeLocation(

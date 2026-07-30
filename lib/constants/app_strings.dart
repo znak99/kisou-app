@@ -62,6 +62,22 @@ class AppStrings {
   static const analysisLockedMessage = 'フィードバックが5回たまると、くわしい分析が表示されます';
   static const analysisRemainingSuffix = '回';
   static const analysisRemainingPrefix = 'あと';
+  static const analysisAverageNotice = '記録が4件以下のため、平均的なデータをもとに予想しています';
+  static const analysisEmptyTitle = 'まだ体感データがありません';
+  static const analysisEmptyBody = '服装の記録を続けると、あなたの傾向が見えてきます';
+  static const analysisDetailedTitle = '記録の詳細';
+  static const analysisOpenHint = 'タップして体感分析を見る';
+  static const analysisEntryDescription = '記録から自分の傾向を見る';
+  static const analysisNoTemperature = '気温記録なし';
+  static String analysisCount(int count) => '$count件';
+  static String analysisCountAndPercent(int count, int percent) =>
+      '$count件  $percent%';
+  static String analysisCountSpoken(String label, int count, int percent) =>
+      '$label、$count件、$percentパーセント';
+  static String analysisDetailedRemaining(int count) => 'くわしい分析まであと$count回です';
+  static String analysisTemperatureSummary(String high, String low) =>
+      '最高 $high / 最低 $low';
+  static String analysisHumiditySpoken(int humidity) => '、湿度$humidityパーセント';
 
   // Onboarding v2
   static const nicknameMinLength = 'ニックネームは2文字以上で入力してください';
@@ -212,6 +228,10 @@ class AppStrings {
   static const timeSetting = '外出・帰宅時間';
   static const locationSetting = '地域';
   static const privacyPolicy = 'プライバシーポリシー';
+  static const aboutKisou = 'KISOUについて';
+  static const aboutDescription = 'KISOUは、天気とあなたの体感記録から、その日に合う服装を提案するアプリです。';
+  static const versionLabel = 'バージョン';
+  static const openSourceLicenses = 'オープンソースライセンス';
   static const accountDelete = 'アカウント削除';
   static const accountDeleteTitle = 'アカウントを削除しますか？';
   static const editNickname = 'ニックネームを変更';
@@ -228,6 +248,8 @@ class AppStrings {
   static const deleteFailed = '削除に失敗しました。もう一度お試しください。';
   static const currentLocationOption = '現在地を使用';
   static const manualLocationOption = '手動で選択';
+  static const openLocationServices = '位置情報サービスを開く';
+  static const openAppSettings = 'アプリの設定を開く';
   static const useCurrentLocationFailed = '現在地を取得できませんでした。手動で選択してください。';
   static const updateFailed = '更新に失敗しました。もう一度お試しください。';
   static const privacyPolicyOpenFailed = 'プライバシーポリシーを開けませんでした。';

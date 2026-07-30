@@ -11,6 +11,7 @@ import '../../constants/major_cities.dart';
 import '../../models/location.dart';
 import '../../models/user.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/analysis_provider.dart';
 import '../../providers/feedback_provider.dart';
 import '../../providers/forecast_provider.dart';
 import '../../providers/home_provider.dart';
@@ -19,6 +20,8 @@ import '../../providers/user_provider.dart';
 import '../../utils/api_error.dart';
 import '../../utils/geocode.dart';
 import '../../widgets/error_state.dart';
+import '../analysis/analysis_screen.dart';
+import 'about_screen.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -38,17 +41,21 @@ enum _ProfileAction {
   delete,
 }
 
-class _ProfileScreenState extends ConsumerState<ProfileScreen> {
+class _ProfileScreenState extends ConsumerState<ProfileScreen>
+    with WidgetsBindingObserver {
   static final _privacyPolicyUri = Uri.parse('https://example.com/privacy');
 
   var _isSaving = false;
   _ProfileAction? _savingAction;
   var _menuHasOverflow = false;
   var _menuScrollProgress = 1.0;
+  var _waitingForLocationSettings = false;
+  var _locationResumeInProgress = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     Future.microtask(() {
       final user = ref
           .read(userProvider)
@@ -58,6 +65,30 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             .read(userProvider.notifier)
             .getMe()
             .then<void>((_) {}, onError: (_) {});
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed ||
+        !_waitingForLocationSettings ||
+        _locationResumeInProgress) {
+      return;
+    }
+    _waitingForLocationSettings = false;
+    _locationResumeInProgress = true;
+    Future.microtask(() async {
+      try {
+        await _useCurrentLocation();
+      } finally {
+        _locationResumeInProgress = false;
       }
     });
   }
@@ -165,6 +196,18 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         title: AppStrings.profileCategoryComfort,
         children: [
           _SettingRow(
+            icon: Icons.insights_outlined,
+            title: AppStrings.analysisTitle,
+            value: AppStrings.analysisEntryDescription,
+            onTap: _isSaving
+                ? null
+                : () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const AnalysisScreen(),
+                    ),
+                  ),
+          ),
+          _SettingRow(
             icon: Icons.thermostat_outlined,
             title: AppStrings.sensitivitySetting,
             value:
@@ -218,6 +261,17 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       const SizedBox(height: KisouTheme.gapS),
       _TileCard(
         children: [
+          _SettingRow(
+            icon: Icons.info_outline_rounded,
+            title: AppStrings.aboutKisou,
+            onTap: _isSaving
+                ? null
+                : () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const AboutKisouScreen(),
+                    ),
+                  ),
+          ),
           _SettingRow(
             icon: Icons.privacy_tip_outlined,
             title: AppStrings.privacyPolicy,
@@ -630,9 +684,20 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     if (action == null) {
       return;
     }
-    final location = action == _LocationAction.current
-        ? await _requestCurrentLocation()
-        : await _selectManualLocation();
+    if (action == _LocationAction.current) {
+      await _useCurrentLocation();
+      return;
+    }
+    final location = await _selectManualLocation();
+    await _saveLocation(location);
+  }
+
+  Future<void> _useCurrentLocation() async {
+    final location = await _requestCurrentLocation();
+    await _saveLocation(location);
+  }
+
+  Future<void> _saveLocation(LocationValue? location) async {
     if (location == null) {
       return;
     }
@@ -651,7 +716,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     try {
       final serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
-        _showMessage(AppStrings.useCurrentLocationFailed);
+        await _showLocationRecovery(
+          title: AppStrings.locationDisabled,
+          actionLabel: AppStrings.openLocationServices,
+          openSettings: Geolocator.openLocationSettings,
+        );
         return null;
       }
 
@@ -662,7 +731,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
       if (permission == LocationPermission.denied ||
           permission == LocationPermission.deniedForever) {
-        _showMessage(AppStrings.useCurrentLocationFailed);
+        await _showLocationRecovery(
+          title: permission == LocationPermission.deniedForever
+              ? AppStrings.locationDeniedForever
+              : AppStrings.locationDenied,
+          actionLabel: AppStrings.openAppSettings,
+          openSettings: Geolocator.openAppSettings,
+        );
         return null;
       }
 
@@ -676,27 +751,77 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         position.latitude,
         position.longitude,
       );
-      if (geocoded == null || !geocoded.isJapan) {
+      final countryCode = geocoded?.countryCode?.trim();
+      if (!isUsableJapanLocation(geocoded)) {
         _showMessage(
-          geocoded == null
+          geocoded == null ||
+                  countryCode == null ||
+                  countryCode.isEmpty ||
+                  geocoded.regionName?.trim().isEmpty != false
               ? AppStrings.locationUnavailable
               : AppStrings.locationOutsideJapan,
         );
         return _selectManualLocation();
       }
-      final region = geocoded.regionName;
-      if (region == null || region.isEmpty) {
-        _showMessage(AppStrings.locationUnavailable);
-        return _selectManualLocation();
-      }
+      final region = geocoded!.regionName!;
       return LocationValue(
         latitude: position.latitude,
         longitude: position.longitude,
         regionName: region,
       );
     } catch (_) {
-      _showMessage(AppStrings.useCurrentLocationFailed);
-      return null;
+      _showMessage(AppStrings.locationUnavailable);
+      return _selectManualLocation();
+    }
+  }
+
+  Future<void> _showLocationRecovery({
+    required String title,
+    required String actionLabel,
+    required Future<bool> Function() openSettings,
+  }) async {
+    if (!mounted) {
+      return;
+    }
+    final action = await showModalBottomSheet<_LocationRecoveryAction>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(title, style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: KisouTheme.gapL),
+              FilledButton(
+                onPressed: () =>
+                    Navigator.of(context).pop(_LocationRecoveryAction.settings),
+                child: Text(actionLabel),
+              ),
+              const SizedBox(height: KisouTheme.gapS),
+              OutlinedButton(
+                onPressed: () =>
+                    Navigator.of(context).pop(_LocationRecoveryAction.manual),
+                child: const Text(AppStrings.manualLocationOption),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (action == _LocationRecoveryAction.manual) {
+      await _saveLocation(await _selectManualLocation());
+      return;
+    }
+    if (action == _LocationRecoveryAction.settings) {
+      _waitingForLocationSettings = true;
+      final opened = await openSettings();
+      if (!opened) {
+        _waitingForLocationSettings = false;
+        _showMessage(AppStrings.useCurrentLocationFailed);
+      }
     }
   }
 
@@ -903,6 +1028,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     ref.invalidate(homeProvider);
     ref.invalidate(forecastTomorrowProvider);
     ref.invalidate(forecastOutlookProvider);
+    ref.invalidate(analysisProvider);
     if (includeFeedback) {
       ref.invalidate(feedbackProvider);
     }
@@ -1235,3 +1361,5 @@ class _SensitivitySelection {
 }
 
 enum _LocationAction { current, manual }
+
+enum _LocationRecoveryAction { settings, manual }

@@ -6,6 +6,7 @@ import '../../constants/app_strings.dart';
 import '../../models/feedback.dart';
 import '../../models/forecast.dart';
 import '../../providers/feedback_provider.dart';
+import '../../providers/analysis_provider.dart';
 import '../../providers/forecast_provider.dart';
 import '../../providers/home_provider.dart';
 import '../../providers/user_provider.dart';
@@ -647,6 +648,7 @@ class _FeedbackNudge extends ConsumerWidget {
       initialFeedback: initialFeedback,
     );
     if (submitted == true) {
+      ref.invalidate(analysisProvider);
       // Same follow-up as the home entry point, plus tomorrow's card (visible
       // right here) because the offset shift changes its recommendation.
       await Future.wait([

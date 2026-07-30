@@ -43,7 +43,9 @@ class SplashView extends StatelessWidget {
               height: usesLargeText(context) ? 88 : 56,
               child: AnimatedOpacity(
                 opacity: showMessage ? 1 : 0,
-                duration: const Duration(milliseconds: 350),
+                duration: MediaQuery.disableAnimationsOf(context)
+                    ? Duration.zero
+                    : const Duration(milliseconds: 350),
                 curve: Curves.easeOut,
                 // Only built while needed: the dot animation ticks on a timer,
                 // so keeping it alive behind opacity 0 would schedule frames
@@ -76,14 +78,25 @@ class _LoadingMessageState extends State<_LoadingMessage> {
   static const _cycle = [1, 2, 3, 2];
   Timer? _timer;
   int _index = 0;
+  bool? _reduceMotion;
 
   @override
-  void initState() {
-    super.initState();
-    _timer = Timer.periodic(const Duration(milliseconds: 400), (_) {
-      if (!mounted) return;
-      setState(() => _index = (_index + 1) % _cycle.length);
-    });
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final reduceMotion = MediaQuery.disableAnimationsOf(context);
+    if (_reduceMotion == reduceMotion) {
+      return;
+    }
+    _reduceMotion = reduceMotion;
+    _timer?.cancel();
+    _timer = null;
+    _index = reduceMotion ? 2 : 0;
+    if (!reduceMotion) {
+      _timer = Timer.periodic(const Duration(milliseconds: 400), (_) {
+        if (!mounted) return;
+        setState(() => _index = (_index + 1) % _cycle.length);
+      });
+    }
   }
 
   @override
