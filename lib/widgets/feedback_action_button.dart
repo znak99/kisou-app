@@ -139,6 +139,15 @@ class FeedbackActionButton extends ConsumerWidget {
       context: context,
       gender: user?.gender,
       initialFeedback: initialFeedback,
+      recommendationSnapshot: !ref.exists(homeProvider)
+          ? null
+          : ref
+                .read(homeProvider)
+                .when(
+                  data: (value) => value,
+                  error: (_, _) => null,
+                  loading: () => null,
+                ),
     );
     if (submitted == true) {
       // Feedback shifts the personal offset, so tomorrow's recommendation is

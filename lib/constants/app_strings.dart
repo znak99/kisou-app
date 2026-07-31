@@ -133,6 +133,11 @@ class AppStrings {
   static const bestRecommendation = 'おすすめ';
   static const warmerOption = '少し暖かめ';
   static const lighterOption = '少し軽め';
+  static const sameWarmthAlternative = '同じ暖かさの別案';
+  static String recommendationOptionSemantics(int rank, String direction) {
+    return '$rank番目の候補、$direction';
+  }
+
   static const recShowMore = '他の服装を見る';
   static const recShowLess = '閉じる';
   static const today = '今日';

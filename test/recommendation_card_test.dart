@@ -13,6 +13,7 @@ void main() {
           body: RecommendationCard(
             recommendation: RecommendationItem(
               rank: 1,
+              direction: RecommendationDirection.primary,
               top: 'SHORT_SLEEVE',
               bottom: 'LONG_PANTS',
               outer: null,
@@ -32,4 +33,34 @@ void main() {
     expect(tester.getCenter(outer).dx, lessThan(tester.getCenter(top).dx));
     expect(tester.getCenter(top).dx, lessThan(tester.getCenter(bottom).dx));
   });
+
+  testWidgets(
+    'announces an extreme-bound option as an equal-warmth alternative',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MediaQuery(
+            data: const MediaQueryData(textScaler: TextScaler.linear(2)),
+            child: const Scaffold(
+              body: RecommendationCard(
+                recommendation: RecommendationItem(
+                  rank: 2,
+                  direction: RecommendationDirection.alternative,
+                  top: 'KNIT_SWEAT',
+                  bottom: 'LONG_PANTS',
+                  outer: 'PADDING',
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('同じ暖かさの別案'), findsOneWidget);
+      expect(find.text('少し暖かめ'), findsNothing);
+      expect(find.bySemanticsLabel('2番目の候補、同じ暖かさの別案'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await expectLater(tester, meetsGuideline(textContrastGuideline));
+    },
+  );
 }

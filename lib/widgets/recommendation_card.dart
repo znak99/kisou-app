@@ -44,7 +44,7 @@ class RecommendationCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _RankBadge(rank: recommendation.rank, isLarge: isLarge),
+          _RankBadge(recommendation: recommendation, isLarge: isLarge),
           SizedBox(height: isLarge ? KisouTheme.gapL : KisouTheme.gapM),
           if (largeText)
             Wrap(
@@ -67,60 +67,86 @@ class RecommendationCard extends StatelessWidget {
 }
 
 class _RankBadge extends StatelessWidget {
-  const _RankBadge({required this.rank, required this.isLarge});
+  const _RankBadge({required this.recommendation, required this.isLarge});
 
-  final int rank;
+  final RecommendationItem recommendation;
   final bool isLarge;
 
   @override
   Widget build(BuildContext context) {
     final c = context.kisou;
-    if (rank == 1) {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(
-          color: KisouTheme.accent,
-          borderRadius: BorderRadius.circular(100),
+    final direction = recommendation.direction;
+    final label = switch (direction) {
+      RecommendationDirection.primary => AppStrings.bestRecommendation,
+      RecommendationDirection.warmer => AppStrings.warmerOption,
+      RecommendationDirection.lighter => AppStrings.lighterOption,
+      RecommendationDirection.alternative => AppStrings.sameWarmthAlternative,
+    };
+    final semanticLabel = AppStrings.recommendationOptionSemantics(
+      recommendation.rank,
+      label,
+    );
+
+    if (direction == RecommendationDirection.primary) {
+      return Semantics(
+        label: semanticLabel,
+        container: true,
+        child: ExcludeSemantics(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: KisouTheme.accent,
+              borderRadius: BorderRadius.circular(100),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.star_rounded, size: 13, color: Colors.white),
+                const SizedBox(width: 4),
+                Text(
+                  label,
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    color: Colors.white,
+                    fontSize: isLarge ? 11 : 10,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
+      );
+    }
+
+    final (icon, color) = switch (direction) {
+      RecommendationDirection.warmer => (Icons.arrow_upward_rounded, c.warm),
+      RecommendationDirection.lighter => (Icons.arrow_downward_rounded, c.cool),
+      RecommendationDirection.alternative => (
+        Icons.swap_horiz_rounded,
+        c.accent,
+      ),
+      RecommendationDirection.primary => (Icons.star_rounded, c.accent),
+    };
+    return Semantics(
+      label: semanticLabel,
+      container: true,
+      child: ExcludeSemantics(
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.star_rounded, size: 13, color: Colors.white),
+            Icon(icon, size: 15, color: color),
             const SizedBox(width: 4),
-            Text(
-              AppStrings.bestRecommendation,
-              style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                color: Colors.white,
-                fontSize: isLarge ? 11 : 10,
+            Flexible(
+              child: Text(
+                label,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: context.kisou.ink,
+                ),
               ),
             ),
           ],
         ),
-      );
-    }
-    // Ranks 2 & 3: no number — just the "warmer / lighter" label.
-    final isWarmer = rank == 2;
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(
-          isWarmer ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded,
-          size: 15,
-          color: isWarmer ? c.warm : c.cool,
-        ),
-        const SizedBox(width: 4),
-        Flexible(
-          child: Text(
-            isWarmer ? AppStrings.warmerOption : AppStrings.lighterOption,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              fontWeight: FontWeight.w700,
-              color: context.kisou.ink,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-      ],
+      ),
     );
   }
 }

@@ -5,8 +5,9 @@ import '../config/theme.dart';
 import '../constants/app_strings.dart';
 import '../constants/clothing_tags.dart';
 import '../models/feedback.dart';
+import '../models/home.dart';
+import '../models/recommendation.dart';
 import '../providers/feedback_provider.dart';
-import '../providers/home_provider.dart';
 import '../utils/api_error.dart';
 import '../utils/jp_date.dart';
 import 'clothing_icon.dart';
@@ -59,13 +60,18 @@ Future<bool?> showFeedbackSheet({
   required BuildContext context,
   required String? gender,
   required FeedbackResponse? initialFeedback,
+  required HomeResponse? recommendationSnapshot,
 }) {
   return showModalBottomSheet<bool>(
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
     builder: (_) {
-      return FeedbackSheet(gender: gender, initialFeedback: initialFeedback);
+      return FeedbackSheet(
+        gender: gender,
+        initialFeedback: initialFeedback,
+        recommendationSnapshot: recommendationSnapshot,
+      );
     },
   );
 }
@@ -75,10 +81,16 @@ class FeedbackSheet extends ConsumerStatefulWidget {
     super.key,
     required this.gender,
     required this.initialFeedback,
+    this.recommendationSnapshot,
+    this.todayProvider,
   });
 
   final String? gender;
   final FeedbackResponse? initialFeedback;
+  final HomeResponse? recommendationSnapshot;
+
+  /// Injectable only for deterministic JST rollover regression tests.
+  final DateTime Function()? todayProvider;
 
   @override
   ConsumerState<FeedbackSheet> createState() => _FeedbackSheetState();
@@ -88,7 +100,8 @@ class _FeedbackSheetState extends ConsumerState<FeedbackSheet> {
   static const _stepCount = 3;
 
   var _step = 0;
-  DateTime _date = jstToday();
+  late DateTime _date;
+  late final DateTime _openedDate;
   var _showDateSelection = false;
   var _isLoadingRecent = false;
   Object? _recentError;
@@ -101,10 +114,12 @@ class _FeedbackSheetState extends ConsumerState<FeedbackSheet> {
   String? _selectedOuter;
   var _outerSelectionMade = false;
   String? _selectedFeeling;
+  int? _appliedRecommendationRank;
   var _isSubmitting = false;
   var _isDirty = false;
   var _showTimeSlotError = false;
   String? _errorMessage;
+  late final HomeResponse? _pinnedHome;
 
   bool get _hasRequiredClothing =>
       _selectedTop != null && _selectedBottom != null && _outerSelectionMade;
@@ -112,11 +127,16 @@ class _FeedbackSheetState extends ConsumerState<FeedbackSheet> {
   @override
   void initState() {
     super.initState();
+    _openedDate = _today();
+    _date = _openedDate;
+    _pinnedHome = widget.recommendationSnapshot;
     final initialFeedback = widget.initialFeedback;
     if (initialFeedback != null) {
       _applyFeedback(initialFeedback);
     }
   }
+
+  DateTime _today() => widget.todayProvider?.call() ?? jstToday();
 
   void _applyFeedback(FeedbackResponse feedback) {
     _loadedFeedback = feedback;
@@ -125,6 +145,7 @@ class _FeedbackSheetState extends ConsumerState<FeedbackSheet> {
     _selectedOuter = feedback.actualOuter;
     _outerSelectionMade = true;
     _selectedFeeling = feedback.feedbackValue;
+    _appliedRecommendationRank = feedback.appliedRecommendationRank;
     _date = DateTime.tryParse(feedback.date) ?? _date;
     _selectedSlots
       ..clear()
@@ -137,22 +158,46 @@ class _FeedbackSheetState extends ConsumerState<FeedbackSheet> {
     // Recommendation values are applied only after an explicit user action.
     // Silent defaults would bias feedback toward what KISOU suggested rather
     // than what the user actually wore.
-    final home = !ref.exists(homeProvider)
-        ? null
-        : ref
-              .read(homeProvider)
-              .maybeWhen(data: (value) => value, orElse: () => null);
-    if (home == null || home.recommendations.isEmpty) {
+    final primary = _pinnedPrimaryRecommendation;
+    if (primary == null) {
       return;
     }
-    final recommendations = [...home.recommendations]
-      ..sort((a, b) => a.rank.compareTo(b.rank));
-    final primary = recommendations.first;
     _selectedTop = primary.top;
     _selectedBottom = primary.bottom;
     _selectedOuter = primary.outer;
     _outerSelectionMade = true;
+    _appliedRecommendationRank = 1;
     _isDirty = true;
+  }
+
+  RecommendationItem? get _pinnedPrimaryRecommendation {
+    if (!_pinnedHomeMatchesSelectedDate) {
+      return null;
+    }
+    for (final recommendation in _pinnedHome!.recommendations) {
+      if (recommendation.rank == 1) {
+        return recommendation;
+      }
+    }
+    return null;
+  }
+
+  bool get _pinnedHomeMatchesSelectedDate {
+    final home = _pinnedHome;
+    return home != null &&
+        _isSameDate(_date, _openedDate) &&
+        home.date == formatIsoDate(_date);
+  }
+
+  String? get _recommendationContextForSubmission {
+    if (!_pinnedHomeMatchesSelectedDate) {
+      return null;
+    }
+    return _pinnedHome?.recommendationContext;
+  }
+
+  int? get _appliedRecommendationRankForSubmission {
+    return _appliedRecommendationRank;
   }
 
   Future<void> _submit() async {
@@ -187,6 +232,9 @@ class _FeedbackSheetState extends ConsumerState<FeedbackSheet> {
                 for (final slot in _timeSlots)
                   if (_selectedSlots.contains(slot.code)) slot.code,
               ],
+              recommendationContext: _recommendationContextForSubmission,
+              appliedRecommendationRank:
+                  _appliedRecommendationRankForSubmission,
             ),
           );
       if (mounted) {
@@ -436,8 +484,8 @@ class _FeedbackSheetState extends ConsumerState<FeedbackSheet> {
           child: ListView(
             controller: _clothingScrollController,
             children: [
-              if (_isSameDate(_date, jstToday()) &&
-                  _loadedFeedback == null) ...[
+              if (_loadedFeedback == null &&
+                  _pinnedPrimaryRecommendation != null) ...[
                 Align(
                   alignment: Alignment.centerLeft,
                   child: OutlinedButton.icon(
@@ -457,6 +505,9 @@ class _FeedbackSheetState extends ConsumerState<FeedbackSheet> {
                     selected: _outerSelectionMade && _selectedOuter == null,
                     onTap: () => setState(() {
                       _isDirty = true;
+                      if (!_outerSelectionMade || _selectedOuter != null) {
+                        _appliedRecommendationRank = null;
+                      }
                       _outerSelectionMade = true;
                       _selectedOuter = null;
                     }),
@@ -471,6 +522,10 @@ class _FeedbackSheetState extends ConsumerState<FeedbackSheet> {
                       onTap: () {
                         setState(() {
                           _isDirty = true;
+                          if (!_outerSelectionMade ||
+                              _selectedOuter != outer.apiCode) {
+                            _appliedRecommendationRank = null;
+                          }
                           _outerSelectionMade = true;
                           _selectedOuter = outer.apiCode;
                         });
@@ -489,6 +544,9 @@ class _FeedbackSheetState extends ConsumerState<FeedbackSheet> {
                       selected: _selectedTop == top.apiCode,
                       onTap: () => setState(() {
                         _isDirty = true;
+                        if (_selectedTop != top.apiCode) {
+                          _appliedRecommendationRank = null;
+                        }
                         _selectedTop = top.apiCode;
                       }),
                     ),
@@ -506,6 +564,9 @@ class _FeedbackSheetState extends ConsumerState<FeedbackSheet> {
                       onTap: () {
                         setState(() {
                           _isDirty = true;
+                          if (_selectedBottom != bottom.apiCode) {
+                            _appliedRecommendationRank = null;
+                          }
                           _selectedBottom = bottom.apiCode;
                         });
                       },
@@ -737,6 +798,7 @@ class _FeedbackSheetState extends ConsumerState<FeedbackSheet> {
       _selectedOuter = null;
       _outerSelectionMade = false;
       _selectedFeeling = null;
+      _appliedRecommendationRank = null;
       _loadedFeedback = null;
       _errorMessage = null;
       _showTimeSlotError = false;
@@ -1335,10 +1397,10 @@ class _FeelingButton extends StatelessWidget {
           ),
           shape: const StadiumBorder(),
         ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon),
             const SizedBox(width: 10),
             Flexible(child: Text(label, textAlign: TextAlign.center)),
           ],

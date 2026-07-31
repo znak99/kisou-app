@@ -6,6 +6,8 @@ class FeedbackRequest {
     required this.actualOuter,
     this.date,
     this.timeSlots,
+    this.recommendationContext,
+    this.appliedRecommendationRank,
   });
 
   final String feedbackValue;
@@ -19,6 +21,12 @@ class FeedbackRequest {
   /// Parts of the day the user was outside (multi-select), or null.
   final List<String>? timeSlots;
 
+  /// Opaque context that binds today's displayed recommendation to the API.
+  final String? recommendationContext;
+
+  /// Rank explicitly applied through the recommendation shortcut, or null.
+  final int? appliedRecommendationRank;
+
   Map<String, dynamic> toJson() {
     return {
       'feedback_value': feedbackValue,
@@ -27,6 +35,10 @@ class FeedbackRequest {
       'actual_outer': actualOuter,
       if (date != null) 'date': date,
       if (timeSlots != null && timeSlots!.isNotEmpty) 'time_slots': timeSlots,
+      if (recommendationContext != null)
+        'recommendation_context': recommendationContext,
+      if (appliedRecommendationRank != null)
+        'applied_recommendation_rank': appliedRecommendationRank,
     };
   }
 }
@@ -42,6 +54,7 @@ class FeedbackResponse {
     required this.createdAt,
     required this.updatedAt,
     this.timeSlots,
+    this.appliedRecommendationRank,
   });
 
   factory FeedbackResponse.fromJson(Map<String, dynamic> json) {
@@ -59,6 +72,9 @@ class FeedbackResponse {
           ?.map((slot) => slot == 'FORENOON' ? 'MORNING' : slot)
           .toSet()
           .toList(growable: false),
+      appliedRecommendationRank: _parseAppliedRecommendationRank(
+        json['applied_recommendation_rank'],
+      ),
     );
   }
 
@@ -71,6 +87,14 @@ class FeedbackResponse {
   final String createdAt;
   final String updatedAt;
   final List<String>? timeSlots;
+  final int? appliedRecommendationRank;
+}
+
+int? _parseAppliedRecommendationRank(Object? value) {
+  if (value is int && value >= 1 && value <= 3) {
+    return value;
+  }
+  return null;
 }
 
 class FeedbackTodayResponse {

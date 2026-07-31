@@ -12,6 +12,7 @@ ForecastOutlook buildOutlookScreenshotFixture({required String date}) {
     recommendations: const [
       RecommendationItem(
         rank: 1,
+        direction: RecommendationDirection.primary,
         top: 'SHORT_SLEEVE',
         bottom: 'SKIRT',
         outer: null,

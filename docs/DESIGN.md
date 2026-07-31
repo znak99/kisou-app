@@ -95,7 +95,9 @@
 
 ### 입력값
 
-- **날씨 데이터:** 외출~귀가 시간대의 시간별 기온, 체감온도, 습도, 풍속, 강수확률 (여름철 WBGT 추가)
+- **날씨 데이터:** 최근 피드백에서 반복된 외출 시간대 또는 기본
+  09:00~18:00의 시간별 기온, 체감온도, 습도, 풍속, 강수확률·강수량
+  (여름철 WBGT 추가)
 - **사용자 프로필:** 성별, 추위/더위 성향
 - **사용자 보정값:** 피드백 누적으로 조정된 개인 체감 오프셋
 - ※ 별명은 UI 표시용이며 로직 입력이 아님
@@ -104,10 +106,20 @@
 
 - 복장 태그 조합 3개 (1번 가장 추천 / 2번 약간 따뜻한 방향 / 3번 약간 가벼운 방향)
 - 각 조합은 상의 + 하의 + 겉옷(선택)
+- 각 조합의 `direction`은 `primary` / `warmer` / `lighter` /
+  `alternative` 중 하나이며 앱은 순위가 아니라 이 값을 표시 문구의 근거로
+  사용
+- 추천 당시의 결과·사용자·JST 날짜를 결합한 서명형
+  `recommendation_context`, 실제 분석에 적용한 시간대와 유효 시간 수를 함께
+  반환
 
 ### 체감 점수
 
-기본 체감 점수 = 체감온도 기반값 + 습도 보정 + 풍속 보정 + WBGT 보정(여름)
+Open-Meteo 체감온도가 있으면 이미 습도·풍속·일사를 반영한 값을 사용하고
+습도·풍속을 다시 더하지 않습니다. 체감온도가 없을 때만 실제 기온에 상한이
+있는 습도·풍속 보정을 적용합니다. 두 경로 모두 WBGT와 강수 보정을 별도로
+적용하며, 과거 강수확률이 없으면 시간당 실제 강수량을 비가 온 신호로
+사용합니다.
 
 시간대 내 최저/최고 체감 점수를 둘 다 사용합니다.
 
@@ -150,6 +162,12 @@
 - 1번: 최저~최고 체감 점수를 종합했을 때 가장 균형 잡힌 조합
 - 2번: 1번보다 약간 따뜻한 방향
 - 3번: 1번보다 약간 가벼운 방향
+- 카탈로그의 가장 따뜻하거나 가장 가벼운 경계에 도달해 해당 방향의 서로
+  다른 조합을 더 만들 수 없으면 2번 또는 3번은 같은 보온도의
+  `alternative`가 될 수 있음
+- 앱은 `direction=alternative`를 `同じ暖かさの別案`으로 표시하고
+  `少し暖かめ` 또는 `少し軽め`라고 잘못 단정하지 않음. 보조기기에는
+  `2番目の候補、同じ暖かさの別案`처럼 순위와 의미를 일본어로 함께 전달
 
 ### 복장 태그 코드 체계
 
@@ -286,6 +304,17 @@
 경우에만 1순위 추천을 채웁니다. 사용자가 직접 수정한 내용이 있는 상태에서
 날짜를 바꾸면 폐기 확인을 거칩니다.
 
+피드백 버튼을 누르는 순간 메모리에 준비된 `/home`의 날짜·추천 조합·
+`recommendation_context`를 하나의 스냅샷으로 고정해 시트에 전달합니다.
+시트가 열린 뒤 홈이 갱신되더라도 서로 다른 추천과 서명값을 섞지 않습니다.
+대상 날짜가 시트를 연 JST 날짜이고 고정한 홈 날짜와도 일치할 때만 서명값을
+전송하므로, 23:59에 연 시트를 자정 뒤 저장해도 유효한 전날 컨텍스트를
+보존합니다. 다른 과거 날짜 또는 홈 미로딩·구 API 응답에서는 전송하지
+않습니다. 명시적 추천 적용 시 `applied_recommendation_rank=1`을 기록하고
+이후 상의·하의·아우터 중 하나를 수동으로 바꾸면 이 값을 `null`로
+해제합니다. 기존 기록 수정 시에는 API가 돌려준 적용 순위를 복원하되 같은
+수동 변경 규칙을 적용합니다.
+
 외출 시간대는 다음 6개 구간을 3열×2행의 동일한 크기로 표시합니다. 화면에는
 분을 노출하지 않되 각 버튼의 접근성 이름에는 실제 범위를 전달합니다.
 
@@ -314,23 +343,33 @@
 - 사용자 ID
 - 날짜
 - 피드백 값 (cold / perfect / hot)
-- 해당 날의 추천 조합 스냅샷
+- `/home`이 발급한 사용자·날짜·알고리즘 버전 결속 9일 만료 서명
+  컨텍스트와 검증된 실제 표시 추천 조합 스냅샷
 - 실제 착용 복장 (actual_top, actual_bottom, actual_outer)
 - 실제 외출 시간대 (time_slots, 신규·수정 UI에서 필수)
-- 해당 날의 날씨 데이터 스냅샷
-- 적용 시점의 보정값
-- 성별 등 프로필 데이터는 학습 시 사용자 테이블에서 조인
+- 선택 시간대의 날씨 데이터 스냅샷
+- 추천 표시 시점과 실제 경험 시간대의 버전화된 점수 구성·결측·프로필 피처
+- 제출 시점 offset, 추천 표시 시점 offset, replay 전 offset과 실제 적용 delta
+- 컨텍스트 출처, 학습 적격성, 제외 사유, 보정 epoch·정책 버전
+- 사용자가 명시적으로 적용한 추천 순위(수동 선택·변경이면 null)
 
 ### 보정값 업데이트 규칙
 
 | 조건 | 추웠어요 | 딱 좋았어요 | 더웠어요 |
 |---|---|---|---|
-| 추천대로 입음 | +0.3 | 변화 없음 | -0.3 |
-| 추천과 다르게 입음 | +0.15 | 변화 없음 | -0.15 |
+| 검증된 1순위대로 입음 | +0.3 | 변화 없음 | -0.3 |
+| 다르게 입음 또는 미검증 | +0.15 | 변화 없음 | -0.15 |
 
 - 보정값 범위: -3 ~ +3
 - 범위 도달 시 더 이상 변하지 않음
-- 피드백 수정 시: 이전 보정을 되돌린 뒤 새 피드백 반영
+- 서명 컨텍스트가 없는 구버전 요청은 추천 일치 보너스를 적용하지 않음
+- 검증된 cold/hot 체감이 같은 방향으로 이어지면 1회 1.0배, 2회 1.25배,
+  3회 이상 1.5배를 `ROUND_HALF_UP`으로 소수 둘째 자리까지 적용
+- perfect, 반대 방향, 미검증 컨텍스트, 성향 변경은 연속 체감을 끊음
+- 같은 calibration epoch의 신규 행은 고정 기준선부터 `(date, id)` 순으로
+  replay하므로 backdate·수정·동시 요청의 도착 순서에 영향받지 않음
+- 배포 전 기존 행은 당시 현재 offset에 포함된 상태로 기준선에 보존하고
+  부정확한 추천·피처를 추정하거나 새 정책으로 재계산하지 않음
 - "딱 좋았어요": 저장하되 보정값 변화 없음
 
 ---
@@ -349,6 +388,9 @@
 | cold_sensitivity | VARCHAR | high / normal / low |
 | heat_sensitivity | VARCHAR | high / normal / low |
 | offset_value | FLOAT | 현재 보정값 (기본 0, 범위 -3~+3) |
+| calibration_epoch_id | UUID | 현재 보정 구간 식별자 |
+| calibration_baseline_offset | FLOAT | 현재 epoch의 불변 replay 기준선 |
+| calibration_policy_version | VARCHAR | 현재 보정 정책 버전 |
 | departure_time | TIME | 외출 시간 (기본 09:00) |
 | return_time | TIME | 귀가 시간 (기본 18:00) |
 | latitude | FLOAT | 위치 위도 |
@@ -371,6 +413,14 @@
 | actual_outer | VARCHAR (nullable) | 실제 착용 겉옷 코드 |
 | weather_snapshot | JSONB | 해당 날 날씨 데이터 스냅샷 |
 | time_slots | JSONB (nullable) | 실제 외출 시간대 코드 목록 |
+| context_source | VARCHAR | served_context / legacy_reconstructed / legacy_unverified |
+| applied_recommendation_rank | SMALLINT (nullable) | 앱에서 명시적으로 적용한 추천 순위 |
+| calibration_epoch_id | UUID (nullable) | 신규 보정 행이 속한 epoch |
+| replay_offset_before / applied_delta | NUMERIC | replay 직전 값과 실제 기여분 |
+| streak_length | SMALLINT (nullable) | 검증된 동일 방향 연속 횟수 |
+| model_features | JSONB (nullable) | 표시 시점 prediction과 경험 시점 피처 |
+| feature_time_slots | JSONB (nullable) | 피처 생성에 사용한 불변 시간대 |
+| training_eligible / exclusion_reason | BOOLEAN / VARCHAR | 학습 사용 여부와 제외 이유 |
 | offset_at_time | FLOAT | 피드백 시점의 보정값 |
 | created_at | TIMESTAMP | 생성일 |
 | updated_at | TIMESTAMP | 수정일 |
@@ -400,8 +450,10 @@ user_id + date에 UNIQUE 제약 (1일 1피드백 보장)
 | fetched_at | TIMESTAMP | API 호출 시점 |
 
 - 같은 좌표(소수점 2자리 반올림, 약 1km 단위) + 같은 날짜 → 캐시 반환
-- 캐시 갱신 주기: 3시간
-- 과거 날씨(어제/2일 전)는 한 번 저장 후 갱신 불필요
+- 오늘·미래 예보의 캐시 갱신 주기: 3시간
+- 강수확률 보조 호출이 실패해도 JMA 실제 강수량이 있으면 저하 상태 캐시를
+  같은 3시간 동안 사용해 장애 시 재호출 폭증을 막음
+- 과거 날씨는 한 번 저장 후 갱신 불필요
 
 ---
 
@@ -458,23 +510,29 @@ GET /home:
   "recommendations": [
     {
       "rank": 1,
+      "direction": "primary",
       "top": "THIN_LONG",
       "bottom": "LONG_PANTS",
       "outer": "LIGHT_OUTER"
     },
     {
       "rank": 2,
+      "direction": "warmer",
       "top": "LONG_SLEEVE",
       "bottom": "LONG_PANTS",
       "outer": "CARDIGAN"
     },
     {
       "rank": 3,
+      "direction": "lighter",
       "top": "SHORT_SLEEVE",
       "bottom": "LONG_PANTS",
       "outer": "LIGHT_OUTER"
     }
   ],
+  "recommendation_context": "<opaque-signed-context>",
+  "applied_time_slots": ["MORNING", "EVENING"],
+  "hours_analyzed": 8,
   "weather_comparison": {
     "today": {
       "temp_high": 22,
@@ -521,7 +579,7 @@ GET /home:
 ### 메인 화면 (홈)
 
 - **상단:** "○○さん、今日の服装は" + 현재 위치/지역명
-- **추천 영역:** `今日の服装はこちら` 아래 1번 추천을 표시하고 2·3번은 접힌 상태에서 펼칠 수 있습니다. 모든 추천의 순서는 겉옷 → 상의 → 하의로 통일하며 겉옷이 없을 때도 `アウターなし`를 생략하지 않습니다.
+- **추천 영역:** `今日の服装はこちら` 아래 1번 추천을 표시하고 2·3번은 접힌 상태에서 펼칠 수 있습니다. 모든 추천의 순서는 겉옷 → 상의 → 하의로 통일하며 겉옷이 없을 때도 `アウターなし`를 생략하지 않습니다. 2·3번의 설명은 순위로 추론하지 않고 서버의 `direction`을 사용하며, 보온도 경계의 동급 대안은 `同じ暖かさの別案`으로 표시합니다.
 - **체감 영역:** 사용자명을 반복하지 않고 `体感予想`과 `〜感じそうです` 형식의 한 문장으로 안내합니다. 카드 전체를 누르면 개인 체감 분석 화면으로 이동합니다.
 - **날씨 비교 영역:** 오늘/어제/2일 전 기온 비교 (예: "어제보다 3도 낮아요")
 - **출처 영역:** 오늘 날씨·날씨 비교 카드 바로 뒤의 같은 스크롤 흐름에
