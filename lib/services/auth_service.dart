@@ -16,6 +16,13 @@ enum AuthLoginProvider {
   final String apiValue;
 }
 
+enum LocalCleanupTransition {
+  logout,
+  accountDeletionRequested,
+  accountDeletion,
+  accountSwitch,
+}
+
 class AuthService {
   AuthService({
     FlutterSecureStorage? storage,
@@ -37,6 +44,8 @@ class AuthService {
   static const String _deviceSecretKey = 'device_secret';
   static const String _hasLaunchedBeforeKey = 'has_launched_before';
   static const String _onboardingCompletedKey = 'onboarding_completed';
+  static const String _localCleanupTransitionKey =
+      'local_cleanup_transition_v1';
 
   final FlutterSecureStorage _storage;
   final Future<SharedPreferences> Function() _preferencesFactory;
@@ -111,11 +120,38 @@ class AuthService {
     await preferences.remove(_onboardingCompletedKey);
   }
 
+  Future<LocalCleanupTransition?> readLocalCleanupTransition() async {
+    final value = await _storage.read(key: _localCleanupTransitionKey);
+    for (final transition in LocalCleanupTransition.values) {
+      if (transition.name == value) {
+        return transition;
+      }
+    }
+    // Treat an unknown marker as an interrupted account switch. Failing
+    // closed prevents a future schema mismatch from exposing account data.
+    return value == null ? null : LocalCleanupTransition.accountSwitch;
+  }
+
+  Future<void> markLocalCleanupTransition(LocalCleanupTransition transition) {
+    return _storage.write(
+      key: _localCleanupTransitionKey,
+      value: transition.name,
+    );
+  }
+
+  Future<void> clearLocalCleanupTransition() {
+    return _storage.delete(key: _localCleanupTransitionKey);
+  }
+
   /// Removes every local credential and preference after the server has
   /// permanently deleted the account. This intentionally differs from logout,
   /// which keeps the anonymous restoration secret.
   Future<void> clearLocalAccountData() async {
-    await _storage.deleteAll();
+    // Delete only auth-owned keys. The transition marker must survive until
+    // every other account-bound store has completed cleanup successfully.
+    await _storage.delete(key: _tokenKey);
+    await _storage.delete(key: _refreshTokenKey);
+    await _storage.delete(key: _deviceSecretKey);
     final preferences = await _preferencesFactory();
     await preferences.clear();
   }
@@ -243,7 +279,7 @@ class AuthService {
     }
   }
 
-  /// Best-effort server-side logout: revokes the refresh token.
+  /// Best-effort server-side logout: local logout must still work offline.
   Future<void> logoutServer({required Dio dio}) async {
     final refreshToken = await readRefreshToken();
     if (refreshToken == null || refreshToken.isEmpty) {
@@ -255,7 +291,7 @@ class AuthService {
         data: {'refresh_token': refreshToken},
       );
     } on DioException {
-      // Logout is best-effort; local tokens are cleared regardless.
+      // The caller clears local credentials and account-bound device data.
     }
   }
 

@@ -77,7 +77,7 @@ void main() {
   });
 
   test(
-    'account deletion clears credentials and all local preferences',
+    'account deletion clears auth keys without erasing the transition marker',
     () async {
       SharedPreferences.setMockInitialValues({
         'has_launched_before': true,
@@ -92,17 +92,37 @@ void main() {
         'refresh_token': 'refresh-token',
         'device_secret': 'anonymous-secret',
         'account_deletion_credential_v1': 'encrypted-delete-code',
+        'local_cleanup_transition_v1': 'accountDeletion',
       });
 
       const storage = FlutterSecureStorage();
       final service = AuthService(storage: storage);
       await service.clearLocalAccountData();
 
-      expect(await storage.readAll(), isEmpty);
+      expect(await storage.readAll(), {
+        'account_deletion_credential_v1': 'encrypted-delete-code',
+        'local_cleanup_transition_v1': 'accountDeletion',
+      });
       final preferences = await SharedPreferences.getInstance();
       expect(preferences.getKeys(), isEmpty);
     },
   );
+
+  test('round-trips the durable local cleanup transition', () async {
+    FlutterSecureStorage.setMockInitialValues({});
+    final service = AuthService();
+
+    expect(await service.readLocalCleanupTransition(), isNull);
+    await service.markLocalCleanupTransition(
+      LocalCleanupTransition.accountSwitch,
+    );
+    expect(
+      await service.readLocalCleanupTransition(),
+      LocalCleanupTransition.accountSwitch,
+    );
+    await service.clearLocalCleanupTransition();
+    expect(await service.readLocalCleanupTransition(), isNull);
+  });
 
   test(
     'successful account linking removes the obsolete anonymous secret',

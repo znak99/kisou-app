@@ -211,6 +211,7 @@
 				3B06AD1E1E4923F5004D2608 /* Thin Binary */,
 				6E6AF63691C3F2B39C66A1A9 /* [CP] Embed Pods Frameworks */,
 				B4A5CFF4E4A49B4F111A9BC2 /* [CP] Copy Pods Resources */,
+				A5D400000000000000000001 /* [KISOU] Configure AdMob App ID */,
 			);
 			buildRules = (
 			);
@@ -352,6 +353,24 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "/bin/sh \"$FLUTTER_ROOT/packages/flutter_tools/bin/xcode_backend.sh\" build";
+		};
+		A5D400000000000000000001 /* [KISOU] Configure AdMob App ID */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+				"${PROJECT_DIR}/scripts/configure_admob.sh",
+				"${TARGET_BUILD_DIR}/${INFOPLIST_PATH}",
+			);
+			name = "[KISOU] Configure AdMob App ID";
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "/bin/sh \"${PROJECT_DIR}/scripts/configure_admob.sh\"";
+			showEnvVarsInLog = 0;
 		};
 		B4A5CFF4E4A49B4F111A9BC2 /* [CP] Copy Pods Resources */ = {
 			isa = PBXShellScriptBuildPhase;

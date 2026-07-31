@@ -129,6 +129,14 @@ The mapping from API code (`"THIN_LONG"`) → enum → Japanese display name →
   coordinator, keep local-cleanup failure visible after the auth screen
   replaces the caller, and offer retry plus reinstall guidance. After a
   successful social-account link, remove the obsolete anonymous `device_secret`
+- Persist account transitions independently from access-token state before
+  login, logout, session expiry, or account deletion begins. Check that marker
+  before `hasToken`; clear it only after every scoped local cleanup succeeds.
+  Account deletion uses separate server-requested and server-confirmed phases
+  to recover interrupted requests without exposing old local data. Until the
+  API provides an idempotency receipt/status, the deleted-user 401 fallback is
+  still ambiguous with an unrelated invalid token and remains tracked in the
+  root work list.
 - API base URL is loaded from the matching `config/dev.json` or
   `config/prod.json`; release builds must fail before networking when the
   environment is not production or the production URL is not safe HTTPS
@@ -156,11 +164,75 @@ The mapping from API code (`"THIN_LONG"`) → enum → Japanese display name →
 - All API responses are parsed into model classes
 - Send exact coordinates for the future forecast in the
   `POST /forecast/outlook` JSON body, never in URL query parameters
+- Treat `GET /forecast/outlook/quota` and the quota embedded in a successful
+  POST response as authoritative. Never recreate the allowance in
+  SharedPreferences. Invalidate quota and reward flow on every account
+  transition, but preserve the device's UMP choice.
+- Give each date/exact-coordinate outlook operation a UUID idempotency key.
+  Reuse it for network and timeout retries only; replace it after input change,
+  success, or a 409 conflict. A 409/429 must refresh quota and must not erase a
+  previous successful result.
+- Keep `ADS_ENABLED` false by default. Disabled and screenshot-fixture paths
+  must not touch UMP, the Mobile Ads SDK, ad platform channels, or the quota
+  API. Development ads use only current official Google sample IDs; an
+  ads-enabled production build must reject missing, malformed, or sample App,
+  banner, and rewarded IDs.
+- Run UMP once per app process in update → required form → eligibility order.
+  Recheck eligibility after every UMP error/form, initialize the SDK
+  single-flight only when eligible, and retry a transient initialization error
+  on resume. Set max content rating G before initialization.
+- Every ad request is non-personalized. Never add location, nickname, feeling,
+  profile/account identifiers, or SSV `userId`. Reward `customData` may contain
+  only the server's one-time 43-character challenge.
+- Load a rewarded ad before issuing a challenge. Send the exact loaded ad unit
+  with the platform to the server, set plaintext `customData`, then show.
+  Production grants credit only after server SSV status becomes `credited`;
+  development confirmation is allowed only with official test units. Do not
+  auto-show an ad or auto-run an outlook.
+- Inline banners belong at the end of the forecast scroll. Occupy no space
+  before actual platform size is known, bound no-fill retries, and dispose
+  stale/invisible/background handles only after removing their `AdWidget`.
 - Never use raw `Map<String, dynamic>` beyond the parsing layer
 - Keep weather-data attribution visible in the About screen and beside the data
   it describes. Open-Meteo data links to its CC BY 4.0 terms; when a surface
   displays summer WBGT, link Japan's Ministry of the Environment there as well.
   State that displayed weather values have been edited or processed
+
+## Device-local travel plans and reminders
+
+- Treat SQLite as the source of truth. Persist a create/update before calling a
+  platform notification API; scheduler errors must leave an outbox state and a
+  non-blocking user warning, never report the completed DB write as a failed
+  save.
+- On iOS, open the database only inside the native-prepared Application Support
+  subdirectory after backup exclusion and file protection succeed. Apply the
+  policy to existing SQLite/WAL/SHM files and fail closed if preparation fails.
+  Migrate a legacy Documents database and its sidecars before deleting the
+  old copies. Android keeps app backup disabled.
+- Store stable city codes and UTC instants. Convert civil input, D-day labels,
+  cleanup boundaries, and scheduled reminders explicitly with
+  `Asia/Tokyo`; never inherit the device timezone.
+- Default a new plan without an outlook date to the next whole JST hour, not a
+  fixed time that may already be past.
+- Keep the plan limit at 20, reject duplicate city/departure pairs, and isolate
+  a malformed SQLite row so it cannot block every valid plan. Reconciliation
+  owns recovery for pending schedule/cancel/delete states and orphan
+  notifications. Serialize reconciliation and mutations so an old snapshot
+  cannot overwrite a newer edit.
+- Notification permission is explicit opt-in at reminder save time. Do not add
+  Android exact-alarm, full-screen intent, DND, advertising-ID, or background
+  location permissions. Use inexact scheduling and tell users it can be
+  delayed by power management.
+- Preserve an Android inexact alarm that is still pending just after its
+  nominal trigger, but never beyond the departure instant.
+- Keep lock-screen content generic. Use only the `travel:` payload namespace
+  and notification IDs `100000..199999`; never include city, coordinates,
+  profile data, or a server credential in title, body, or payload.
+- Initialize tap handling before authenticated UI routing, validate the
+  payload, and handle missing/expired local targets without crashing.
+- On logout, account switch, or account deletion, cancel only the travel
+  notification namespace before deleting its local rows. If cancellation
+  fails, keep the rows/outbox available for a visible cleanup retry.
 
 ## Theming & Design
 
@@ -190,7 +262,7 @@ applicable items.
 - Focus order must follow the visual and task order. Verify it manually on both
   VoiceOver and TalkBack for each changed flow.
 
-The root `TODO.md` accessibility automation task tracks regression coverage for
+The root work-list accessibility automation task tracks regression coverage for
 these criteria; manual checks remain required where platform assistive
 technology behavior cannot be represented by widget tests.
 

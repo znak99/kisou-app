@@ -233,6 +233,8 @@ class AppStrings {
   static const timeSetting = '外出・帰宅時間';
   static const locationSetting = '地域';
   static const privacyPolicy = 'プライバシーポリシー';
+  static const adPrivacyOptions = '広告のプライバシー設定';
+  static const adPrivacyOptionsFailed = '広告のプライバシー設定を開けませんでした。';
   static const aboutKisou = 'KISOUについて';
   static const aboutDescription = 'KISOUは、天気とあなたの体感記録から、その日に合う服装を提案するアプリです。';
   static const versionLabel = 'バージョン';
@@ -262,7 +264,9 @@ class AppStrings {
   static const yes = 'はい';
   static const no = 'いいえ';
   static const logoutConfirm = 'ログアウトしますか？';
-  static const logoutConfirmBody = 'この端末でKISOUからログアウトします。記録は削除されません。';
+  static const logoutConfirmBody =
+      'フィードバック記録は削除されません。'
+      'この端末に保存した旅行予定と通知は削除されます。';
   static const logoutAction = 'ログアウト';
   static const logoutFailed = 'ログアウトできませんでした。もう一度お試しください。';
   static const sensitivityResetConfirm = '感度を変更すると補正値がリセットされます。よろしいですか？';
@@ -274,6 +278,19 @@ class AppStrings {
       'KISOUをアンインストールしてから再インストールしてください。';
   static const accountDeleteLocalCleanupTitle = '端末内データを消去できませんでした';
   static const accountDeleteLocalCleanupRetry = '端末データの消去を再試行';
+  static const accountDeleteRequestRecoveryTitle = 'アカウント削除を完了できませんでした';
+  static const accountDeleteRequestRecoveryFailed =
+      '通信を確認して、アカウント削除を再開してください。完了するまで別のアカウントは開始できません。';
+  static const accountDeleteRequestRecoveryRetry = 'アカウント削除を再開';
+  static const logoutLocalCleanupTitle = 'ログアウト後の端末整理を完了できませんでした';
+  static const logoutLocalCleanupFailed =
+      'ログアウトしましたが、以前のアカウントの端末内データを消去できませんでした。'
+      '整理を再試行してから続けてください。';
+  static const logoutLocalCleanupRetry = 'ログアウト後の整理を再試行';
+  static const accountSwitchLocalCleanupTitle = '以前の端末内データを整理できませんでした';
+  static const accountSwitchLocalCleanupFailed =
+      '新しいアカウントを開始する前に、以前の旅行予定と端末内情報を消去してください。';
+  static const accountSwitchLocalCleanupRetry = '端末内データの整理を再試行';
   static const accountDeletionCredentials = '削除用情報';
   static const accountDeletionCredentialsDescription = 'アプリを使えないときのアカウント削除';
   static const accountDeletionCredentialsIntroTitle = '削除用コードを発行しますか？';
@@ -370,7 +387,24 @@ class AppStrings {
   static const forecastOutlookEntry = '日付で予想';
   static const forecastOutlookIntro = '旅行や予定の日を選ぶと、その日の気温とおすすめの服装をKISOUが予想します。';
   static const forecastOutlookQuotaEmpty = '今日の予想回数を使い切りました';
-  static const forecastOutlookAdNote = '広告を見ると1回追加できます（準備中）';
+  static const forecastOutlookQuotaLoading = '残り回数を確認しています';
+  static const forecastOutlookQuotaFailed = '残り回数を確認できませんでした';
+  static const forecastOutlookRateLimited = '本日の上限に達しました。残り回数を更新しました。';
+  static const forecastOutlookConflict = '入力内容を確認して、もう一度お試しください。';
+  static const forecastOutlookRewardAction = '広告を見て1回分を追加';
+  static const forecastOutlookRewardLoadingAd = '広告を準備しています…';
+  static const forecastOutlookRewardIssuing = '追加分を準備しています…';
+  static const forecastOutlookRewardShowing = '広告を表示しています…';
+  static const forecastOutlookRewardSettling = '視聴結果を確認しています。画面を閉じずにお待ちください。';
+  static const forecastOutlookRewardDelayed =
+      '視聴結果の反映に時間がかかっています。アプリに戻ったときに再確認します。';
+  static const forecastOutlookRewardDismissed =
+      '広告の視聴が完了しませんでした。追加分は付与されていません。';
+  static const forecastOutlookRewardFailed =
+      '広告を利用できませんでした。通信状態を確認して、もう一度お試しください。';
+  static const forecastOutlookRewardUnavailable =
+      '現在、広告を準備できません。しばらくしてからお試しください。';
+  static const forecastOutlookRewardCredited = '予想できる回数を1回追加しました。';
 
   static String forecastOutlookQuota(int remaining) => '今日はあと$remaining回予想できます';
   static const forecastOutlookDateLabel = '日付';
@@ -385,6 +419,56 @@ class AppStrings {
   static const forecastOutlookScreenshotNotice = '画面イメージ・説明用データ';
   static const forecastOutlookScreenshotSource =
       'この画面は説明用です。実際の予想では、以下の気象データを使用します。';
+  static const travelSectionTitle = '旅行予定';
+  static const travelManage = '予定を管理';
+  static const travelPlansTitle = '旅行予定';
+  static const travelAdd = '予定を追加';
+  static const travelSaveFromOutlook = '旅行予定に保存';
+  static const travelEmptyTitle = '保存した旅行予定はありません';
+  static const travelEmptyBody = '日付・場所・出発時刻を端末に保存できます';
+  static const travelDateLabel = '出発日';
+  static const travelTimeLabel = '出発時刻';
+  static const travelPlaceLabel = '場所';
+  static const travelReminderLabel = '出発前の通知';
+  static const travelReminderNone = '通知しない';
+  static const travelReminderDayBefore = '24時間前ごろ';
+  static const travelReminderThreeHours = '3時間前ごろ';
+  static const travelJstNote = '日付と時刻は日本時間です';
+  static const travelNotificationDelayNote = '端末の省電力設定により通知が遅れる場合があります';
+  static const travelSave = '予定を保存';
+  static const travelUpdate = '変更を保存';
+  static const travelEdit = '予定を編集';
+  static const travelDelete = '予定を削除';
+  static const travelDeleteTitle = 'この旅行予定を削除しますか？';
+  static const travelDeleteBody = 'この端末の予定と出発前の通知を削除します。';
+  static const travelSaved = '旅行予定を保存しました';
+  static const travelUpdated = '旅行予定を更新しました';
+  static const travelDeleted = '旅行予定を削除しました';
+  static const travelDuplicate = '同じ場所と出発時刻の予定がすでに保存されています';
+  static const travelLimitReached = '保存できる旅行予定は20件までです';
+  static const travelDepartureNotFuture = 'これからの出発日時を選んでください';
+  static const travelReminderNotFuture = '通知時刻を過ぎています。通知しないを選ぶか、出発日時を変更してください';
+  static const travelSaveFailed = '旅行予定を保存できませんでした。もう一度お試しください。';
+  static const travelDeleteFailed = '旅行予定を完全に削除できませんでした。次回起動時に再試行します。';
+  static const travelLoadFailed = '旅行予定を読み込めませんでした';
+  static const travelNotificationBlocked = '通知は許可されていません';
+  static const travelNotificationScheduled = '出発前の通知を設定済み';
+  static const travelNotificationPending = '通知の更新を再試行します';
+  static const travelNotificationExpired = '通知時刻を過ぎています';
+  static const travelOpenNotificationSettings = '通知設定を開く';
+  static const travelNotificationPermissionDenied =
+      '予定は保存しました。通知を受け取るには端末の設定で通知を許可してください。';
+  static const travelNotificationGenericTitle = '旅行の予定があります';
+  static const travelNotificationGenericBody = '出発前の準備を確認しましょう';
+  static const travelPlanNotFound = '保存した旅行予定が見つかりませんでした';
+
+  static String travelDday(int days) => days == 0 ? 'D-DAY' : 'D-$days';
+
+  static String travelDdaySpoken(int days) =>
+      days == 0 ? '出発日です' : '出発まであと$days日';
+
+  static String travelDateTime(String date, String time) => '$date  $time';
+
   static const tryAgain = 'もう一度試す';
 
   static String forecastComparedToToday(int degrees) {

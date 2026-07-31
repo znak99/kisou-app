@@ -12,6 +12,7 @@ import '../../models/location.dart';
 import '../../models/user.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/analysis_provider.dart';
+import '../../providers/ads_provider.dart';
 import '../../providers/external_link_provider.dart';
 import '../../providers/feedback_provider.dart';
 import '../../providers/forecast_provider.dart';
@@ -161,6 +162,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
   }
 
   List<Widget> _profileSections(User user) {
+    final adsState = ref.watch(adsProvider);
     return [
       _ProfileHeader(user: user),
       const SizedBox(height: KisouTheme.gapL),
@@ -293,9 +295,28 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                 ? null
                 : _openPrivacyPolicy,
           ),
+          if (adsState.privacyOptionsRequired)
+            _SettingRow(
+              icon: Icons.ads_click_outlined,
+              title: AppStrings.adPrivacyOptions,
+              loading: adsState.consentInProgress,
+              onTap: _isSaving || adsState.consentInProgress
+                  ? null
+                  : _openAdPrivacyOptions,
+            ),
         ],
       ),
     ];
+  }
+
+  Future<void> _openAdPrivacyOptions() async {
+    await ref.read(adsProvider.notifier).showPrivacyOptions();
+    if (!mounted || ref.read(adsProvider).error == null) {
+      return;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text(AppStrings.adPrivacyOptionsFailed)),
+    );
   }
 
   void _updateMenuScrollProgress(ScrollMetrics metrics) {

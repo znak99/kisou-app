@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kisou_app/constants/app_strings.dart';
+import 'package:kisou_app/models/outlook_quota.dart';
+import 'package:kisou_app/providers/outlook_quota_provider.dart';
 import 'package:kisou_app/screens/forecast/outlook_screen.dart';
 import 'package:kisou_app/screens/onboarding/steps/gender_step.dart';
 import 'package:kisou_app/screens/onboarding/steps/sensitivity_step.dart';
@@ -109,9 +111,7 @@ void main() {
           reason: 'sensitivity ${size.width}×${size.height} / ${scale}x',
         );
 
-        await tester.pumpWidget(
-          const ProviderScope(child: MaterialApp(home: OutlookScreen())),
-        );
+        await tester.pumpWidget(_outlookApp());
         await tester.pump();
         expect(
           tester.takeException(),
@@ -120,8 +120,8 @@ void main() {
         );
 
         await tester.pumpWidget(
-          const ProviderScope(
-            child: MaterialApp(
+          _withTestQuota(
+            const MaterialApp(
               home: Scaffold(
                 body: FeedbackSheet(gender: 'male', initialFeedback: null),
               ),
@@ -148,9 +148,7 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
     addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
 
-    await tester.pumpWidget(
-      const ProviderScope(child: MaterialApp(home: OutlookScreen())),
-    );
+    await tester.pumpWidget(_outlookApp());
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
     await tester.scrollUntilVisible(
@@ -161,8 +159,8 @@ void main() {
     expect(find.text(AppStrings.forecastOutlookEmptyBody), findsOneWidget);
 
     await tester.pumpWidget(
-      const ProviderScope(
-        child: MaterialApp(
+      _withTestQuota(
+        const MaterialApp(
           home: Scaffold(
             body: FeedbackSheet(gender: 'male', initialFeedback: null),
           ),
@@ -212,4 +210,31 @@ void main() {
     await tester.tap(find.bySemanticsLabel(AppStrings.tabForecast));
     expect(tappedIndex, 1);
   });
+}
+
+Widget _outlookApp() {
+  return _withTestQuota(const MaterialApp(home: OutlookScreen()));
+}
+
+Widget _withTestQuota(Widget child) {
+  return ProviderScope(
+    overrides: [outlookQuotaProvider.overrideWith(_TestQuotaController.new)],
+    child: child,
+  );
+}
+
+class _TestQuotaController extends OutlookQuotaController {
+  @override
+  Future<OutlookQuota> build() async {
+    return OutlookQuota(
+      date: '2026-07-31',
+      freeLimit: 3,
+      freeUsed: 0,
+      freeRemaining: 3,
+      rewardCredits: 0,
+      totalRemaining: 3,
+      resetsAt: DateTime.utc(2100),
+      adsAvailable: false,
+    );
+  }
 }
