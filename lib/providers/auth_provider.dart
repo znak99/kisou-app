@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:uuid/uuid.dart';
 
 import '../services/auth_service.dart';
 import '../utils/api_error.dart';
@@ -22,7 +23,10 @@ enum LocalCleanupScope {
   accountDeletionRequest,
   accountDeletion,
   accountSwitch,
+  unconfirmedAccountDiscard,
 }
+
+enum AccountDeletionRecoveryKind { retryable, authenticationRequired }
 
 class AuthState {
   const AuthState._({
@@ -30,16 +34,22 @@ class AuthState {
     required this.isNewUser,
     this.startupErrorKind,
     this.localCleanupScope,
+    this.accountDeletionRecoveryKind,
+    this.canDiscardUnconfirmedAccountData = false,
   });
 
   const AuthState.unauthenticated({
     ApiErrorKind? startupErrorKind,
     LocalCleanupScope? localCleanupScope,
+    AccountDeletionRecoveryKind? accountDeletionRecoveryKind,
+    bool canDiscardUnconfirmedAccountData = false,
   }) : this._(
          status: AuthStatus.unauthenticated,
          isNewUser: false,
          startupErrorKind: startupErrorKind,
          localCleanupScope: localCleanupScope,
+         accountDeletionRecoveryKind: accountDeletionRecoveryKind,
+         canDiscardUnconfirmedAccountData: canDiscardUnconfirmedAccountData,
        );
 
   const AuthState.authenticated({required bool isNewUser})
@@ -49,6 +59,8 @@ class AuthState {
   final bool isNewUser;
   final ApiErrorKind? startupErrorKind;
   final LocalCleanupScope? localCleanupScope;
+  final AccountDeletionRecoveryKind? accountDeletionRecoveryKind;
+  final bool canDiscardUnconfirmedAccountData;
 
   bool get isAuthenticated => status == AuthStatus.authenticated;
   bool get localCleanupRequired => localCleanupScope != null;
@@ -58,7 +70,18 @@ final authProvider = AsyncNotifierProvider<AuthController, AuthState>(
   AuthController.new,
 );
 
+final accountDeletionIdempotencyKeyFactoryProvider =
+    Provider<String Function()>((ref) {
+      const uuid = Uuid();
+      return uuid.v4;
+    });
+
 class AuthController extends AsyncNotifier<AuthState> {
+  Future<void>? _deleteAccountFuture;
+  Future<bool>? _discardUnconfirmedAccountDataFuture;
+  var _deletionAuthenticationRequired = false;
+  var _deletionReceiptNotFound = false;
+
   @override
   Future<AuthState> build() async {
     final authService = ref.read(authServiceProvider);
@@ -68,8 +91,10 @@ class AuthController extends AsyncNotifier<AuthState> {
         LocalCleanupTransition.accountDeletionRequested) {
       final confirmed = await _resumeAccountDeletionRequest();
       if (!confirmed) {
-        return const AuthState.unauthenticated(
+        return AuthState.unauthenticated(
           localCleanupScope: LocalCleanupScope.accountDeletionRequest,
+          accountDeletionRecoveryKind: _deletionRecoveryKind,
+          canDiscardUnconfirmedAccountData: _canDiscardUnconfirmedAccountData,
         );
       }
       interruptedTransition = LocalCleanupTransition.accountDeletion;
@@ -206,6 +231,31 @@ class AuthController extends AsyncNotifier<AuthState> {
 
   Future<void> expireSession() async {
     final authService = ref.read(authServiceProvider);
+    final persistedTransition = await authService.readLocalCleanupTransition();
+    if (_deleteAccountFuture != null ||
+        _discardUnconfirmedAccountDataFuture != null) {
+      // The active coordinator owns both the durable marker and final state.
+      // Writing here could resurrect a recovery screen after cleanup finishes
+      // but before the coordinator Future runs its whenComplete callback.
+      return;
+    }
+    if (persistedTransition ==
+            LocalCleanupTransition.accountDeletionRequested ||
+        persistedTransition == LocalCleanupTransition.accountDeletion ||
+        persistedTransition ==
+            LocalCleanupTransition.unconfirmedAccountDiscard) {
+      final scope = switch (persistedTransition) {
+        LocalCleanupTransition.accountDeletion =>
+          LocalCleanupScope.accountDeletion,
+        LocalCleanupTransition.unconfirmedAccountDiscard =>
+          LocalCleanupScope.unconfirmedAccountDiscard,
+        _ => LocalCleanupScope.accountDeletionRequest,
+      };
+      // A concurrent 401 must never downgrade a deletion receipt capability
+      // into accountSwitch or erase the data needed for status recovery.
+      state = AsyncData(AuthState.unauthenticated(localCleanupScope: scope));
+      return;
+    }
     try {
       await authService.markLocalCleanupTransition(
         LocalCleanupTransition.accountSwitch,
@@ -260,31 +310,39 @@ class AuthController extends AsyncNotifier<AuthState> {
   /// Deletes the server account first, then removes every local credential.
   /// Both onboarding and profile use this single coordinator so no created
   /// guest account is left without an in-app deletion path.
-  Future<void> deleteAccount() async {
+  Future<void> deleteAccount() {
+    return _deleteAccountFuture ??= _deleteAccount().whenComplete(() {
+      _deleteAccountFuture = null;
+    });
+  }
+
+  Future<void> _deleteAccount() async {
     final authService = ref.read(authServiceProvider);
-    await authService.markLocalCleanupTransition(
-      LocalCleanupTransition.accountDeletionRequested,
-    );
-    try {
-      await ref.read(userProvider.notifier).deleteMe();
-    } catch (error, stackTrace) {
+    final idempotencyKey = ref.read(
+      accountDeletionIdempotencyKeyFactoryProvider,
+    )();
+    await authService.markAccountDeletionRequested(idempotencyKey);
+    final confirmed = await _requestDeletionAndConfirm(idempotencyKey);
+    if (!confirmed) {
       _invalidateUserScopedData();
-      state = const AsyncData(
+      state = AsyncData(
         AuthState.unauthenticated(
           localCleanupScope: LocalCleanupScope.accountDeletionRequest,
+          accountDeletionRecoveryKind: _deletionRecoveryKind,
+          canDiscardUnconfirmedAccountData: _canDiscardUnconfirmedAccountData,
         ),
       );
-      Error.throwWithStackTrace(error, stackTrace);
+      throw const AccountDeletionConfirmationException();
     }
     try {
-      await authService.markLocalCleanupTransition(
-        LocalCleanupTransition.accountDeletion,
-      );
+      await authService.markAccountDeletionConfirmed(idempotencyKey);
     } catch (error, stackTrace) {
       _invalidateUserScopedData();
-      state = const AsyncData(
+      state = AsyncData(
         AuthState.unauthenticated(
           localCleanupScope: LocalCleanupScope.accountDeletionRequest,
+          accountDeletionRecoveryKind: _deletionRecoveryKind,
+          canDiscardUnconfirmedAccountData: _canDiscardUnconfirmedAccountData,
         ),
       );
       Error.throwWithStackTrace(
@@ -306,9 +364,11 @@ class AuthController extends AsyncNotifier<AuthState> {
     if (scope == LocalCleanupScope.accountDeletionRequest) {
       final confirmed = await _resumeAccountDeletionRequest();
       if (!confirmed) {
-        state = const AsyncData(
+        state = AsyncData(
           AuthState.unauthenticated(
             localCleanupScope: LocalCleanupScope.accountDeletionRequest,
+            accountDeletionRecoveryKind: _deletionRecoveryKind,
+            canDiscardUnconfirmedAccountData: _canDiscardUnconfirmedAccountData,
           ),
         );
         return false;
@@ -328,6 +388,57 @@ class AuthController extends AsyncNotifier<AuthState> {
     state = AsyncData(
       AuthState.unauthenticated(
         localCleanupScope: cleanupFailure == null ? null : cleanupScope,
+      ),
+    );
+    return cleanupFailure == null;
+  }
+
+  /// Explicitly abandons only this device's unconfirmed deletion recovery.
+  ///
+  /// This never claims that the server account was deleted and never sends
+  /// another DELETE. It is available only after a definitive receipt 404 and
+  /// failure to restore the exact original session. The dedicated discard
+  /// marker makes full identity cleanup resume safely after a process restart.
+  Future<bool> discardUnconfirmedAccountData() {
+    return _discardUnconfirmedAccountDataFuture ??=
+        _discardUnconfirmedAccountData().whenComplete(() {
+          _discardUnconfirmedAccountDataFuture = null;
+        });
+  }
+
+  Future<bool> _discardUnconfirmedAccountData() async {
+    final current = state.value;
+    if (current?.localCleanupScope !=
+            LocalCleanupScope.accountDeletionRequest ||
+        current?.accountDeletionRecoveryKind !=
+            AccountDeletionRecoveryKind.authenticationRequired ||
+        current?.canDiscardUnconfirmedAccountData != true) {
+      throw StateError('Unconfirmed local account discard is not allowed.');
+    }
+    final authService = ref.read(authServiceProvider);
+    try {
+      final transition = await authService.readLocalCleanupTransition();
+      if (transition != LocalCleanupTransition.accountDeletionRequested) {
+        return false;
+      }
+      await authService.markLocalCleanupTransition(
+        LocalCleanupTransition.unconfirmedAccountDiscard,
+      );
+    } catch (_) {
+      // The deletion UUID marker remains authoritative when the crash-safe
+      // local-discard marker cannot be persisted.
+      return false;
+    }
+
+    final cleanupFailure = await _runScopedCleanup(
+      LocalCleanupScope.unconfirmedAccountDiscard,
+    );
+    _invalidateUserScopedData();
+    state = AsyncData(
+      AuthState.unauthenticated(
+        localCleanupScope: cleanupFailure == null
+            ? null
+            : LocalCleanupScope.unconfirmedAccountDiscard,
       ),
     );
     return cleanupFailure == null;
@@ -356,15 +467,23 @@ class AuthController extends AsyncNotifier<AuthState> {
     final authService = ref.read(authServiceProvider);
     return switch (scope) {
       LocalCleanupScope.logout || LocalCleanupScope.accountSwitch => [
+        () async {
+          ref.invalidate(adRewardProvider);
+        },
         () => ref.read(travelPlanProvider.notifier).clearAllLocalData(),
         // Linking preserves this code because the user ID stays the same. A
         // full account transition removes it before another account can use
         // the device.
         () => ref.read(accountDeletionCredentialStoreProvider).delete(),
+        authService.clearPendingAdRewardOperation,
         authService.clearTokens,
         authService.clearOnboardingCompleted,
       ],
-      LocalCleanupScope.accountDeletion => [
+      LocalCleanupScope.accountDeletion ||
+      LocalCleanupScope.unconfirmedAccountDiscard => [
+        () async {
+          ref.invalidate(adRewardProvider);
+        },
         () => ref.read(travelPlanProvider.notifier).clearAllLocalData(),
         () => ref.read(accountDeletionCredentialStoreProvider).delete(),
         () async {
@@ -386,7 +505,8 @@ class AuthController extends AsyncNotifier<AuthState> {
       // intact until every account-bound cleanup can complete.
       return cleanupFailure;
     }
-    if (scope == LocalCleanupScope.accountDeletion) {
+    if (scope == LocalCleanupScope.accountDeletion ||
+        scope == LocalCleanupScope.unconfirmedAccountDiscard) {
       try {
         // Clear auth-owned credentials and preferences only after the other
         // stores succeed. AuthService deliberately preserves the secure
@@ -405,26 +525,111 @@ class AuthController extends AsyncNotifier<AuthState> {
   }
 
   Future<bool> _resumeAccountDeletionRequest() async {
-    try {
-      await ref.read(userProvider.notifier).deleteMe();
-    } on DioException catch (error) {
-      final status = error.response?.statusCode;
-      if (status != 401) {
+    _deletionAuthenticationRequired = false;
+    _deletionReceiptNotFound = false;
+    final authService = ref.read(authServiceProvider);
+    var idempotencyKey = await authService
+        .readAccountDeletionRequestIdempotencyKey();
+    if (idempotencyKey != null &&
+        await _lookupDeletionReceipt(idempotencyKey) ==
+            _DeletionReceiptLookup.completed) {
+      return _markAccountDeletionConfirmed(idempotencyKey);
+    }
+    if (idempotencyKey == null) {
+      idempotencyKey = ref.read(accountDeletionIdempotencyKeyFactoryProvider)();
+      try {
+        await authService.markAccountDeletionRequested(idempotencyKey);
+      } catch (_) {
         return false;
       }
-      // Fallback for a response lost after DELETE committed: this API has no
-      // deletion receipt and no longer resolves a deleted user's JWT. A 401 is
-      // also possible for an unrelated expired/invalid token, so this is not
-      // definitive proof; a server idempotency/status API remains necessary.
-    } catch (_) {
-      // The request may not have reached the server, so do not claim local
-      // completion or erase the marker. The recovery screen offers a retry.
+    }
+    if (!await _requestDeletionAndConfirm(idempotencyKey)) {
       return false;
     }
+    return _markAccountDeletionConfirmed(idempotencyKey);
+  }
+
+  Future<bool> _requestDeletionAndConfirm(String idempotencyKey) async {
+    _deletionAuthenticationRequired = false;
+    _deletionReceiptNotFound = false;
+    if (await _lookupDeletionReceipt(idempotencyKey) ==
+        _DeletionReceiptLookup.completed) {
+      return true;
+    }
+    var restoredOnce = false;
+    for (var attempt = 0; attempt < 2; attempt++) {
+      final authService = ref.read(authServiceProvider);
+      if (!await authService.hasToken()) {
+        if (restoredOnce) {
+          _deletionAuthenticationRequired = true;
+          return false;
+        }
+        try {
+          final restored = await authService.restoreAnonymousSessionForDeletion(
+            dio: ref.read(apiClientProvider),
+          );
+          if (!restored) {
+            _deletionAuthenticationRequired = true;
+            return false;
+          }
+          restoredOnce = true;
+        } catch (_) {
+          // Offline/timeout remains retryable. Keep every local credential and
+          // the atomic request marker intact.
+          return false;
+        }
+      }
+      try {
+        await ref
+            .read(userProvider.notifier)
+            .deleteMe(idempotencyKey: idempotencyKey);
+      } catch (_) {
+        // A response-lost success and an unrelated 401 are indistinguishable
+        // here. Only the unauthenticated receipt endpoint can confirm deletion.
+      }
+      if (await _lookupDeletionReceipt(idempotencyKey) ==
+          _DeletionReceiptLookup.completed) {
+        return true;
+      }
+      if (await authService.hasToken()) {
+        return false;
+      }
+    }
+    _deletionAuthenticationRequired = true;
+    return false;
+  }
+
+  AccountDeletionRecoveryKind get _deletionRecoveryKind =>
+      _deletionAuthenticationRequired
+      ? AccountDeletionRecoveryKind.authenticationRequired
+      : AccountDeletionRecoveryKind.retryable;
+
+  bool get _canDiscardUnconfirmedAccountData =>
+      _deletionAuthenticationRequired && _deletionReceiptNotFound;
+
+  Future<_DeletionReceiptLookup> _lookupDeletionReceipt(
+    String idempotencyKey,
+  ) async {
+    try {
+      final receipt = await ref
+          .read(userServiceProvider)
+          .getDeletionStatus(idempotencyKey: idempotencyKey);
+      final result = receipt == null
+          ? _DeletionReceiptLookup.notFound
+          : _DeletionReceiptLookup.completed;
+      _deletionReceiptNotFound = result == _DeletionReceiptLookup.notFound;
+      return result;
+    } catch (_) {
+      _deletionReceiptNotFound = false;
+      return _DeletionReceiptLookup.unavailable;
+    }
+  }
+
+  Future<bool> _markAccountDeletionConfirmed(String idempotencyKey) async {
     try {
       await ref
           .read(authServiceProvider)
-          .markLocalCleanupTransition(LocalCleanupTransition.accountDeletion);
+          .markAccountDeletionConfirmed(idempotencyKey);
       return true;
     } catch (_) {
       return false;
@@ -541,6 +746,8 @@ LocalCleanupScope _scopeFor(LocalCleanupTransition transition) {
       LocalCleanupScope.accountDeletionRequest,
     LocalCleanupTransition.accountDeletion => LocalCleanupScope.accountDeletion,
     LocalCleanupTransition.accountSwitch => LocalCleanupScope.accountSwitch,
+    LocalCleanupTransition.unconfirmedAccountDiscard =>
+      LocalCleanupScope.unconfirmedAccountDiscard,
   };
 }
 
@@ -551,6 +758,8 @@ LocalCleanupTransition _transitionFor(LocalCleanupScope scope) {
       LocalCleanupTransition.accountDeletionRequested,
     LocalCleanupScope.accountDeletion => LocalCleanupTransition.accountDeletion,
     LocalCleanupScope.accountSwitch => LocalCleanupTransition.accountSwitch,
+    LocalCleanupScope.unconfirmedAccountDiscard =>
+      LocalCleanupTransition.unconfirmedAccountDiscard,
   };
 }
 
@@ -559,6 +768,12 @@ class LocalAccountCleanupException implements Exception {
 
   final Object cause;
 }
+
+class AccountDeletionConfirmationException implements Exception {
+  const AccountDeletionConfirmationException();
+}
+
+enum _DeletionReceiptLookup { completed, notFound, unavailable }
 
 class _CleanupFailure {
   const _CleanupFailure(this.error, this.stackTrace);

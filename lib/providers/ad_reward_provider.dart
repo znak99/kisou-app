@@ -1,9 +1,12 @@
 import 'dart:async';
 
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:uuid/uuid.dart';
 
 import '../models/ad_reward.dart';
 import '../services/ad_gateway.dart';
+import '../services/ad_reward_operation_store.dart';
 import '../services/ad_reward_service.dart';
 import 'ads_provider.dart';
 import 'api_provider.dart';
@@ -11,6 +14,21 @@ import 'outlook_quota_provider.dart';
 
 final adRewardServiceProvider = Provider<AdRewardService>((ref) {
   return AdRewardService(ref.watch(apiClientProvider));
+});
+
+final adRewardOperationStoreProvider = Provider<AdRewardOperationStore>((ref) {
+  return AdRewardOperationStore();
+});
+
+final adRewardIdempotencyKeyFactoryProvider = Provider<String Function()>((
+  ref,
+) {
+  const uuid = Uuid();
+  return uuid.v4;
+});
+
+final adRewardClockProvider = Provider<DateTime Function()>((ref) {
+  return () => DateTime.now().toUtc();
 });
 
 final rewardPollingDelaysProvider = Provider<List<Duration>>((ref) {
@@ -76,7 +94,13 @@ class AdRewardController extends Notifier<RewardFlowState> {
   String? _activeChallengeId;
   DateTime? _settlementExpiresAt;
   Future<void>? _pollFuture;
-  bool _challengeOutcomeUncertain = false;
+  Future<AdRewardOperation?>? _restoreFuture;
+  Future<void>? _earnFuture;
+  Future<void>? _startupRecoveryFuture;
+  Future<void>? _resumeRecoveryFuture;
+  AdRewardOperation? _pendingOperation;
+  int? _storeAccountGeneration;
+  bool _operationStoreRestored = false;
   bool _serverCreditConfirmed = false;
 
   @override
@@ -84,11 +108,37 @@ class AdRewardController extends Notifier<RewardFlowState> {
     ref.onDispose(() {
       _generation++;
     });
+    if (ref.read(adsRuntimePolicyProvider).enabled) {
+      final operation = _generation;
+      late final Future<void> startup;
+      startup = Future<void>.microtask(() => _restoreAfterBuild(operation))
+          .catchError((_) {})
+          .whenComplete(() {
+            if (identical(_startupRecoveryFuture, startup)) {
+              _startupRecoveryFuture = null;
+            }
+          });
+      _startupRecoveryFuture = startup;
+      unawaited(startup);
+    }
     return const RewardFlowState.idle();
   }
 
-  Future<void> earnCredit() async {
-    if (!state.canRequestNewChallenge || _challengeOutcomeUncertain) {
+  Future<void> earnCredit() {
+    if (_earnFuture != null) {
+      return _earnFuture!;
+    }
+    return _earnFuture ??= _earnCredit().whenComplete(() {
+      _earnFuture = null;
+    });
+  }
+
+  Future<void> _earnCredit() async {
+    final startupRecovery = _startupRecoveryFuture;
+    if (startupRecovery != null) {
+      await startupRecovery;
+    }
+    if (!state.canRequestNewChallenge) {
       return;
     }
     final policy = ref.read(adsRuntimePolicyProvider);
@@ -105,9 +155,21 @@ class AdRewardController extends Notifier<RewardFlowState> {
     final operation = ++_generation;
     final consentGeneration = ads.generation;
     RewardedAdHandle? ad;
-    var challengeIssued = false;
     _serverCreditConfirmed = false;
     try {
+      var pending = await _restoreOperation();
+      if (!_isCurrent(operation)) {
+        return;
+      }
+      if (pending?.stage == AdRewardOperationStage.presented) {
+        await _recoverPresentedOperation(operation, pending!);
+        return;
+      }
+      pending = await _validateRestoredIssuanceOperation(policy, pending);
+      if (!_isCurrent(operation)) {
+        return;
+      }
+
       state = const RewardFlowState(phase: RewardFlowPhase.loadingAd);
       ad = await ref
           .read(adGatewayProvider)
@@ -119,13 +181,22 @@ class AdRewardController extends Notifier<RewardFlowState> {
         throw StateError('Ad consent changed while the rewarded ad loaded.');
       }
 
+      pending ??= await _createIssuanceOperation(policy);
+      if (!_isCurrent(operation)) {
+        return;
+      }
+      if (!_adRequestStillAllowed(consentGeneration)) {
+        throw StateError('Ad consent changed before challenge issuance.');
+      }
+
       state = const RewardFlowState(phase: RewardFlowPhase.issuingChallenge);
-      _challengeOutcomeUncertain = true;
       final challenge = await ref
           .read(adRewardServiceProvider)
-          .issueChallenge(policy.platform, policy.ids.rewardedId);
-      _challengeOutcomeUncertain = false;
-      challengeIssued = true;
+          .issueChallenge(
+            policy.platform,
+            policy.ids.rewardedId,
+            idempotencyKey: pending.idempotencyKey,
+          );
       _activeChallengeId = challenge.id;
       _settlementExpiresAt = challenge.settlementExpiresAt;
       if (!_isCurrent(operation)) {
@@ -134,6 +205,32 @@ class AdRewardController extends Notifier<RewardFlowState> {
       if (!_adRequestStillAllowed(consentGeneration)) {
         throw StateError('Ad consent changed before rewarded presentation.');
       }
+      if (challenge.platform != policy.platform ||
+          pending.challengeId != null && pending.challengeId != challenge.id) {
+        throw StateError('The replayed reward challenge does not match.');
+      }
+
+      if (challenge.status != AdRewardChallengeState.pending) {
+        await _handleReplayedStatus(operation, pending, challenge);
+        return;
+      }
+      final issued = pending.withIssuedChallenge(
+        challengeId: challenge.id,
+        expiresAt: challenge.expiresAt,
+        settlementExpiresAt: challenge.settlementExpiresAt,
+      );
+      await _writePendingOperation(issued);
+      if (!_isCurrent(operation)) {
+        return;
+      }
+      _pendingOperation = issued;
+      final presented = issued.asPresented();
+      // Persist the no-second-show boundary before entering the native SDK.
+      await _writePendingOperation(presented);
+      if (!_isCurrent(operation)) {
+        return;
+      }
+      _pendingOperation = presented;
 
       state = RewardFlowState(
         phase: RewardFlowPhase.showingAd,
@@ -146,6 +243,7 @@ class AdRewardController extends Notifier<RewardFlowState> {
         return;
       }
       if (presentation == RewardedPresentationResult.dismissed) {
+        await _clearPendingOperation();
         await ref.read(outlookQuotaProvider.notifier).refresh();
         if (!_isCurrent(operation)) {
           return;
@@ -178,7 +276,19 @@ class AdRewardController extends Notifier<RewardFlowState> {
       await _settle(operation, initialStatus);
     } catch (error) {
       if (_isCurrent(operation)) {
-        if (challengeIssued || _challengeOutcomeUncertain) {
+        final statusCode = error is DioException
+            ? error.response?.statusCode
+            : null;
+        if (statusCode == 409) {
+          // The server has definitively rejected this semantic replay. Keep
+          // this tap failed; only a later explicit tap may create a new UUID.
+          try {
+            await _clearPendingOperation();
+          } catch (_) {
+            // A failed secure delete remains fail-closed below.
+          }
+        }
+        if (_pendingOperation != null || statusCode == 409) {
           await ref.read(outlookQuotaProvider.notifier).refresh();
         }
         if (!_isCurrent(operation)) {
@@ -186,7 +296,7 @@ class AdRewardController extends Notifier<RewardFlowState> {
         }
         state = RewardFlowState(
           phase: RewardFlowPhase.failed,
-          retryAllowed: !_challengeOutcomeUncertain,
+          retryAllowed: statusCode == 409 || _pendingOperation != null,
           settlementExpiresAt: _settlementExpiresAt,
           error: error,
         );
@@ -195,6 +305,103 @@ class AdRewardController extends Notifier<RewardFlowState> {
       if (ad != null) {
         await _disposeRewardedAd(ad);
       }
+    }
+  }
+
+  Future<AdRewardOperation?> _validateRestoredIssuanceOperation(
+    AdsRuntimePolicy policy,
+    AdRewardOperation? existing,
+  ) async {
+    final now = ref.read(adRewardClockProvider)();
+    if (existing != null) {
+      final matches =
+          existing.platform == policy.platform &&
+          existing.adUnitId == policy.ids.rewardedId;
+      final replayExpired = !now.isBefore(existing.issueReplayDeadline);
+      if (!matches && !replayExpired) {
+        throw StateError(
+          'A reward request for another ad configuration is unresolved.',
+        );
+      }
+      if (replayExpired) {
+        await _clearPendingOperation();
+        existing = null;
+      }
+    }
+    if (existing != null) {
+      return existing;
+    }
+    return null;
+  }
+
+  Future<AdRewardOperation> _createIssuanceOperation(
+    AdsRuntimePolicy policy,
+  ) async {
+    final now = ref.read(adRewardClockProvider)();
+    final operation = AdRewardOperation.issuing(
+      idempotencyKey: ref.read(adRewardIdempotencyKeyFactoryProvider)(),
+      platform: policy.platform,
+      adUnitId: policy.ids.rewardedId,
+      createdAt: now,
+    );
+    // No API call may occur unless this exact UUID is durable.
+    await _writePendingOperation(operation);
+    _pendingOperation = operation;
+    return operation;
+  }
+
+  Future<void> _handleReplayedStatus(
+    int operation,
+    AdRewardOperation pending,
+    AdRewardChallenge challenge,
+  ) async {
+    switch (challenge.status) {
+      case AdRewardChallengeState.pending:
+        throw StateError('Pending replay must continue to presentation.');
+      case AdRewardChallengeState.settling:
+        final presented = pending
+            .withIssuedChallenge(
+              challengeId: challenge.id,
+              expiresAt: challenge.expiresAt,
+              settlementExpiresAt: challenge.settlementExpiresAt,
+            )
+            .asPresented();
+        await _writePendingOperation(presented);
+        if (!_isCurrent(operation)) {
+          return;
+        }
+        _pendingOperation = presented;
+        await _settle(operation, challenge);
+        return;
+      case AdRewardChallengeState.credited:
+        final presented = pending
+            .withIssuedChallenge(
+              challengeId: challenge.id,
+              expiresAt: challenge.expiresAt,
+              settlementExpiresAt: challenge.settlementExpiresAt,
+            )
+            .asPresented();
+        await _writePendingOperation(presented);
+        if (!_isCurrent(operation)) {
+          return;
+        }
+        _pendingOperation = presented;
+        final done = await _handleStatus(operation, challenge);
+        if (!done && _isCurrent(operation)) {
+          await _settle(operation, challenge);
+        }
+        return;
+      case AdRewardChallengeState.consumed:
+      case AdRewardChallengeState.expired:
+        final done = await _handleStatus(operation, challenge);
+        if (!done && _isCurrent(operation)) {
+          state = RewardFlowState(
+            phase: RewardFlowPhase.delayed,
+            retryAllowed: false,
+            settlementExpiresAt: challenge.settlementExpiresAt,
+          );
+        }
+        return;
     }
   }
 
@@ -210,8 +417,13 @@ class AdRewardController extends Notifier<RewardFlowState> {
       phase: RewardFlowPhase.settling,
       settlementExpiresAt: initialStatus.settlementExpiresAt,
     );
-    _pollFuture = _poll(operation);
-    await _pollFuture;
+    final poll = _poll(operation);
+    _pollFuture = poll;
+    await poll.whenComplete(() {
+      if (identical(_pollFuture, poll)) {
+        _pollFuture = null;
+      }
+    });
   }
 
   Future<void> _poll(int operation) async {
@@ -263,7 +475,10 @@ class AdRewardController extends Notifier<RewardFlowState> {
             refreshed &&
             quota != null &&
             quota.totalRemaining > 0) {
-          _activeChallengeId = null;
+          await _clearPendingOperation();
+          if (!_isCurrent(operation)) {
+            return true;
+          }
           _serverCreditConfirmed = false;
           state = RewardFlowState(
             phase: RewardFlowPhase.credited,
@@ -273,9 +488,9 @@ class AdRewardController extends Notifier<RewardFlowState> {
         }
         return !_isCurrent(operation);
       case AdRewardChallengeState.consumed:
+        await _clearPendingOperation();
         await ref.read(outlookQuotaProvider.notifier).refresh();
         if (_isCurrent(operation)) {
-          _activeChallengeId = null;
           _serverCreditConfirmed = false;
           state = RewardFlowState(
             phase: RewardFlowPhase.failed,
@@ -284,9 +499,9 @@ class AdRewardController extends Notifier<RewardFlowState> {
         }
         return true;
       case AdRewardChallengeState.expired:
+        await _clearPendingOperation();
         await ref.read(outlookQuotaProvider.notifier).refresh();
         if (_isCurrent(operation)) {
-          _activeChallengeId = null;
           _serverCreditConfirmed = false;
           state = RewardFlowState(
             phase: RewardFlowPhase.failed,
@@ -300,7 +515,13 @@ class AdRewardController extends Notifier<RewardFlowState> {
     }
   }
 
-  Future<void> refreshAfterResume() async {
+  Future<void> refreshAfterResume() {
+    return _resumeRecoveryFuture ??= _refreshAfterResume().whenComplete(() {
+      _resumeRecoveryFuture = null;
+    });
+  }
+
+  Future<void> _refreshAfterResume() async {
     final operation = _generation;
     final quotaRefreshed = await ref
         .read(outlookQuotaProvider.notifier)
@@ -313,7 +534,10 @@ class AdRewardController extends Notifier<RewardFlowState> {
         quotaRefreshed &&
         quota != null &&
         quota.totalRemaining > 0) {
-      _activeChallengeId = null;
+      await _clearPendingOperation();
+      if (!_isCurrent(operation)) {
+        return;
+      }
       _serverCreditConfirmed = false;
       state = RewardFlowState(
         phase: RewardFlowPhase.credited,
@@ -321,28 +545,27 @@ class AdRewardController extends Notifier<RewardFlowState> {
       );
       return;
     }
-    final challengeId = _activeChallengeId;
-    if (challengeId == null ||
-        (state.phase != RewardFlowPhase.settling &&
-            state.phase != RewardFlowPhase.delayed) ||
-        _pollFuture != null && state.phase == RewardFlowPhase.settling) {
+    final pending = await _restoreOperation();
+    if (!_isCurrent(operation)) {
       return;
     }
-    try {
-      final status = await ref
-          .read(adRewardServiceProvider)
-          .getChallenge(challengeId);
-      final done = await _handleStatus(operation, status);
-      if (!done && _isCurrent(operation)) {
+    if (pending == null) {
+      return;
+    }
+    if (pending.stage != AdRewardOperationStage.presented) {
+      if (!state.isBusy) {
         state = RewardFlowState(
-          phase: RewardFlowPhase.delayed,
-          settlementExpiresAt: status.settlementExpiresAt,
+          phase: RewardFlowPhase.failed,
+          retryAllowed: true,
+          settlementExpiresAt: pending.settlementExpiresAt,
         );
       }
-    } catch (_) {
-      // Keep the delayed state; another resume or explicit quota refresh can
-      // recover without issuing or showing another ad.
+      return;
     }
+    if (_pollFuture != null && state.phase == RewardFlowPhase.settling) {
+      return;
+    }
+    await _recoverPresentedOperation(operation, pending);
   }
 
   void pausePollingForBackground() {
@@ -377,5 +600,122 @@ class AdRewardController extends Notifier<RewardFlowState> {
       // Native cleanup is best-effort and must not replace the authoritative
       // reward state or surface as an unhandled UI Future.
     }
+  }
+
+  Future<void> _restoreAfterBuild(int operation) async {
+    try {
+      final pending = await _restoreOperation();
+      if (!_isCurrent(operation)) {
+        return;
+      }
+      if (pending == null) {
+        return;
+      }
+      if (pending.stage == AdRewardOperationStage.presented) {
+        await refreshAfterResume();
+        if (!_isCurrent(operation)) {
+          return;
+        }
+      } else if (!state.isBusy) {
+        state = RewardFlowState(
+          phase: RewardFlowPhase.failed,
+          retryAllowed: true,
+          settlementExpiresAt: pending.settlementExpiresAt,
+        );
+      }
+    } catch (error) {
+      if (!_isCurrent(operation)) {
+        return;
+      }
+      state = RewardFlowState(
+        phase: RewardFlowPhase.failed,
+        retryAllowed: false,
+        error: error,
+      );
+    }
+  }
+
+  Future<AdRewardOperation?> _restoreOperation() {
+    if (_operationStoreRestored) {
+      return Future.value(_pendingOperation);
+    }
+    if (_pendingOperation case final operation?) {
+      return Future.value(operation);
+    }
+    final operationGeneration = _generation;
+    return _restoreFuture ??= ref
+        .read(adRewardOperationStoreProvider)
+        .readSnapshot()
+        .then((snapshot) {
+          if (_isCurrent(operationGeneration)) {
+            _storeAccountGeneration = snapshot.accountGeneration;
+            _pendingOperation = snapshot.operation;
+            _operationStoreRestored = true;
+            _activeChallengeId = snapshot.operation?.challengeId;
+            _settlementExpiresAt = snapshot.operation?.settlementExpiresAt;
+          }
+          return snapshot.operation;
+        })
+        .whenComplete(() {
+          _restoreFuture = null;
+        });
+  }
+
+  Future<void> _recoverPresentedOperation(
+    int operation,
+    AdRewardOperation pending,
+  ) async {
+    final challengeId = pending.challengeId;
+    if (challengeId == null) {
+      throw StateError('Presented reward operation has no challenge ID.');
+    }
+    _activeChallengeId = challengeId;
+    _settlementExpiresAt = pending.settlementExpiresAt;
+    state = RewardFlowState(
+      phase: RewardFlowPhase.settling,
+      settlementExpiresAt: pending.settlementExpiresAt,
+    );
+    try {
+      final status = await ref
+          .read(adRewardServiceProvider)
+          .getChallenge(challengeId);
+      if (await _handleStatus(operation, status)) {
+        return;
+      }
+      if (_isCurrent(operation)) {
+        await _settle(operation, status);
+      }
+    } catch (_) {
+      if (_isCurrent(operation)) {
+        state = RewardFlowState(
+          phase: RewardFlowPhase.delayed,
+          retryAllowed: false,
+          settlementExpiresAt: pending.settlementExpiresAt,
+        );
+      }
+    }
+  }
+
+  Future<void> _clearPendingOperation() async {
+    final accountGeneration = _storeAccountGeneration;
+    if (accountGeneration == null) {
+      throw StateError('Ad reward operation store was not restored.');
+    }
+    await ref
+        .read(adRewardOperationStoreProvider)
+        .deleteIfCurrent(accountGeneration: accountGeneration);
+    _pendingOperation = null;
+    _activeChallengeId = null;
+    _settlementExpiresAt = null;
+  }
+
+  Future<void> _writePendingOperation(AdRewardOperation operation) async {
+    final accountGeneration = _storeAccountGeneration;
+    if (accountGeneration == null) {
+      throw StateError('Ad reward operation store was not restored.');
+    }
+    await ref
+        .read(adRewardOperationStoreProvider)
+        .writeIfCurrent(operation, accountGeneration: accountGeneration);
   }
 }

@@ -11,6 +11,7 @@ import 'package:kisou_app/app.dart';
 import 'package:kisou_app/config/app_links.dart';
 import 'package:kisou_app/config/theme.dart';
 import 'package:kisou_app/constants/app_strings.dart';
+import 'package:kisou_app/models/account_deletion_status.dart';
 import 'package:kisou_app/providers/account_deletion_credential_provider.dart';
 import 'package:kisou_app/providers/api_provider.dart';
 import 'package:kisou_app/providers/auth_provider.dart';
@@ -1317,6 +1318,7 @@ class _FakeAuthService extends AuthService {
   final bool failLocalCleanup;
   bool didClearLocalAccountData = false;
   LocalCleanupTransition? localCleanupTransition;
+  String? accountDeletionIdempotencyKey;
 
   @override
   Future<void> clearKeychainOnFirstLaunch() async {}
@@ -1334,8 +1336,26 @@ class _FakeAuthService extends AuthService {
   }
 
   @override
+  Future<void> markAccountDeletionRequested(String idempotencyKey) async {
+    localCleanupTransition = LocalCleanupTransition.accountDeletionRequested;
+    accountDeletionIdempotencyKey = idempotencyKey;
+  }
+
+  @override
+  Future<void> markAccountDeletionConfirmed(String idempotencyKey) async {
+    localCleanupTransition = LocalCleanupTransition.accountDeletion;
+    accountDeletionIdempotencyKey = idempotencyKey;
+  }
+
+  @override
+  Future<String?> readAccountDeletionRequestIdempotencyKey() async {
+    return accountDeletionIdempotencyKey;
+  }
+
+  @override
   Future<void> clearLocalCleanupTransition() async {
     localCleanupTransition = null;
+    accountDeletionIdempotencyKey = null;
   }
 
   @override
@@ -1356,6 +1376,9 @@ class _FakeAuthService extends AuthService {
 
   @override
   Future<void> clearOnboardingCompleted() async {}
+
+  @override
+  Future<void> clearPendingAdRewardOperation() async {}
 
   @override
   Future<void> clearLocalAccountData() async {
@@ -1380,10 +1403,24 @@ class _DeleteTrackingUserService extends UserService {
   _DeleteTrackingUserService() : super(Dio());
 
   var deleteCallCount = 0;
+  var deleted = false;
 
   @override
-  Future<void> deleteMe() async {
+  Future<void> deleteMe({required String idempotencyKey}) async {
     deleteCallCount++;
+    deleted = true;
+  }
+
+  @override
+  Future<AccountDeletionStatus?> getDeletionStatus({
+    required String idempotencyKey,
+  }) async {
+    return deleted
+        ? AccountDeletionStatus(
+            completedAt: DateTime.utc(2026, 7, 31),
+            expiresAt: DateTime.utc(2026, 8, 1),
+          )
+        : null;
   }
 }
 

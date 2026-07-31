@@ -15,6 +15,10 @@ Flutter mobile app for **キソウ**, a weather-based personalized clothing reco
 - Forecast tab with tomorrow recommendation, D+2 through D+4 weather, and future date/place estimates
 - Server-authoritative future-estimate quota, retry-safe UUID idempotency, and
   an explicit rewarded-ad path after the allowance is exhausted
+- Crash-safe in-app account deletion with an atomic secure UUID marker and a
+  JWT-free completion receipt; ambiguous 401/offline outcomes preserve local data
+- Restart-safe rewarded challenge issuance that replays one durable UUID,
+  persists no raw SSV challenge, and never shows a presented challenge twice
 - Consent-gated, non-personalized inline adaptive AdMob banner at the end of
   the forecast scroll; ads are compile-time disabled by default
 - Offline travel plans for up to 20 major-city departures, with JST D-day
@@ -54,6 +58,16 @@ account switch, and in-app account deletion cancel this feature's reserved
 notification IDs and remove its device-local rows. Android app backup is
 disabled; iOS stores the database in a protected Application Support directory
 that is explicitly excluded from device/cloud backup.
+
+Account deletion and rewarded-ad issuance use account-scoped secure operation
+records. Logout, account switch, and deletion close the prior operation
+generation, drain any in-flight secure write, and delete it before a later
+account can start. A deletion 401 is not treated as success: only the public
+completion receipt confirms server deletion. If that receipt is definitively
+absent and the original session cannot be restored, a strongly warned,
+explicit local-only discard wipes the device identity without claiming server
+success. A lost reward-issuance response is retried with the same UUID through
+its server replay window.
 
 ## API Server
 

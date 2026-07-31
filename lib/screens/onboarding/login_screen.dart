@@ -3,8 +3,10 @@ import 'dart:async';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../config/api_config.dart';
+import '../../config/app_links.dart';
 import '../../config/theme.dart';
 import '../../constants/app_strings.dart';
 import '../../providers/auth_provider.dart';
@@ -89,10 +91,93 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     }
   }
 
+  Future<void> _openAccountDeletionHelp() async {
+    var opened = false;
+    try {
+      opened = await launchUrl(
+        AppLinks.accountDeletion,
+        mode: LaunchMode.externalApplication,
+      );
+    } catch (_) {
+      // Fall through to the same visible error as a rejected launch.
+    }
+    if (!mounted || opened) {
+      return;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(AppStrings.accountDeleteRequestOpenWebFailed),
+      ),
+    );
+  }
+
+  Future<void> _discardUnconfirmedLocalData() async {
+    if (_cleanupRetrying) {
+      return;
+    }
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text(AppStrings.accountDeleteRequestDiscardLocalTitle),
+          content: const Text(AppStrings.accountDeleteRequestDiscardLocalBody),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text(AppStrings.cancel),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              style: TextButton.styleFrom(
+                foregroundColor: Theme.of(dialogContext).colorScheme.error,
+              ),
+              child: const Text(
+                AppStrings.accountDeleteRequestDiscardLocalConfirm,
+              ),
+            ),
+          ],
+        );
+      },
+    );
+    if (confirmed != true || !mounted) {
+      return;
+    }
+    setState(() => _cleanupRetrying = true);
+    var succeeded = false;
+    try {
+      succeeded = await ref
+          .read(authProvider.notifier)
+          .discardUnconfirmedAccountData();
+    } catch (_) {
+      // The provider keeps the recovery marker and local data fail-closed.
+    }
+    if (!mounted) {
+      return;
+    }
+    setState(() => _cleanupRetrying = false);
+    if (succeeded) {
+      ref.invalidate(authProvider);
+      return;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(AppStrings.accountDeleteRequestDiscardLocalFailed),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
     final cleanupScope = authState.value?.localCleanupScope;
+    final deletionRecoveryKind = authState.value?.accountDeletionRecoveryKind;
+    final deletionAuthenticationRequired =
+        cleanupScope == LocalCleanupScope.accountDeletionRequest &&
+        deletionRecoveryKind ==
+            AccountDeletionRecoveryKind.authenticationRequired;
+    final canDiscardUnconfirmedAccountData =
+        deletionAuthenticationRequired &&
+        authState.value?.canDiscardUnconfirmedAccountData == true;
     final cleanupRequired = cleanupScope != null;
     final isLoading = authState.isLoading || _cleanupRetrying;
     final kind = authState.value?.startupErrorKind;
@@ -110,12 +195,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
       ),
       (LocalCleanupScope.accountDeletionRequest, _) => (
         AppStrings.accountDeleteRequestRecoveryTitle,
-        AppStrings.accountDeleteRequestRecoveryFailed,
+        deletionAuthenticationRequired
+            ? AppStrings.accountDeleteRequestAuthenticationRequired
+            : AppStrings.accountDeleteRequestRecoveryFailed,
         Icons.person_remove_alt_1_outlined,
       ),
       (LocalCleanupScope.accountDeletion, _) => (
         AppStrings.accountDeleteLocalCleanupTitle,
         AppStrings.accountDeleteLocalCleanupFailed,
+        Icons.phonelink_erase_rounded,
+      ),
+      (LocalCleanupScope.unconfirmedAccountDiscard, _) => (
+        AppStrings.unconfirmedAccountDiscardCleanupTitle,
+        AppStrings.unconfirmedAccountDiscardCleanupBody,
         Icons.phonelink_erase_rounded,
       ),
       (null, ApiErrorKind.offline) => (
@@ -214,8 +306,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                                               .accountSwitchLocalCleanupRetry,
                                         LocalCleanupScope
                                             .accountDeletionRequest =>
+                                          deletionAuthenticationRequired
+                                              ? AppStrings
+                                                    .accountDeleteRequestStatusRetry
+                                              : AppStrings
+                                                    .accountDeleteRequestRecoveryRetry,
+                                        LocalCleanupScope
+                                            .unconfirmedAccountDiscard =>
                                           AppStrings
-                                              .accountDeleteRequestRecoveryRetry,
+                                              .unconfirmedAccountDiscardCleanupRetry,
                                         _ =>
                                           AppStrings
                                               .accountDeleteLocalCleanupRetry,
@@ -223,6 +322,30 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                                     : AppStrings.retry,
                               ),
                       ),
+                      if (deletionAuthenticationRequired) ...[
+                        const SizedBox(height: KisouTheme.gapM),
+                        OutlinedButton.icon(
+                          onPressed: isLoading
+                              ? null
+                              : _openAccountDeletionHelp,
+                          icon: const Icon(Icons.open_in_new_rounded),
+                          label: const Text(
+                            AppStrings.accountDeleteRequestOpenWeb,
+                          ),
+                        ),
+                        if (canDiscardUnconfirmedAccountData) ...[
+                          const SizedBox(height: KisouTheme.gapS),
+                          TextButton.icon(
+                            onPressed: isLoading
+                                ? null
+                                : _discardUnconfirmedLocalData,
+                            icon: const Icon(Icons.delete_forever_outlined),
+                            label: const Text(
+                              AppStrings.accountDeleteRequestDiscardLocalOnly,
+                            ),
+                          ),
+                        ],
+                      ],
                       if (!cleanupRequired &&
                           ApiConfig.showDevelopmentLogin) ...[
                         const SizedBox(height: KisouTheme.gapL),

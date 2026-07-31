@@ -6,6 +6,7 @@ import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
 import '../config/api_config.dart';
 import '../models/auth.dart';
+import 'ad_reward_operation_store.dart';
 
 enum AuthLoginProvider {
   apple('apple'),
@@ -21,12 +22,14 @@ enum LocalCleanupTransition {
   accountDeletionRequested,
   accountDeletion,
   accountSwitch,
+  unconfirmedAccountDiscard,
 }
 
 class AuthService {
   AuthService({
     FlutterSecureStorage? storage,
     Future<SharedPreferences> Function()? preferencesFactory,
+    AdRewardOperationStore? adRewardOperationStore,
     bool developmentAuthEnabled = ApiConfig.developmentFeaturesEnabled,
   }) : _storage =
            storage ??
@@ -35,6 +38,8 @@ class AuthService {
            ),
        _preferencesFactory =
            preferencesFactory ?? SharedPreferences.getInstance,
+       _adRewardOperationStore =
+           adRewardOperationStore ?? AdRewardOperationStore(storage: storage),
        _developmentAuthEnabled = developmentAuthEnabled;
 
   static const String _tokenKey = 'jwt_token';
@@ -46,9 +51,11 @@ class AuthService {
   static const String _onboardingCompletedKey = 'onboarding_completed';
   static const String _localCleanupTransitionKey =
       'local_cleanup_transition_v1';
+  static const String _accountDeletionRequestMarkerVersion = 'v2';
 
   final FlutterSecureStorage _storage;
   final Future<SharedPreferences> Function() _preferencesFactory;
+  final AdRewardOperationStore _adRewardOperationStore;
   final bool _developmentAuthEnabled;
   Future<void>? _googleInitializeFuture;
   Future<bool>? _refreshInFlight;
@@ -120,8 +127,23 @@ class AuthService {
     await preferences.remove(_onboardingCompletedKey);
   }
 
+  Future<void> clearPendingAdRewardOperation() {
+    return _adRewardOperationStore.closeWritesAndClear();
+  }
+
   Future<LocalCleanupTransition?> readLocalCleanupTransition() async {
     final value = await _storage.read(key: _localCleanupTransitionKey);
+    for (final transition in const [
+      LocalCleanupTransition.accountDeletionRequested,
+      LocalCleanupTransition.accountDeletion,
+    ]) {
+      if (value?.startsWith(
+            '${transition.name}:$_accountDeletionRequestMarkerVersion:',
+          ) ==
+          true) {
+        return transition;
+      }
+    }
     for (final transition in LocalCleanupTransition.values) {
       if (transition.name == value) {
         return transition;
@@ -139,19 +161,76 @@ class AuthService {
     );
   }
 
+  /// Atomically persists both the crash-recovery phase and the request UUID in
+  /// one secure-storage value before DELETE /users/me can be sent.
+  Future<void> markAccountDeletionRequested(String idempotencyKey) {
+    return _markAccountDeletionWithKey(
+      LocalCleanupTransition.accountDeletionRequested,
+      idempotencyKey,
+    );
+  }
+
+  /// Keeps the confirmed receipt key in the same crash-recovery record until
+  /// every account-bound local store has been erased successfully.
+  Future<void> markAccountDeletionConfirmed(String idempotencyKey) {
+    return _markAccountDeletionWithKey(
+      LocalCleanupTransition.accountDeletion,
+      idempotencyKey,
+    );
+  }
+
+  Future<void> _markAccountDeletionWithKey(
+    LocalCleanupTransition transition,
+    String idempotencyKey,
+  ) {
+    if (!_uuidPattern.hasMatch(idempotencyKey)) {
+      throw const FormatException('Invalid account-deletion idempotency key.');
+    }
+    return _storage.write(
+      key: _localCleanupTransitionKey,
+      value:
+          '${transition.name}:'
+          '$_accountDeletionRequestMarkerVersion:$idempotencyKey',
+    );
+  }
+
+  /// Returns null for the legacy marker or a damaged value. The transition
+  /// itself remains accountDeletionRequested, so the app stays fail-closed.
+  Future<String?> readAccountDeletionRequestIdempotencyKey() async {
+    final value = await _storage.read(key: _localCleanupTransitionKey);
+    if (value == null) {
+      return null;
+    }
+    for (final transition in const [
+      LocalCleanupTransition.accountDeletionRequested,
+      LocalCleanupTransition.accountDeletion,
+    ]) {
+      final prefix =
+          '${transition.name}:$_accountDeletionRequestMarkerVersion:';
+      if (value.startsWith(prefix)) {
+        final key = value.substring(prefix.length);
+        return _uuidPattern.hasMatch(key) ? key : null;
+      }
+    }
+    return null;
+  }
+
   Future<void> clearLocalCleanupTransition() {
     return _storage.delete(key: _localCleanupTransitionKey);
   }
 
-  /// Removes every local credential and preference after the server has
-  /// permanently deleted the account. This intentionally differs from logout,
-  /// which keeps the anonymous restoration secret.
+  /// Removes every local identity credential and preference after confirmed
+  /// server deletion or an explicit unconfirmed local-only discard.
+  ///
+  /// This intentionally differs from logout/account switch, which keep the
+  /// anonymous restoration secret so the same guest can be restored.
   Future<void> clearLocalAccountData() async {
     // Delete only auth-owned keys. The transition marker must survive until
     // every other account-bound store has completed cleanup successfully.
     await _storage.delete(key: _tokenKey);
     await _storage.delete(key: _refreshTokenKey);
     await _storage.delete(key: _deviceSecretKey);
+    await clearPendingAdRewardOperation();
     final preferences = await _preferencesFactory();
     await preferences.clear();
   }
@@ -213,6 +292,27 @@ class AuthService {
       if (error.response?.statusCode == 401 && secret != null) {
         await _storage.delete(key: _deviceSecretKey);
         return _postAnonymous(dio: dio, deviceSecret: null);
+      }
+      rethrow;
+    }
+  }
+
+  /// Restores only the exact anonymous account already bound to this device.
+  ///
+  /// Account-deletion recovery must never fall back to creating a fresh guest:
+  /// doing so could send the old request UUID while authenticated as a
+  /// different account.
+  Future<bool> restoreAnonymousSessionForDeletion({required Dio dio}) async {
+    final secret = await _storage.read(key: _deviceSecretKey);
+    if (secret == null || secret.isEmpty) {
+      return false;
+    }
+    try {
+      await _postAnonymous(dio: dio, deviceSecret: secret);
+      return true;
+    } on DioException catch (error) {
+      if (error.response?.statusCode == 401) {
+        return false;
       }
       rethrow;
     }
@@ -385,6 +485,11 @@ class AuthService {
     }
   }
 }
+
+final _uuidPattern = RegExp(
+  r'^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-'
+  r'[89ab][0-9a-f]{3}-[0-9a-f]{12}$',
+);
 
 class AuthException implements Exception {
   const AuthException(this.message);

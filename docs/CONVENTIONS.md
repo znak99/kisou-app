@@ -132,11 +132,33 @@ The mapping from API code (`"THIN_LONG"`) → enum → Japanese display name →
 - Persist account transitions independently from access-token state before
   login, logout, session expiry, or account deletion begins. Check that marker
   before `hasToken`; clear it only after every scoped local cleanup succeeds.
-  Account deletion uses separate server-requested and server-confirmed phases
-  to recover interrupted requests without exposing old local data. Until the
-  API provides an idempotency receipt/status, the deleted-user 401 fallback is
-  still ambiguous with an unrelated invalid token and remains tracked in the
-  root work list.
+  Before in-app deletion, atomically persist the requested phase and a
+  canonical lowercase UUID v4 in one secure-storage value, then send that UUID
+  as `Idempotency-Key`. Only a `completed` result from the JWT-free
+  `POST /account-deletion/status` receipt endpoint may advance to confirmed
+  local cleanup; a DELETE 401, 404 receipt, timeout, 429, 5xx, or malformed
+  response is never proof. Keep the UUID embedded in the confirmed marker until
+  every account-bound store has been erased.
+- A deletion 401 may clear the expired access/refresh tokens, but neither the
+  interceptor callback nor `expireSession` may downgrade an active deletion
+  marker to account switch. Restore an anonymous session only with the existing
+  `device_secret`, without the normal create-new-guest fallback, and always
+  reuse the same UUID. If the exact account cannot be restored, preserve local
+  data and link the recovery UI to the public deletion page for users who saved
+  their support ID and deletion code.
+- Offer local-only abandonment only when the exact session cannot be restored
+  and the latest receipt lookup is a definitive 404—not on timeout, offline,
+  429, 5xx, or malformed data. Warn that server deletion is unconfirmed, server
+  data may remain, the public Web flow should be used first when saved
+  credentials exist, and local erasure is irreversible. Confirmation must send
+  no DELETE and claim no server success: atomically replace the deletion marker
+  with a dedicated `unconfirmedAccountDiscard` marker, erase every local
+  identity credential (including `device_secret`), account preference, travel
+  plan/notification, deletion code, reward operation, and theme, and clear the
+  marker last. Do not reuse logout/account-switch cleanup because those preserve
+  same-guest restoration. A marker-write failure preserves the deletion UUID
+  and local data; later cleanup failure resumes from the dedicated marker after
+  restart, and only successful cleanup may start a new anonymous account.
 - API base URL is loaded from the matching `config/dev.json` or
   `config/prod.json`; release builds must fail before networking when the
   environment is not production or the production URL is not safe HTTPS
@@ -185,10 +207,28 @@ The mapping from API code (`"THIN_LONG"`) → enum → Japanese display name →
   profile/account identifiers, or SSV `userId`. Reward `customData` may contain
   only the server's one-time 43-character challenge.
 - Load a rewarded ad before issuing a challenge. Send the exact loaded ad unit
-  with the platform to the server, set plaintext `customData`, then show.
-  Production grants credit only after server SSV status becomes `credited`;
-  development confirmation is allowed only with official test units. Do not
-  auto-show an ad or auto-run an outlook.
+  with the platform and a canonical client UUID v4 to the server. Persist the
+  UUID and its `created_at` after a successful ad load and immediately before
+  the API call; a no-fill must leave no never-sent operation. Replay it after
+  timeout or process restart until the returned `expires_at`; never issue a
+  second UUID while the first outcome is uncertain. If the initial issuance
+  response itself is lost and
+  `expires_at` is unknown, reuse that UUID for a local 61-minute ceiling (the
+  server's 60-minute maximum plus one minute of margin). Persist only
+  `issuing|issued|presented`, challenge ID, and timestamps in secure
+  storage—never the raw 43-character challenge.
+- Show a replayed challenge only while its server status is `pending`.
+  `settling` resumes polling, `credited` refreshes authoritative quota without
+  another ad, and `consumed|expired` clears the operation. Persist `presented`
+  before entering the native ad SDK so a crash cannot show the same challenge
+  twice. Set plaintext `customData` only in memory. Production grants credit
+  only after server SSV status becomes `credited`; development confirmation is
+  allowed only with official test units. Do not auto-show an ad or auto-run an
+  outlook.
+- Bind reward-store mutations to an account-generation lease. Logout, account
+  switch, and deletion first invalidate the provider, close old leases, drain
+  an in-flight secure write, and perform the final delete so a previous
+  account's queued operation cannot be recreated for the next account.
 - Inline banners belong at the end of the forecast scroll. Occupy no space
   before actual platform size is known, bound no-fill retries, and dispose
   stale/invisible/background handles only after removing their `AdWidget`.

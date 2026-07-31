@@ -28,6 +28,7 @@ void main() {
         service.issueChallenge(
           KisouAdPlatform.android,
           AdConfig.androidSamples.rewardedId,
+          idempotencyKey: '11111111-1111-4111-8111-111111111111',
         ),
         throwsA(isA<DioException>()),
       );
@@ -37,6 +38,7 @@ void main() {
       expect(captured.data, {
         'platform': 'android',
         'ad_unit_id': AdConfig.androidSamples.rewardedId,
+        'idempotency_key': '11111111-1111-4111-8111-111111111111',
       });
     },
   );
