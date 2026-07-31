@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="widget_surface">#FFFFFFFF</color>
+    <color name="widget_surface_alt">#FFF1F3F5</color>
+    <color name="widget_ink">#FF1A1B1E</color>
+    <color name="widget_soft_ink">#FF6B7280</color>
+    <color name="widget_hairline">#FFE8EAED</color>
+    <color name="widget_accent">#FF4C5BCC</color>
+
+    <style name="KisouWidgetGarmentText">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:ellipsize">end</item>
+        <item name="android:fontFamily">sans-serif</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:textColor">@color/widget_ink</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="KisouWidgetGarmentCard">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">match_parent</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:background">@drawable/kisou_widget_garment_background</item>
+        <item name="android:ellipsize">end</item>
+        <item name="android:fontFamily">sans-serif</item>
+        <item name="android:gravity">center</item>
+        <item name="android:maxLines">3</item>
+        <item name="android:padding">8dp</item>
+        <item name="android:textAlignment">center</item>
+        <item name="android:textColor">@color/widget_ink</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <string name="widget_title">今日のおすすめ</string>
+    <string name="widget_open_to_update">アプリを開いて更新</string>
+    <string name="widget_ready_description">%1$sのおすすめ。%2$s。アウター、%3$s。トップス、%4$s。ボトムス、%5$s。ダブルタップしてアプリを開きます。</string>
+    <string name="widget_placeholder_description">%1$sのおすすめはまだ更新されていません。ダブルタップしてアプリを開きます。</string>
+    <string name="widget_description">KISOUの今日の服装おすすめ</string>
+</resources>

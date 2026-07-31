@@ -18,6 +18,7 @@ import 'shell_provider.dart';
 import 'theme_provider.dart';
 import 'travel_plan_provider.dart';
 import 'user_provider.dart';
+import 'widget_recommendation_provider.dart';
 
 enum AuthStatus { unauthenticated, authenticated }
 
@@ -91,6 +92,7 @@ class AuthController extends AsyncNotifier<AuthState> {
     await authService.clearKeychainOnFirstLaunch();
     var interruptedTransition = await authService.readLocalCleanupTransition();
     var pushAlreadyClosed = false;
+    var widgetAlreadyClosed = false;
     if (interruptedTransition ==
         LocalCleanupTransition.accountDeletionRequested) {
       final confirmed = await _resumeAccountDeletionRequest();
@@ -102,6 +104,7 @@ class AuthController extends AsyncNotifier<AuthState> {
         );
       }
       pushAlreadyClosed = true;
+      widgetAlreadyClosed = true;
       interruptedTransition = LocalCleanupTransition.accountDeletion;
     }
     if (interruptedTransition != null) {
@@ -109,6 +112,7 @@ class AuthController extends AsyncNotifier<AuthState> {
       final cleanupFailure = await _runScopedCleanup(
         scope,
         pushAlreadyClosed: pushAlreadyClosed,
+        widgetAlreadyClosed: widgetAlreadyClosed,
       );
       if (cleanupFailure != null) {
         return AuthState.unauthenticated(localCleanupScope: scope);
@@ -144,6 +148,10 @@ class AuthController extends AsyncNotifier<AuthState> {
       );
       await authService.setOnboardingCompleted(!isNewUser);
       await authService.clearLocalCleanupTransition();
+      // Account-switch cleanup closed the prior widget lease. Recreate every
+      // account-scoped provider before onboarding can persist profile data or
+      // RootShell can request the new anonymous account's recommendation.
+      _invalidateUserScopedData();
       return AuthState.authenticated(isNewUser: isNewUser);
     } catch (error) {
       try {
@@ -215,6 +223,7 @@ class AuthController extends AsyncNotifier<AuthState> {
     await authService.markLocalCleanupTransition(LocalCleanupTransition.logout);
     // Unregister while the old refresh/access session is still usable.
     await _closePushAccountForTransition();
+    await _closeWidgetAccountForTransition();
     state = const AsyncLoading<AuthState>();
     try {
       await authService.logoutServer(dio: ref.read(apiClientProvider));
@@ -226,6 +235,7 @@ class AuthController extends AsyncNotifier<AuthState> {
     final cleanupFailure = await _runScopedCleanup(
       LocalCleanupScope.logout,
       pushAlreadyClosed: true,
+      widgetAlreadyClosed: true,
     );
     _invalidateUserScopedData();
     state = AsyncData(
@@ -302,11 +312,13 @@ class AuthController extends AsyncNotifier<AuthState> {
 
   Future<void> _completeAccountDeletion({
     bool pushAlreadyClosed = false,
+    bool widgetAlreadyClosed = false,
   }) async {
     state = const AsyncLoading<AuthState>();
     final cleanupFailure = await _runScopedCleanup(
       LocalCleanupScope.accountDeletion,
       pushAlreadyClosed: pushAlreadyClosed,
+      widgetAlreadyClosed: widgetAlreadyClosed,
     );
     _invalidateUserScopedData();
     state = AsyncData(
@@ -340,6 +352,7 @@ class AuthController extends AsyncNotifier<AuthState> {
     )();
     await authService.markAccountDeletionRequested(idempotencyKey);
     await _closePushAccountForTransition();
+    await _closeWidgetAccountForTransition();
     final confirmed = await _requestDeletionAndConfirm(idempotencyKey);
     if (!confirmed) {
       _invalidateUserScopedData();
@@ -368,7 +381,10 @@ class AuthController extends AsyncNotifier<AuthState> {
         stackTrace,
       );
     }
-    await _completeAccountDeletion(pushAlreadyClosed: true);
+    await _completeAccountDeletion(
+      pushAlreadyClosed: true,
+      widgetAlreadyClosed: true,
+    );
   }
 
   /// Re-attempts the exact local cleanup scope without creating an account.
@@ -380,6 +396,7 @@ class AuthController extends AsyncNotifier<AuthState> {
     final authService = ref.read(authServiceProvider);
     var cleanupScope = scope;
     var pushAlreadyClosed = false;
+    var widgetAlreadyClosed = false;
     if (scope == LocalCleanupScope.accountDeletionRequest) {
       final confirmed = await _resumeAccountDeletionRequest();
       if (!confirmed) {
@@ -393,6 +410,7 @@ class AuthController extends AsyncNotifier<AuthState> {
         return false;
       }
       pushAlreadyClosed = true;
+      widgetAlreadyClosed = true;
       cleanupScope = LocalCleanupScope.accountDeletion;
     }
     try {
@@ -406,6 +424,7 @@ class AuthController extends AsyncNotifier<AuthState> {
     final cleanupFailure = await _runScopedCleanup(
       cleanupScope,
       pushAlreadyClosed: pushAlreadyClosed,
+      widgetAlreadyClosed: widgetAlreadyClosed,
     );
     _invalidateUserScopedData();
     state = AsyncData(
@@ -489,10 +508,12 @@ class AuthController extends AsyncNotifier<AuthState> {
   List<Future<void> Function()> _preCredentialCleanupOperations(
     LocalCleanupScope scope, {
     bool includePush = true,
+    bool includeWidget = true,
   }) {
     return switch (scope) {
       LocalCleanupScope.logout || LocalCleanupScope.accountSwitch => [
         if (includePush) _closePushAccountForTransition,
+        if (includeWidget) _closeWidgetAccountForTransition,
         () async {
           ref.invalidate(adRewardProvider);
         },
@@ -505,6 +526,7 @@ class AuthController extends AsyncNotifier<AuthState> {
       LocalCleanupScope.accountDeletion ||
       LocalCleanupScope.unconfirmedAccountDiscard => [
         if (includePush) _closePushAccountForTransition,
+        if (includeWidget) _closeWidgetAccountForTransition,
         () async {
           ref.invalidate(adRewardProvider);
         },
@@ -548,11 +570,16 @@ class AuthController extends AsyncNotifier<AuthState> {
   Future<_CleanupFailure?> _runScopedCleanup(
     LocalCleanupScope scope, {
     bool pushAlreadyClosed = false,
+    bool widgetAlreadyClosed = false,
     bool clearTransitionOnSuccess = true,
   }) async {
     final authService = ref.read(authServiceProvider);
     final cleanupFailure = await _runCleanupOperations(
-      _preCredentialCleanupOperations(scope, includePush: !pushAlreadyClosed),
+      _preCredentialCleanupOperations(
+        scope,
+        includePush: !pushAlreadyClosed,
+        includeWidget: !widgetAlreadyClosed,
+      ),
     );
     if (cleanupFailure != null) {
       // The access/refresh session is the capability needed to retry server
@@ -583,6 +610,7 @@ class AuthController extends AsyncNotifier<AuthState> {
     final authService = ref.read(authServiceProvider);
     try {
       await _closePushAccountForTransition();
+      await _closeWidgetAccountForTransition();
     } catch (_) {
       // A durable installation revision is required before deletion can
       // proceed; preserve the deletion marker and retry later.
@@ -712,6 +740,10 @@ class AuthController extends AsyncNotifier<AuthState> {
     ref.invalidate(pushSettingsProvider);
     ref.invalidate(pushNavigationQueueProvider);
     ref.invalidate(pushForegroundNotificationProvider);
+    ref.invalidate(widgetRecommendationStartupSyncProvider);
+    ref.invalidate(widgetRecommendationCoordinatorProvider);
+    ref.invalidate(widgetRecommendationServiceProvider);
+    ref.invalidate(widgetHomeRouteProvider);
     ref.invalidate(shellTabProvider);
   }
 
@@ -775,6 +807,21 @@ class AuthController extends AsyncNotifier<AuthState> {
     } catch (_) {
       // Delivered content is generic and contains no account data. Native
       // clearing is best effort; durable receipts still block known replays.
+    }
+  }
+
+  Future<void> _closeWidgetAccountForTransition() async {
+    // Clear the in-memory route before and after the native durable boundary:
+    // a tap racing with close must not route the next account.
+    if (ref.exists(widgetHomeRouteProvider)) {
+      ref.read(widgetHomeRouteProvider.notifier).clear();
+    }
+    try {
+      await ref.read(widgetRecommendationCoordinatorProvider).closeAccount();
+    } finally {
+      if (ref.exists(widgetHomeRouteProvider)) {
+        ref.read(widgetHomeRouteProvider.notifier).clear();
+      }
     }
   }
 

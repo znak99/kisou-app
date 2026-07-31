@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/user.dart';
 import '../services/user_service.dart';
 import 'api_provider.dart';
+import 'widget_recommendation_provider.dart';
 
 final userServiceProvider = Provider<UserService>((ref) {
   return UserService(ref.watch(apiClientProvider));
@@ -35,9 +36,13 @@ class UserController extends AsyncNotifier<User?> {
   Future<User> updateMe(UserUpdate update) async {
     final previous = state;
     state = const AsyncLoading<User?>();
+    final widgetCoordinator = ref.read(widgetRecommendationCoordinatorProvider);
+    widgetCoordinator.beginRecommendationMutation();
+    var changed = false;
     try {
       final user = await ref.read(userServiceProvider).updateMe(update);
       state = AsyncData(user);
+      changed = true;
       return user;
     } catch (error, stackTrace) {
       // Keep the profile usable by restoring the prior data; the caller
@@ -46,21 +51,29 @@ class UserController extends AsyncNotifier<User?> {
           ? previous
           : AsyncError<User?>(error, stackTrace);
       rethrow;
+    } finally {
+      widgetCoordinator.endRecommendationMutation(changed: changed);
     }
   }
 
   Future<User> resetData() async {
     final previous = state;
     state = const AsyncLoading<User?>();
+    final widgetCoordinator = ref.read(widgetRecommendationCoordinatorProvider);
+    widgetCoordinator.beginRecommendationMutation();
+    var changed = false;
     try {
       final user = await ref.read(userServiceProvider).resetData();
       state = AsyncData(user);
+      changed = true;
       return user;
     } catch (error, stackTrace) {
       state = previous.hasValue
           ? previous
           : AsyncError<User?>(error, stackTrace);
       rethrow;
+    } finally {
+      widgetCoordinator.endRecommendationMutation(changed: changed);
     }
   }
 

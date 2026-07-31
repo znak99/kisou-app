@@ -15,6 +15,8 @@ import '../providers/outlook_quota_provider.dart';
 import '../providers/push_provider.dart';
 import '../providers/shell_provider.dart';
 import '../providers/travel_plan_provider.dart';
+import '../providers/widget_recommendation_provider.dart';
+import '../services/widget_recommendation_coordinator.dart';
 import '../utils/jp_date.dart';
 import '../widgets/app_bottom_nav.dart';
 import '../widgets/feedback_action_button.dart';
@@ -108,6 +110,12 @@ class _RootShellState extends ConsumerState<RootShell>
               .catchError((_) {}),
         );
       }
+      unawaited(
+        ref
+            .read(widgetRecommendationCoordinatorProvider)
+            .refreshIfDue()
+            .catchError((_) => WidgetRefreshResult.unavailable),
+      );
     } else if (ref.exists(adRewardProvider)) {
       ref.read(adRewardProvider.notifier).pausePollingForBackground();
     }
@@ -135,6 +143,12 @@ class _RootShellState extends ConsumerState<RootShell>
       ref.invalidate(feedbackProvider);
       ref.invalidate(homeProvider);
       ref.invalidate(forecastTomorrowProvider);
+      unawaited(
+        ref
+            .read(widgetRecommendationCoordinatorProvider)
+            .refreshIfDue(force: true)
+            .catchError((_) => WidgetRefreshResult.unavailable),
+      );
       _reconcileTravelPlans();
     }
     _scheduleMidnightRollover();
@@ -155,6 +169,20 @@ class _RootShellState extends ConsumerState<RootShell>
     // Starts FCM tap/token listeners for every authenticated, onboarded user;
     // opening the settings screen is never required.
     ref.watch(pushSettingsProvider);
+    ref.watch(widgetRecommendationStartupSyncProvider);
+    ref.watch(widgetHomeRouteProvider);
+    ref.listen<bool>(widgetHomeRouteProvider, (_, next) {
+      if (next) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _openWidgetHomeRoute();
+        });
+      }
+    });
+    if (ref.read(widgetHomeRouteProvider)) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _openWidgetHomeRoute();
+      });
+    }
     ref.listen<int?>(travelNotificationNavigationProvider, (_, next) {
       if (next != null) {
         _openQueuedTravelPlan();
@@ -227,6 +255,31 @@ class _RootShellState extends ConsumerState<RootShell>
           onTap: (value) => ref.read(shellTabProvider.notifier).setTab(value),
         ),
       ),
+    );
+  }
+
+  void _openWidgetHomeRoute() {
+    if (!mounted || !ref.read(widgetHomeRouteProvider)) {
+      return;
+    }
+    ref.read(widgetHomeRouteProvider.notifier).consume();
+    ScaffoldMessenger.of(context).hideCurrentMaterialBanner();
+    Navigator.of(
+      context,
+      rootNavigator: true,
+    ).popUntil((route) => route.isFirst);
+    ref.read(shellTabProvider.notifier).setTab(ShellTab.home);
+    unawaited(
+      ref
+          .read(homeProvider.notifier)
+          .refresh(syncWidget: false)
+          .catchError((_) {}),
+    );
+    unawaited(
+      ref
+          .read(widgetRecommendationCoordinatorProvider)
+          .refreshIfDue(force: true)
+          .catchError((_) => WidgetRefreshResult.unavailable),
     );
   }
 

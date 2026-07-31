@@ -4,11 +4,28 @@
 <dict>
 	<key>FirebaseMessagingAutoInitEnabled</key>
 	<false/>
+	<key>FlutterDeepLinkingEnabled</key>
+	<false/>
 	<key>FIREBASE_ANALYTICS_COLLECTION_ENABLED</key>
 	<false/>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>
+	</array>
+	<key>KISOUWidgetAppGroup</key>
+	<string>$(KISOU_WIDGET_APP_GROUP)</string>
+	<key>KISOUWidgetURLScheme</key>
+	<string>$(KISOU_WIDGET_URL_SCHEME)</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>$(KISOU_WIDGET_URL_SCHEME)</string>
+			</array>
+		</dict>
 	</array>
 		<key>CADisableMinimumFrameDurationOnPhone</key>
 		<true/>

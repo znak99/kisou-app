@@ -54,9 +54,22 @@
               android:name="io.flutter.embedding.android.NormalTheme"
               android:resource="@style/NormalTheme"
               />
+            <!-- The exact widget URL is owned by the custom snapshot bridge. -->
+            <meta-data
+                android:name="flutter_deeplinking_enabled"
+                android:value="false" />
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="${widgetDeepLinkScheme}"
+                    android:host="widget"
+                    android:path="/home" />
             </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.
@@ -93,6 +106,17 @@
                 <action android:name="android.intent.action.QUICKBOOT_POWERON" />
                 <action android:name="com.htc.intent.action.QUICKBOOT_POWERON" />
             </intent-filter>
+        </receiver>
+        <receiver
+            android:name=".KisouWidgetProvider"
+            android:exported="false"
+            android:label="@string/widget_title">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/kisou_widget_info" />
         </receiver>
     </application>
     <!-- Required to query activities that can process text, see:

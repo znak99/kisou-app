@@ -16,6 +16,11 @@
 		97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FD1CF9000F007C117D /* Assets.xcassets */; };
 		97C147011CF9000F007C117D /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FF1CF9000F007C117D /* LaunchScreen.storyboard */; };
 		9984863D1D34897614263A21 /* Pods_Runner.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 35F05986629431F02E7D3C49 /* Pods_Runner.framework */; };
+		AA1100000000000000000001 /* KisouWidgetSnapshotCodec.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1200000000000000000001 /* KisouWidgetSnapshotCodec.swift */; };
+		AA1100000000000000000002 /* WidgetSnapshotBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1200000000000000000002 /* WidgetSnapshotBridge.swift */; };
+		AA1100000000000000000003 /* KisouWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1200000000000000000003 /* KisouWidget.swift */; };
+		AA1100000000000000000004 /* KisouWidgetSnapshotCodec.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1200000000000000000001 /* KisouWidgetSnapshotCodec.swift */; };
+		AA1100000000000000000005 /* KisouWidget.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = AA1200000000000000000007 /* KisouWidget.appex */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		FB107B84EC4E2F14103CC23A /* Pods_RunnerTests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 921309DE6942A4CCA37E45C5 /* Pods_RunnerTests.framework */; };
 /* End PBXBuildFile section */
 
@@ -26,7 +31,14 @@
 			proxyType = 1;
 			remoteGlobalIDString = 97C146ED1CF9000F007C117D;
 			remoteInfo = Runner;
-		};
+			};
+		AA1600000000000000000001 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 97C146E61CF9000F007C117D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = AA1500000000000000000001;
+			remoteInfo = KisouWidget;
+			};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -39,7 +51,18 @@
 			);
 			name = "Embed Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
-		};
+			};
+		AA1400000000000000000004 /* Embed App Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				AA1100000000000000000005 /* KisouWidget.appex in Embed App Extensions */,
+			);
+			name = "Embed App Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+			};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
@@ -64,6 +87,13 @@
 		97C146FD1CF9000F007C117D /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		97C147001CF9000F007C117D /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		97C147021CF9000F007C117D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		AA1200000000000000000001 /* KisouWidgetSnapshotCodec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KisouWidgetSnapshotCodec.swift; sourceTree = "<group>"; };
+		AA1200000000000000000002 /* WidgetSnapshotBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetSnapshotBridge.swift; sourceTree = "<group>"; };
+		AA1200000000000000000003 /* KisouWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KisouWidget.swift; sourceTree = "<group>"; };
+		AA1200000000000000000004 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		AA1200000000000000000005 /* KisouWidget.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = KisouWidget.entitlements; sourceTree = "<group>"; };
+		AA1200000000000000000006 /* KisouWidget-Dev.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "KisouWidget-Dev.entitlements"; sourceTree = "<group>"; };
+		AA1200000000000000000007 /* KisouWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = KisouWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		D00400000000000000000001 /* Info-Dev.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "Info-Dev.plist"; sourceTree = "<group>"; };
 		D00400000000000000000002 /* Runner.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Runner.entitlements; sourceTree = "<group>"; };
 		D00400000000000000000003 /* Runner-Dev.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "Runner-Dev.entitlements"; sourceTree = "<group>"; };
@@ -89,7 +119,14 @@
 				9984863D1D34897614263A21 /* Pods_Runner.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
-		};
+			};
+		AA1400000000000000000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -118,6 +155,8 @@
 			children = (
 				9740EEB11CF90186004384FC /* Flutter */,
 				97C146F01CF9000F007C117D /* Runner */,
+				AA1300000000000000000001 /* WidgetShared */,
+				AA1300000000000000000002 /* KisouWidget */,
 				97C146EF1CF9000F007C117D /* Products */,
 				331C8082294A63A400263BE5 /* RunnerTests */,
 				A8C998F5FEED0C6222873FFD /* Pods */,
@@ -130,6 +169,7 @@
 			children = (
 				97C146EE1CF9000F007C117D /* Runner.app */,
 				331C8081294A63A400263BE5 /* RunnerTests.xctest */,
+				AA1200000000000000000007 /* KisouWidget.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -147,12 +187,32 @@
 				1498D2321E8E86230040F4C2 /* GeneratedPluginRegistrant.h */,
 				1498D2331E8E89220040F4C2 /* GeneratedPluginRegistrant.m */,
 				74858FAE1ED2DC5600515810 /* AppDelegate.swift */,
+				AA1200000000000000000002 /* WidgetSnapshotBridge.swift */,
 				7884E8672EC3CC0400C636F2 /* SceneDelegate.swift */,
 				74858FAD1ED2DC5600515810 /* Runner-Bridging-Header.h */,
 			);
 			path = Runner;
 			sourceTree = "<group>";
-		};
+			};
+		AA1300000000000000000001 /* WidgetShared */ = {
+			isa = PBXGroup;
+			children = (
+				AA1200000000000000000001 /* KisouWidgetSnapshotCodec.swift */,
+			);
+			path = WidgetShared;
+			sourceTree = "<group>";
+			};
+		AA1300000000000000000002 /* KisouWidget */ = {
+			isa = PBXGroup;
+			children = (
+				AA1200000000000000000003 /* KisouWidget.swift */,
+				AA1200000000000000000004 /* Info.plist */,
+				AA1200000000000000000005 /* KisouWidget.entitlements */,
+				AA1200000000000000000006 /* KisouWidget-Dev.entitlements */,
+			);
+			path = KisouWidget;
+			sourceTree = "<group>";
+			};
 		A8C998F5FEED0C6222873FFD /* Pods */ = {
 			isa = PBXGroup;
 			children = (
@@ -208,6 +268,7 @@
 				97C146EB1CF9000F007C117D /* Frameworks */,
 				97C146EC1CF9000F007C117D /* Resources */,
 				9705A1C41CF9048500538489 /* Embed Frameworks */,
+				AA1400000000000000000004 /* Embed App Extensions */,
 				3B06AD1E1E4923F5004D2608 /* Thin Binary */,
 				6E6AF63691C3F2B39C66A1A9 /* [CP] Embed Pods Frameworks */,
 				B4A5CFF4E4A49B4F111A9BC2 /* [CP] Copy Pods Resources */,
@@ -216,12 +277,30 @@
 			buildRules = (
 			);
 			dependencies = (
+				AA1600000000000000000002 /* PBXTargetDependency */,
 			);
 			name = Runner;
 			productName = Runner;
 			productReference = 97C146EE1CF9000F007C117D /* Runner.app */;
 			productType = "com.apple.product-type.application";
-		};
+			};
+		AA1500000000000000000001 /* KisouWidget */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AA1800000000000000000001 /* Build configuration list for PBXNativeTarget "KisouWidget" */;
+			buildPhases = (
+				AA1400000000000000000003 /* Sources */,
+				AA1400000000000000000001 /* Frameworks */,
+				AA1400000000000000000002 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = KisouWidget;
+			productName = KisouWidget;
+			productReference = AA1200000000000000000007 /* KisouWidget.appex */;
+			productType = "com.apple.product-type.app-extension";
+			};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -241,6 +320,10 @@
 						LastSwiftMigration = 1100;
 						ProvisioningStyle = Automatic;
 					};
+					AA1500000000000000000001 = {
+						CreatedOnToolsVersion = 15.0;
+						ProvisioningStyle = Automatic;
+					};
 				};
 			};
 			buildConfigurationList = 97C146E91CF9000F007C117D /* Build configuration list for PBXProject "Runner" */;
@@ -258,6 +341,7 @@
 			targets = (
 				97C146ED1CF9000F007C117D /* Runner */,
 				331C8080294A63A400263BE5 /* RunnerTests */,
+				AA1500000000000000000001 /* KisouWidget */,
 			);
 		};
 /* End PBXProject section */
@@ -280,7 +364,14 @@
 				97C146FC1CF9000F007C117D /* Main.storyboard in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
-		};
+			};
+		AA1400000000000000000002 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
@@ -427,11 +518,22 @@
 			buildActionMask = 2147483647;
 			files = (
 				74858FAF1ED2DC5600515810 /* AppDelegate.swift in Sources */,
+				AA1100000000000000000001 /* KisouWidgetSnapshotCodec.swift in Sources */,
+				AA1100000000000000000002 /* WidgetSnapshotBridge.swift in Sources */,
 				1498D2341E8E89220040F4C2 /* GeneratedPluginRegistrant.m in Sources */,
 				7884E8682EC3CC0700C636F2 /* SceneDelegate.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
-		};
+			};
+		AA1400000000000000000003 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AA1100000000000000000003 /* KisouWidget.swift in Sources */,
+				AA1100000000000000000004 /* KisouWidgetSnapshotCodec.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -439,7 +541,12 @@
 			isa = PBXTargetDependency;
 			target = 97C146ED1CF9000F007C117D /* Runner */;
 			targetProxy = 331C8085294A63A400263BE5 /* PBXContainerItemProxy */;
-		};
+			};
+		AA1600000000000000000002 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = AA1500000000000000000001 /* KisouWidget */;
+			targetProxy = AA1600000000000000000001 /* PBXContainerItemProxy */;
+			};
 /* End PBXTargetDependency section */
 
 /* Begin PBXVariantGroup section */
@@ -527,6 +634,8 @@
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = Runner/Info.plist;
 				KISOU_DISPLAY_NAME = KISOU;
+				KISOU_WIDGET_APP_GROUP = group.cloud.znak99.kisou.widget;
+				KISOU_WIDGET_URL_SCHEME = kisou;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -813,6 +922,8 @@
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = Runner/Info.plist;
 				KISOU_DISPLAY_NAME = KISOU;
+				KISOU_WIDGET_APP_GROUP = group.cloud.znak99.kisou.widget;
+				KISOU_WIDGET_URL_SCHEME = kisou;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -839,6 +950,8 @@
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = Runner/Info.plist;
 				KISOU_DISPLAY_NAME = KISOU;
+				KISOU_WIDGET_APP_GROUP = group.cloud.znak99.kisou.widget;
+				KISOU_WIDGET_URL_SCHEME = kisou;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -1190,6 +1303,8 @@
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = "Runner/Info-Dev.plist";
 				KISOU_DISPLAY_NAME = "KISOU Dev";
+				KISOU_WIDGET_APP_GROUP = group.cloud.znak99.kisou.dev.widget;
+				KISOU_WIDGET_URL_SCHEME = "kisou-dev";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -1216,6 +1331,8 @@
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = Runner/Info.plist;
 				KISOU_DISPLAY_NAME = KISOU;
+				KISOU_WIDGET_APP_GROUP = group.cloud.znak99.kisou.widget;
+				KISOU_WIDGET_URL_SCHEME = kisou;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -1242,6 +1359,8 @@
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = "Runner/Info-Dev.plist";
 				KISOU_DISPLAY_NAME = "KISOU Dev";
+				KISOU_WIDGET_APP_GROUP = group.cloud.znak99.kisou.dev.widget;
+				KISOU_WIDGET_URL_SCHEME = "kisou-dev";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -1267,6 +1386,8 @@
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = Runner/Info.plist;
 				KISOU_DISPLAY_NAME = KISOU;
+				KISOU_WIDGET_APP_GROUP = group.cloud.znak99.kisou.widget;
+				KISOU_WIDGET_URL_SCHEME = kisou;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -1292,6 +1413,8 @@
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = "Runner/Info-Dev.plist";
 				KISOU_DISPLAY_NAME = "KISOU Dev";
+				KISOU_WIDGET_APP_GROUP = group.cloud.znak99.kisou.dev.widget;
+				KISOU_WIDGET_URL_SCHEME = "kisou-dev";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -1317,6 +1440,8 @@
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = Runner/Info.plist;
 				KISOU_DISPLAY_NAME = KISOU;
+				KISOU_WIDGET_APP_GROUP = group.cloud.znak99.kisou.widget;
+				KISOU_WIDGET_URL_SCHEME = kisou;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -1328,7 +1453,229 @@
 				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = "Release-prod";
-		};
+			};
+		AA1700000000000000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 9740EEB31CF90195004384FC /* Generated.xcconfig */;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = KisouWidget/KisouWidget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
+				DEVELOPMENT_TEAM = SHUGXU55KP;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = KisouWidget/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				KISOU_WIDGET_APP_GROUP = group.cloud.znak99.kisou.widget;
+				KISOU_WIDGET_DISPLAY_NAME = KISOU;
+				KISOU_WIDGET_URL_SCHEME = kisou;
+				MARKETING_VERSION = "$(FLUTTER_BUILD_NAME)";
+				PRODUCT_BUNDLE_IDENTIFIER = cloud.znak99.kisou.widget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+			};
+		AA1700000000000000000002 /* Profile */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 9740EEB31CF90195004384FC /* Generated.xcconfig */;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = KisouWidget/KisouWidget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
+				DEVELOPMENT_TEAM = SHUGXU55KP;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = KisouWidget/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				KISOU_WIDGET_APP_GROUP = group.cloud.znak99.kisou.widget;
+				KISOU_WIDGET_DISPLAY_NAME = KISOU;
+				KISOU_WIDGET_URL_SCHEME = kisou;
+				MARKETING_VERSION = "$(FLUTTER_BUILD_NAME)";
+				PRODUCT_BUNDLE_IDENTIFIER = cloud.znak99.kisou.widget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Profile;
+			};
+		AA1700000000000000000003 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 9740EEB31CF90195004384FC /* Generated.xcconfig */;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = KisouWidget/KisouWidget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
+				DEVELOPMENT_TEAM = SHUGXU55KP;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = KisouWidget/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				KISOU_WIDGET_APP_GROUP = group.cloud.znak99.kisou.widget;
+				KISOU_WIDGET_DISPLAY_NAME = KISOU;
+				KISOU_WIDGET_URL_SCHEME = kisou;
+				MARKETING_VERSION = "$(FLUTTER_BUILD_NAME)";
+				PRODUCT_BUNDLE_IDENTIFIER = cloud.znak99.kisou.widget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+			};
+		AA1700000000000000000004 /* Debug-dev */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 9740EEB31CF90195004384FC /* Generated.xcconfig */;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = "KisouWidget/KisouWidget-Dev.entitlements";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
+				DEVELOPMENT_TEAM = SHUGXU55KP;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = KisouWidget/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				KISOU_WIDGET_APP_GROUP = group.cloud.znak99.kisou.dev.widget;
+				KISOU_WIDGET_DISPLAY_NAME = "KISOU Dev";
+				KISOU_WIDGET_URL_SCHEME = "kisou-dev";
+				MARKETING_VERSION = "$(FLUTTER_BUILD_NAME)";
+				PRODUCT_BUNDLE_IDENTIFIER = cloud.znak99.kisou.dev.widget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = "Debug-dev";
+			};
+		AA1700000000000000000005 /* Debug-prod */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 9740EEB31CF90195004384FC /* Generated.xcconfig */;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = KisouWidget/KisouWidget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
+				DEVELOPMENT_TEAM = SHUGXU55KP;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = KisouWidget/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				KISOU_WIDGET_APP_GROUP = group.cloud.znak99.kisou.widget;
+				KISOU_WIDGET_DISPLAY_NAME = KISOU;
+				KISOU_WIDGET_URL_SCHEME = kisou;
+				MARKETING_VERSION = "$(FLUTTER_BUILD_NAME)";
+				PRODUCT_BUNDLE_IDENTIFIER = cloud.znak99.kisou.widget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = "Debug-prod";
+			};
+		AA1700000000000000000006 /* Profile-dev */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 9740EEB31CF90195004384FC /* Generated.xcconfig */;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = "KisouWidget/KisouWidget-Dev.entitlements";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
+				DEVELOPMENT_TEAM = SHUGXU55KP;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = KisouWidget/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				KISOU_WIDGET_APP_GROUP = group.cloud.znak99.kisou.dev.widget;
+				KISOU_WIDGET_DISPLAY_NAME = "KISOU Dev";
+				KISOU_WIDGET_URL_SCHEME = "kisou-dev";
+				MARKETING_VERSION = "$(FLUTTER_BUILD_NAME)";
+				PRODUCT_BUNDLE_IDENTIFIER = cloud.znak99.kisou.dev.widget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = "Profile-dev";
+			};
+		AA1700000000000000000007 /* Profile-prod */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 9740EEB31CF90195004384FC /* Generated.xcconfig */;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = KisouWidget/KisouWidget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
+				DEVELOPMENT_TEAM = SHUGXU55KP;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = KisouWidget/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				KISOU_WIDGET_APP_GROUP = group.cloud.znak99.kisou.widget;
+				KISOU_WIDGET_DISPLAY_NAME = KISOU;
+				KISOU_WIDGET_URL_SCHEME = kisou;
+				MARKETING_VERSION = "$(FLUTTER_BUILD_NAME)";
+				PRODUCT_BUNDLE_IDENTIFIER = cloud.znak99.kisou.widget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = "Profile-prod";
+			};
+		AA1700000000000000000008 /* Release-dev */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 9740EEB31CF90195004384FC /* Generated.xcconfig */;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = "KisouWidget/KisouWidget-Dev.entitlements";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
+				DEVELOPMENT_TEAM = SHUGXU55KP;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = KisouWidget/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				KISOU_WIDGET_APP_GROUP = group.cloud.znak99.kisou.dev.widget;
+				KISOU_WIDGET_DISPLAY_NAME = "KISOU Dev";
+				KISOU_WIDGET_URL_SCHEME = "kisou-dev";
+				MARKETING_VERSION = "$(FLUTTER_BUILD_NAME)";
+				PRODUCT_BUNDLE_IDENTIFIER = cloud.znak99.kisou.dev.widget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = "Release-dev";
+			};
+		AA1700000000000000000009 /* Release-prod */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 9740EEB31CF90195004384FC /* Generated.xcconfig */;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = KisouWidget/KisouWidget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
+				DEVELOPMENT_TEAM = SHUGXU55KP;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = KisouWidget/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				KISOU_WIDGET_APP_GROUP = group.cloud.znak99.kisou.widget;
+				KISOU_WIDGET_DISPLAY_NAME = KISOU;
+				KISOU_WIDGET_URL_SCHEME = kisou;
+				MARKETING_VERSION = "$(FLUTTER_BUILD_NAME)";
+				PRODUCT_BUNDLE_IDENTIFIER = cloud.znak99.kisou.widget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = "Release-prod";
+			};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -1379,7 +1726,23 @@
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
-		};
+			};
+		AA1800000000000000000001 /* Build configuration list for PBXNativeTarget "KisouWidget" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AA1700000000000000000001 /* Debug */,
+				AA1700000000000000000004 /* Debug-dev */,
+				AA1700000000000000000005 /* Debug-prod */,
+				AA1700000000000000000002 /* Profile */,
+				AA1700000000000000000006 /* Profile-dev */,
+				AA1700000000000000000007 /* Profile-prod */,
+				AA1700000000000000000003 /* Release */,
+				AA1700000000000000000008 /* Release-dev */,
+				AA1700000000000000000009 /* Release-prod */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+			};
 /* End XCConfigurationList section */
 	};
 	rootObject = 97C146E61CF9000F007C117D /* Project object */;
