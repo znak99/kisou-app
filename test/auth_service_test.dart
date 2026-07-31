@@ -21,20 +21,26 @@ void main() {
   });
 
   test(
-    'clears secure storage on first launch and stores launch flag',
+    'fresh install clears identity keys but preserves retained push boundary',
     () async {
       SharedPreferences.setMockInitialValues({});
       FlutterSecureStorage.setMockInitialValues({
         'jwt_token': 'stale-token',
         'refresh_token': 'stale-refresh-token',
         'device_secret': 'stale-device-secret',
+        'local_cleanup_transition_v1': 'accountSwitch',
+        'ad_reward_operation_v1': 'stale-operation',
+        'account_deletion_credential_v1': 'stale-recovery-code',
+        'push_installation_v1': 'retained-installation-boundary',
       });
 
       const storage = FlutterSecureStorage();
       final service = AuthService(storage: storage);
       await service.clearKeychainOnFirstLaunch();
 
-      expect(await storage.readAll(), isEmpty);
+      expect(await storage.readAll(), {
+        'push_installation_v1': 'retained-installation-boundary',
+      });
       final preferences = await SharedPreferences.getInstance();
       expect(preferences.getBool('has_launched_before'), isTrue);
     },
@@ -54,7 +60,7 @@ void main() {
     'does not mark first launch complete when secure deletion fails',
     () async {
       SharedPreferences.setMockInitialValues({});
-      final service = AuthService(storage: const _FailingDeleteAllStorage());
+      final service = AuthService(storage: const _FailingDeleteStorage());
 
       await expectLater(service.clearKeychainOnFirstLaunch(), throwsStateError);
 
@@ -314,11 +320,12 @@ void main() {
   });
 }
 
-class _FailingDeleteAllStorage extends FlutterSecureStorage {
-  const _FailingDeleteAllStorage();
+class _FailingDeleteStorage extends FlutterSecureStorage {
+  const _FailingDeleteStorage();
 
   @override
-  Future<void> deleteAll({
+  Future<void> delete({
+    required String key,
     AppleOptions? iOptions,
     AndroidOptions? aOptions,
     LinuxOptions? lOptions,

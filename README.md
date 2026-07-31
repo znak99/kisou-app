@@ -23,6 +23,9 @@ Flutter mobile app for **キソウ**, a weather-based personalized clothing reco
   the forecast scroll; ads are compile-time disabled by default
 - Offline travel plans for up to 20 major-city departures, with JST D-day
   display and optional inexact device-local reminders
+- Explicitly opted-in daily FCM notifications for a morning recommendation and
+  evening feedback reminder, with independent JST times and account-safe tap
+  routing; push is compile-time disabled by default
 - Linked Open-Meteo/CC BY 4.0 attribution beside every weather-data surface,
   with the Ministry of the Environment source shown in context when WBGT appears
 - Feedback bottom sheet for a recent date, outside time slots, actual clothing, and comfort feedback
@@ -45,6 +48,7 @@ Flutter mobile app for **キソウ**, a weather-based personalized clothing reco
 | Local flags | shared_preferences |
 | Travel-plan storage | sqflite (device-local source of truth) |
 | Local reminders | flutter_local_notifications + timezone (`Asia/Tokyo`) |
+| Remote notifications | Firebase Core + Cloud Messaging + Installations |
 | Ads and consent | google_mobile_ads 9.x (Google Mobile Ads + UMP) |
 | Location | geolocator |
 | External URL | url_launcher |
@@ -68,6 +72,17 @@ absent and the original session cannot be restored, a strongly warned,
 explicit local-only discard wipes the device identity without claiming server
 success. A lost reward-issuance response is retried with the same UUID through
 its server replay window.
+
+Daily push is separate from travel reminders. The server stores the FCM token,
+while the app persists only its SHA-256 fingerprint plus an install UUID and a
+monotonic client revision in secure storage. Notification content and the
+four-field routing payload are generic: nickname, account/user identifiers,
+location, weather, recommendation details, and FCM tokens are never embedded.
+Logout, account switch, account deletion, or turning both reminders off writes
+a higher unregister revision, disables FCM auto-init, deletes the FCM token and
+Firebase Installation ID, and clears only the daily-push notification
+namespace. Travel reminders are preserved unless their own account cleanup is
+running.
 
 ## API Server
 
@@ -132,6 +147,16 @@ certificate registered in Play Console before distribution.
 | `ADMOB_IOS_APP_ID` | *(empty)* | Live iOS App ID for an ads-enabled production build |
 | `ADMOB_IOS_BANNER_ID` | *(empty)* | Live iOS inline-banner unit ID |
 | `ADMOB_IOS_REWARDED_ID` | *(empty)* | Live iOS rewarded unit ID |
+| `PUSH_NOTIFICATIONS_ENABLED` | `false` | Enable the daily remote-notification runtime |
+| `FIREBASE_ANDROID_API_KEY` | *(empty)* | Firebase Android app API key |
+| `FIREBASE_ANDROID_APP_ID` | *(empty)* | Firebase Android App ID (`1:…:android:…`) |
+| `FIREBASE_ANDROID_MESSAGING_SENDER_ID` | *(empty)* | Firebase project number |
+| `FIREBASE_ANDROID_PROJECT_ID` | *(empty)* | Firebase project ID |
+| `FIREBASE_IOS_API_KEY` | *(empty)* | Firebase Apple app API key |
+| `FIREBASE_IOS_APP_ID` | *(empty)* | Firebase Apple App ID (`1:…:ios:…`) |
+| `FIREBASE_IOS_MESSAGING_SENDER_ID` | *(empty)* | Firebase project number |
+| `FIREBASE_IOS_PROJECT_ID` | *(empty)* | Firebase project ID |
+| `FIREBASE_IOS_BUNDLE_ID` | *(empty)* | `cloud.znak99.kisou[.dev]` for the selected flavor |
 
 Resolution rules (`lib/config/api_config.dart`):
 
@@ -171,6 +196,49 @@ Resolution rules (`lib/config/api_config.dart`):
   네트워크·저장소 초기화 전에 즉시 중단합니다.
 - release는 production만 허용하므로 배포 archive는 `prod` scheme만
   지원합니다. dev scheme은 archive 대상에서 제외합니다.
+- `PUSH_NOTIFICATIONS_ENABLED`는 정확한 `true|false`만 허용하고 기본값은
+  `false`입니다. 활성 빌드는 플랫폼·환경과 Firebase App ID, sender ID,
+  project ID, iOS bundle ID의 형식을 앱 시작 시 검증합니다. 설정 오류는
+  네트워크나 보안 저장소 접근 전에 중단됩니다.
+- FCM native auto-init과 Firebase Analytics 수집은 Android manifest와 iOS
+  Info.plist에서 기본 비활성입니다. 앱은 사용자가 아침 또는 저녁 알림을
+  직접 켠 경우에만 OS 권한을 요청하고 auto-init과 token 등록을 시작합니다.
+  Firebase 런타임의 단말별 초기화 실패는 날씨·인증 등 핵심 기능 시작을
+  막지 않으며 설정 화면과 foreground 복귀에서 재시도할 수 있습니다.
+- 한번 배포에서 push를 활성화했다면 이후 `PUSH_NOTIFICATIONS_ENABLED=false`
+  빌드에도 같은 환경의 Firebase 식별자 define을 유지해야 합니다. 그래야
+  업데이트 전에 남은 token/FID 정리 marker를 처리할 수 있습니다.
+
+### Push notification owner setup
+
+Repository code and disabled builds are complete without Firebase owner
+credentials. Enabling delivery requires the following external setup:
+
+1. Create isolated development and production Firebase projects (or enforce
+   equivalent project-level access isolation), then register these apps:
+   `cloud.znak99.kisou.dev` and `cloud.znak99.kisou` on both Android and iOS.
+2. Copy each registered app's API key, App ID, sender/project number, and
+   project ID into an ignored `config/*.local.json` or CI secret set using the
+   defines above. Set the exact iOS bundle ID and then set
+   `PUSH_NOTIFICATIONS_ENABLED=true`.
+3. In Apple Developer, enable Push Notifications and Background Modes /
+   Remote notifications for both App IDs and regenerate provisioning profiles.
+   Upload the APNs authentication key to the matching Firebase projects. The
+   repository already contains environment-specific `aps-environment`
+   entitlements, but signing profiles must authorize them.
+4. On macOS, run `flutter pub get`, `cd ios && pod install`, and build the
+   `dev` and `prod` schemes. On the API side, configure the matching Firebase
+   service-account credentials and the daily scheduler before enabling clients.
+5. Verify on physical Android and iOS devices: first opt-in and denial,
+   token refresh, foreground banner, background and terminated taps, 07:00 /
+   20:00 JST defaults, custom times, offline/retry behavior, logout/account
+   switch/deletion cleanup, and that travel notifications remain untouched.
+
+FCM and APNs delivery can be delayed or omitted by the OS/network, so selected
+times are requested delivery times rather than exact alarms. Deleting the
+Firebase Installation ID starts deletion of data tied to that installation;
+Firebase documents removal from live and backup systems within up to 180 days:
+<https://firebase.google.com/docs/projects/manage-installations>.
 
 ### Testing on a physical device over the LAN
 
@@ -237,6 +305,11 @@ flutter test --dart-define-from-file=config/prod.json \
   --dart-define=OUTLOOK_SCREENSHOT_FIXTURE=true \
   --dart-define=ADS_ENABLED=true \
   test/outlook_screenshot_fixture_test.dart
+flutter test test/push_config_test.dart test/push_notification_test.dart \
+  test/push_installation_store_test.dart test/push_local_metadata_test.dart \
+  test/push_messaging_gateway_test.dart test/push_service_test.dart \
+  test/push_provider_test.dart test/push_native_config_test.dart \
+  test/notification_settings_screen_test.dart
 ```
 
 GitHub Actions runs analysis, the default, production-config, and opted-in
@@ -251,6 +324,9 @@ Common manual checks:
 - Start `kisou-api`, tap retry, and confirm home data loads.
 - Submit feedback and confirm the home screen changes to `フィードバック済み ✓`.
 - Change settings, return home, and confirm user/home data refreshes.
+- On a push-enabled physical-device build, enable one daily reminder and
+  confirm the API registration, generic notification content, correct tap
+  destination, all-off cleanup, and account-transition isolation.
 
 ## Project Structure
 

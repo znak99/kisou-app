@@ -18,7 +18,7 @@ class AccountDeletionCredentialStore {
        _preferencesFactory =
            preferencesFactory ?? SharedPreferences.getInstance;
 
-  static const _credentialKey = 'account_deletion_credential_v1';
+  static const storageKey = 'account_deletion_credential_v1';
   static const _backupConfirmationKey =
       'account_deletion_credential_backup_confirmation_v1';
   static final _iOptions = IOSOptions(
@@ -34,7 +34,7 @@ class AccountDeletionCredentialStore {
   Future<StoredAccountDeletionCredential?> read() async {
     try {
       final encoded = await _storage.read(
-        key: _credentialKey,
+        key: storageKey,
         iOptions: _iOptions,
         aOptions: _aOptions,
       );
@@ -55,7 +55,7 @@ class AccountDeletionCredentialStore {
 
   Future<void> write(StoredAccountDeletionCredential credential) {
     return _storage.write(
-      key: _credentialKey,
+      key: storageKey,
       value: credential.encode(),
       iOptions: _iOptions,
       aOptions: _aOptions,
@@ -64,7 +64,7 @@ class AccountDeletionCredentialStore {
 
   Future<void> delete() async {
     await _storage.delete(
-      key: _credentialKey,
+      key: storageKey,
       iOptions: _iOptions,
       aOptions: _aOptions,
     );

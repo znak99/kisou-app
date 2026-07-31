@@ -26,6 +26,8 @@ void main() {
       );
 
       expect(auth.clearTokenCalls, 1);
+      expect(auth.clearOnboardingCalls, 1);
+      expect(auth.onboardingCompleted, isFalse);
       expect(unauthorizedCallbacks, 0);
 
       auth.token = 'another-token';
@@ -33,6 +35,30 @@ void main() {
       expect(unauthorizedCallbacks, 1);
     },
   );
+
+  test('push cleanup 401 preserves auth for the outer cleanup retry', () async {
+    final auth = _UnauthorizedAuthService();
+    var unauthorizedCallbacks = 0;
+    final dio = ApiClient(
+      authService: auth,
+      onUnauthorized: () => unauthorizedCallbacks++,
+    ).dio;
+    dio.httpClientAdapter = _Always401Adapter();
+
+    await expectLater(
+      dio.post<void>(
+        '/push/devices/unregister',
+        options: Options(extra: {'suppressAuthRecovery': true}),
+      ),
+      throwsA(isA<DioException>()),
+    );
+
+    expect(auth.clearTokenCalls, 0);
+    expect(auth.clearOnboardingCalls, 0);
+    expect(auth.token, 'access-token');
+    expect(auth.onboardingCompleted, isTrue);
+    expect(unauthorizedCallbacks, 0);
+  });
 }
 
 class _Always401Adapter implements HttpClientAdapter {
@@ -58,6 +84,8 @@ class _Always401Adapter implements HttpClientAdapter {
 class _UnauthorizedAuthService extends AuthService {
   String? token = 'access-token';
   var clearTokenCalls = 0;
+  var clearOnboardingCalls = 0;
+  var onboardingCompleted = true;
 
   @override
   Future<String?> readToken() async => token;
@@ -72,5 +100,8 @@ class _UnauthorizedAuthService extends AuthService {
   }
 
   @override
-  Future<void> clearOnboardingCompleted() async {}
+  Future<void> clearOnboardingCompleted() async {
+    clearOnboardingCalls++;
+    onboardingCompleted = false;
+  }
 }

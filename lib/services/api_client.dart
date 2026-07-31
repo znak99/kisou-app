@@ -45,6 +45,15 @@ class ApiClient {
               }
             }
 
+            // Push account close owns the transition boundary. Its outer
+            // coordinator must retain the old session when unregister or
+            // platform cleanup is still retryable, so surface this 401 without
+            // performing global auth recovery.
+            if (request.extra['suppressAuthRecovery'] == true) {
+              handler.next(error);
+              return;
+            }
+
             // Refresh failed → the session is truly gone. Clear it and surface.
             await authService.clearTokens();
             await authService.clearOnboardingCompleted();

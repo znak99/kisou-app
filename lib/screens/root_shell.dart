@@ -4,12 +4,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../config/theme.dart';
+import '../constants/app_strings.dart';
+import '../models/push_notification.dart';
 import '../providers/ad_reward_provider.dart';
 import '../providers/ads_provider.dart';
 import '../providers/feedback_provider.dart';
 import '../providers/forecast_provider.dart';
 import '../providers/home_provider.dart';
 import '../providers/outlook_quota_provider.dart';
+import '../providers/push_provider.dart';
 import '../providers/shell_provider.dart';
 import '../providers/travel_plan_provider.dart';
 import '../utils/jp_date.dart';
@@ -46,6 +49,8 @@ class _RootShellState extends ConsumerState<RootShell>
   Timer? _midnightTimer;
   DateTime _lastSeenDay = jstToday();
   bool _openingTravelPlan = false;
+  bool _handlingPushNavigation = false;
+  String? _shownForegroundDeliveryId;
 
   @override
   void initState() {
@@ -92,6 +97,17 @@ class _RootShellState extends ConsumerState<RootShell>
           ref.read(outlookQuotaProvider.notifier).refresh().catchError((_) {}),
         );
       }
+      if (ref.exists(pushSettingsProvider)) {
+        final pushState = ref.read(pushSettingsProvider).value;
+        unawaited(
+          (pushState?.available == true
+                  ? ref
+                        .read(pushSettingsProvider.notifier)
+                        .refreshAuthorizationAfterResume()
+                  : ref.read(pushSettingsProvider.notifier).retry())
+              .catchError((_) {}),
+        );
+      }
     } else if (ref.exists(adRewardProvider)) {
       ref.read(adRewardProvider.notifier).pausePollingForBackground();
     }
@@ -136,11 +152,45 @@ class _RootShellState extends ConsumerState<RootShell>
 
   @override
   Widget build(BuildContext context) {
+    // Starts FCM tap/token listeners for every authenticated, onboarded user;
+    // opening the settings screen is never required.
+    ref.watch(pushSettingsProvider);
     ref.listen<int?>(travelNotificationNavigationProvider, (_, next) {
       if (next != null) {
         _openQueuedTravelPlan();
       }
     });
+    ref.listen<List<PushNotificationIntent>>(pushNavigationQueueProvider, (
+      _,
+      next,
+    ) {
+      if (next.isNotEmpty) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _openQueuedPushNavigation();
+        });
+      }
+    });
+    ref.listen<PushNotificationIntent?>(pushForegroundNotificationProvider, (
+      _,
+      next,
+    ) {
+      if (next != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _showForegroundPush(next);
+        });
+      }
+    });
+    if (ref.read(pushNavigationQueueProvider).isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _openQueuedPushNavigation();
+      });
+    }
+    final foregroundNotice = ref.read(pushForegroundNotificationProvider);
+    if (foregroundNotice != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _showForegroundPush(foregroundNotice);
+      });
+    }
     final index = ref.watch(shellTabProvider);
     _visitedTabs.add(index);
     return Scaffold(
@@ -202,5 +252,133 @@ class _RootShellState extends ConsumerState<RootShell>
           _openingTravelPlan = false;
           _openQueuedTravelPlan();
         });
+  }
+
+  void _showForegroundPush(PushNotificationIntent intent) {
+    if (!mounted || _shownForegroundDeliveryId == intent.deliveryId) {
+      return;
+    }
+    _shownForegroundDeliveryId = intent.deliveryId;
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.hideCurrentMaterialBanner();
+    final title = intent.type == PushNotificationType.morningRecommendation
+        ? AppStrings.pushForegroundMorningTitle
+        : AppStrings.pushForegroundEveningTitle;
+    final body = intent.type == PushNotificationType.morningRecommendation
+        ? AppStrings.pushForegroundMorningBody
+        : AppStrings.pushForegroundEveningBody;
+    final controller = messenger.showMaterialBanner(
+      MaterialBanner(
+        forceActionsBelow: usesLargeText(context),
+        leading: const Icon(Icons.notifications_active_outlined),
+        content: Semantics(
+          liveRegion: true,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                title,
+                style: Theme.of(
+                  context,
+                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 2),
+              Text(body),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              messenger.hideCurrentMaterialBanner();
+              unawaited(
+                ref
+                    .read(pushSettingsProvider.notifier)
+                    .openForegroundNotification(intent.deliveryId),
+              );
+            },
+            child: const Text(AppStrings.pushForegroundOpen),
+          ),
+          TextButton(
+            onPressed: () {
+              messenger.hideCurrentMaterialBanner();
+              ref
+                  .read(pushSettingsProvider.notifier)
+                  .dismissForegroundNotification(intent.deliveryId);
+            },
+            child: const Text(AppStrings.pushForegroundDismiss),
+          ),
+        ],
+      ),
+    );
+    unawaited(
+      controller.closed.then((_) {
+        if (_shownForegroundDeliveryId == intent.deliveryId) {
+          _shownForegroundDeliveryId = null;
+        }
+        if (mounted && ref.exists(pushSettingsProvider)) {
+          ref
+              .read(pushSettingsProvider.notifier)
+              .dismissForegroundNotification(intent.deliveryId);
+        }
+      }),
+    );
+  }
+
+  void _openQueuedPushNavigation() {
+    if (!mounted || _handlingPushNavigation) {
+      return;
+    }
+    final intent = ref.read(pushNavigationQueueProvider.notifier).consume();
+    if (intent == null) {
+      return;
+    }
+    _handlingPushNavigation = true;
+    unawaited(
+      _performPushNavigation(intent)
+          .then((opened) async {
+            if (opened) {
+              try {
+                await ref
+                    .read(pushDeliveryReceiptStoreProvider)
+                    .completeNavigation(intent.deliveryId);
+              } catch (_) {
+                // A pending receipt is deliberately retained for crash-safe
+                // recovery when completion cannot be persisted.
+              }
+            }
+          })
+          .whenComplete(() {
+            _handlingPushNavigation = false;
+            _openQueuedPushNavigation();
+          }),
+    );
+  }
+
+  Future<bool> _performPushNavigation(PushNotificationIntent intent) async {
+    if (!mounted) {
+      return false;
+    }
+    ScaffoldMessenger.of(context).hideCurrentMaterialBanner();
+    Navigator.of(
+      context,
+      rootNavigator: true,
+    ).popUntil((route) => route.isFirst);
+    ref.read(shellTabProvider.notifier).setTab(ShellTab.home);
+    await WidgetsBinding.instance.endOfFrame;
+    if (!mounted) {
+      return false;
+    }
+    if (intent.type == PushNotificationType.morningRecommendation) {
+      try {
+        await ref.read(homeProvider.notifier).refresh();
+      } catch (_) {
+        // Home renders its existing actionable retry UI.
+      }
+      return true;
+    }
+    await openFeedbackEntry(context: context, ref: ref);
+    return true;
   }
 }

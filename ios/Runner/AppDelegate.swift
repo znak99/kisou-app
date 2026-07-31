@@ -35,6 +35,28 @@ import UserNotifications
         )
       }
     }
+    let pushChannel = FlutterMethodChannel(
+      name: "jp.kisou/push",
+      binaryMessenger: engineBridge.applicationRegistrar.messenger()
+    )
+    pushChannel.setMethodCallHandler { call, result in
+      guard call.method == "clearDisplayedPushNotifications" else {
+        result(FlutterMethodNotImplemented)
+        return
+      }
+      let center = UNUserNotificationCenter.current()
+      center.getDeliveredNotifications { notifications in
+        let identifiers = notifications.compactMap { notification in
+          notification.request.content.threadIdentifier == "kisou_daily_push_v1"
+            ? notification.request.identifier
+            : nil
+        }
+        center.removeDeliveredNotifications(withIdentifiers: identifiers)
+        DispatchQueue.main.async {
+          result(nil)
+        }
+      }
+    }
   }
 
   private static func prepareTravelDatabaseDirectory() throws -> String {

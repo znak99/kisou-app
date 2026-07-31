@@ -135,40 +135,77 @@ class FeedbackActionButton extends ConsumerWidget {
     required User? user,
     required FeedbackResponse? initialFeedback,
   }) async {
-    final submitted = await showFeedbackSheet(
+    await openFeedbackEntry(
       context: context,
-      gender: user?.gender,
+      ref: ref,
+      user: user,
       initialFeedback: initialFeedback,
-      recommendationSnapshot: !ref.exists(homeProvider)
-          ? null
-          : ref
-                .read(homeProvider)
-                .when(
-                  data: (value) => value,
-                  error: (_, _) => null,
-                  loading: () => null,
-                ),
     );
-    if (submitted == true) {
-      // Feedback shifts the personal offset, so tomorrow's recommendation is
-      // stale too. invalidate (not refresh) so an unvisited 予報 tab doesn't
-      // get initialized just to be refreshed (lazy-tab principle, audit B23).
-      ref.invalidate(forecastTomorrowProvider);
-      ref.invalidate(analysisProvider);
-      await Future.wait([
-        ref.read(homeProvider.notifier).refresh(),
-        // Feedback itself has already succeeded. A secondary profile refresh
-        // failure must not suppress the success message or escape unhandled.
-        ref
-            .read(userProvider.notifier)
-            .getMe()
-            .then<void>((_) {}, onError: (_) {}),
-      ]);
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text(AppStrings.feedbackApplied)),
-        );
-      }
+  }
+}
+
+/// Shared feedback entry used by the toolbar and evening push navigation.
+///
+/// The caller owns single-flight navigation. This function refreshes every
+/// recommendation surface affected by a successful feedback mutation.
+Future<bool?> openFeedbackEntry({
+  required BuildContext context,
+  required WidgetRef ref,
+  User? user,
+  FeedbackResponse? initialFeedback,
+}) async {
+  var resolvedUser = user;
+  var resolvedFeedback = initialFeedback;
+  if (resolvedUser == null) {
+    try {
+      resolvedUser = await ref.read(userProvider.future);
+    } catch (_) {
+      // The feedback sheet supports a null gender.
     }
   }
+  if (resolvedFeedback == null) {
+    try {
+      resolvedFeedback = (await ref.read(feedbackProvider.future)).feedback;
+    } catch (_) {
+      // A fresh entry remains usable when status refresh is temporarily down.
+    }
+  }
+  if (!context.mounted) {
+    return null;
+  }
+  final submitted = await showFeedbackSheet(
+    context: context,
+    gender: resolvedUser?.gender,
+    initialFeedback: resolvedFeedback,
+    recommendationSnapshot: !ref.exists(homeProvider)
+        ? null
+        : ref
+              .read(homeProvider)
+              .when(
+                data: (value) => value,
+                error: (_, _) => null,
+                loading: () => null,
+              ),
+  );
+  if (submitted != true) {
+    return submitted;
+  }
+  // Feedback shifts the personal offset, so tomorrow's recommendation is
+  // stale too. invalidate (not refresh) so an unvisited 予報 tab doesn't get
+  // initialized just to be refreshed.
+  ref.invalidate(forecastTomorrowProvider);
+  ref.invalidate(analysisProvider);
+  await Future.wait([
+    ref
+        .read(homeProvider.notifier)
+        .refresh()
+        .then<void>((_) {}, onError: (_) {}),
+    ref.read(userProvider.notifier).getMe().then<void>((_) {}, onError: (_) {}),
+  ]);
+  if (context.mounted) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text(AppStrings.feedbackApplied)));
+  }
+  return true;
 }

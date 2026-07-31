@@ -25,6 +25,7 @@ import '../../widgets/error_state.dart';
 import '../analysis/analysis_screen.dart';
 import 'about_screen.dart';
 import 'account_deletion_credentials_screen.dart';
+import 'notification_settings_screen.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -234,6 +235,23 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
       const _SectionLabel(title: AppStrings.profileCategoryDisplay),
       const SizedBox(height: KisouTheme.gapS),
       _buildThemeSelector(),
+      const SizedBox(height: KisouTheme.gapS),
+      _TileCard(
+        children: [
+          _SettingRow(
+            icon: Icons.notifications_none_outlined,
+            title: AppStrings.pushSettings,
+            value: AppStrings.pushSettingsDescription,
+            onTap: _isSaving
+                ? null
+                : () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const NotificationSettingsScreen(),
+                    ),
+                  ),
+          ),
+        ],
+      ),
       const SizedBox(height: KisouTheme.gapL),
       // --- アカウント設定 ---
       const _SectionLabel(title: AppStrings.profileCategoryAccount),
