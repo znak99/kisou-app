@@ -335,7 +335,6 @@ android {
             versionNameSuffix = "-dev"
             resValue("string", "app_name", "KISOU Dev")
             resValue("string", "admob_app_id", googleSampleAndroidAppId)
-            manifestPlaceholders["widgetDeepLinkScheme"] = "kisou-dev"
         }
         create("prod") {
             dimension = "environment"
@@ -345,7 +344,6 @@ android {
                 "admob_app_id",
                 selectedAndroidProductionAppId,
             )
-            manifestPlaceholders["widgetDeepLinkScheme"] = "kisou"
         }
     }
 

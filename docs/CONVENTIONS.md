@@ -75,10 +75,7 @@ lib/
 ## UI & Language
 
 - All user-facing text is in **Japanese**
-- Flutter UI widgets must not hardcode Japanese strings; use app constants or
-  localization. Native home-screen widget targets are the narrow exception:
-  keep one reviewed code-to-Japanese allowlist per native parser because the
-  extension/RemoteViews process cannot depend on Flutter localization.
+- Never hardcode Japanese strings in widget code — use a constants file or localization
 - Use the app's nickname greeting format: `○○さん、今日の服装は`
 
 ## Clothing Tag System
@@ -98,9 +95,6 @@ enum ClothingTop {
 ```
 
 The mapping from API code (`"THIN_LONG"`) → enum → Japanese display name → icon asset is centralized in `constants/clothing_tags.dart`. This is the single source of truth.
-
-Native widget allowlists must stay parity-tested against these Dart codes and
-labels. Never display an unvalidated API code or arbitrary server string.
 
 ## API Communication
 
@@ -230,74 +224,6 @@ labels. Never display an unvalidated API code or arbitrary server string.
   it describes. Open-Meteo data links to its CC BY 4.0 terms; when a surface
   displays summer WBGT, link Japan's Ministry of the Environment there as well.
   State that displayed weather values have been edited or processed
-
-## Native home-screen widgets
-
-- Only the authenticated Flutter app may call `GET /widget/today`. WidgetKit
-  and AppWidget code must read the shared snapshot only and must never receive
-  a token, instantiate an HTTP client, or retry the network.
-- Parse the API and ready envelope with exact key sets, integer schema `1`,
-  clothing/feeling allowlists, canonical `YYYY-MM-DD`, and canonical
-  `YYYY-MM-DDTHH:MM:SSZ`. Reject offset, whitespace, fractional seconds,
-  leap seconds, overflow components, unknown codes, and a `valid_until` that
-  is not the next `Asia/Tokyo` midnight.
-- After semantic parsing, rebuild the fixed-order UTF-8 ready envelope and
-  require byte-for-byte equality with the stored input. This rejects duplicate
-  keys, alternate key order/escaping/whitespace, comments, single quotes,
-  trailing content, and other permissive native-JSON forms.
-- Shared ready data contains only `schema_version`, `state`, `date`,
-  `valid_until`, `feeling`, and `recommendation(top,bottom,outer)`. Keep account,
-  nickname, location, weather, context, and credentials out of native storage.
-- Android uses `AtomicFile` below `noBackupFilesDir`, pre-read size guards, one
-  IO executor, `fd.sync`, and `finishWrite`/`failWrite`. After `finishWrite`,
-  require a bounded byte-exact `readFully` result before acknowledging either
-  ready or account close, with no residual `.bak` or `.new` sidecar before or
-  after read-back; never call `failWrite` on the finished stream. Its
-  periodic update only rereads that file. iOS uses the flavor-specific App Group,
-  `Data.write(.atomic)`, file synchronization, file protection, and backup
-  exclusion.
-- Unknown, corrupt, expired, or wrong-JST-date input always renders a dated
-  generic placeholder. Native code resolves only centralized allowlisted
-  Japanese labels and never shows a raw code.
-- A successful refresh is cooled down for three hours. The latest failure is
-  retryable after one minute and supersedes a prior success timestamp. Offline
-  failure preserves a still-valid same-day ready snapshot.
-- Profile, feedback, and reset mutations invalidate the in-flight widget
-  revision before the request, wait for all overlapping mutations, and force
-  one refresh after commit. Provider disposal synchronously deactivates the old
-  coordinator so its later response cannot write into a new account.
-- Account close synchronously closes the generation, drains in-flight work,
-  atomically writes the exact `signed_out` envelope, clears pending routes, and
-  requests native reload before auth can be removed. Preserve auth on failure;
-  reopen the coordinator lease with cleared cooldown but do not automatically
-  resurrect a snapshot from a prior successful cleanup.
-- Keep route and storage epochs in Dart, Android, and iOS. A ready operation
-  that started before close cannot reopen the route. Recover the route-disabled
-  state from the shared tombstone after process restart and reopen only after a
-  valid ready write succeeds. A same-account ready publish never acknowledges
-  or clears an unconsumed tap. On Android, preserve cold/warm taps while the
-  durable lease is unresolved, let only close supersede hydration, and redeliver
-  the callback after hydration or ready publish enables the lease. Distinguish
-  a truly absent first-run file from an existing unreadable, non-file, or
-  oversized snapshot; only the former may resolve without a corrupt-file fence.
-- Accept only prod `kisou://widget/home` and dev
-  `kisou-dev://widget/home`, with no user/password/port/query/fragment. Disable
-  Flutter automatic deep linking and let the custom bridge own both cold and
-  warm delivery.
-- iOS builds a current entry plus a boundary placeholder at `valid_until` and
-  requests `.atEnd`; `reloadTimelines` does not acknowledge completed render.
-  Android requests 30-minute rereads. Document that both OSes may apply updates
-  later.
-- Isolate Android package/no-backup storage and iOS bundle/App Group/scheme for
-  dev and prod. Widget extension versions must inherit Flutter's generated
-  build name/number, and embedded extensions require `CodeSignOnCopy`.
-- Ready iOS content is privacy-sensitive. Use adaptive 4.5:1 text colors and
-  compact large-text layouts on both platforms; preserve date and all three
-  garment values while Small/large-text layouts may omit feeling and repeated
-  category/title text.
-- Keep App Group registration, provisioning profiles, macOS archive/build
-  settings checks, WidgetKit redaction/timing, and physical-device accessibility
-  verification as explicit owner release gates.
 
 ## Device-local travel plans and reminders
 

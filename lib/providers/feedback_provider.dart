@@ -4,7 +4,6 @@ import '../models/feedback.dart';
 import '../services/feedback_service.dart';
 import '../utils/jp_date.dart';
 import 'api_provider.dart';
-import 'widget_recommendation_provider.dart';
 
 final feedbackServiceProvider = Provider<FeedbackService>((ref) {
   return FeedbackService(ref.watch(apiClientProvider));
@@ -29,25 +28,17 @@ class FeedbackController extends AsyncNotifier<FeedbackTodayResponse> {
   }
 
   Future<FeedbackResponse> submit(FeedbackRequest request) async {
-    final widgetCoordinator = ref.read(widgetRecommendationCoordinatorProvider);
-    widgetCoordinator.beginRecommendationMutation();
-    var changed = false;
-    try {
-      final response = await ref
-          .read(feedbackServiceProvider)
-          .submitFeedback(request);
-      changed = true;
-      // This provider represents TODAY's feedback status. A back-dated
-      // submission must not flip today's button to "done".
-      if (response.date == formatIsoDate(jstToday())) {
-        state = AsyncData(
-          FeedbackTodayResponse(exists: true, feedback: response),
-        );
-      }
-      return response;
-    } finally {
-      widgetCoordinator.endRecommendationMutation(changed: changed);
+    final response = await ref
+        .read(feedbackServiceProvider)
+        .submitFeedback(request);
+    // This provider represents TODAY's feedback status. A back-dated
+    // submission must not flip today's button to "done".
+    if (response.date == formatIsoDate(jstToday())) {
+      state = AsyncData(
+        FeedbackTodayResponse(exists: true, feedback: response),
+      );
     }
+    return response;
   }
 
   Future<FeedbackRecentResponse> getRecentFeedback() {

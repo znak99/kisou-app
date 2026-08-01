@@ -6,9 +6,5 @@
 	<string>production</string>
 	<key>keychain-access-groups</key>
 	<array/>
-	<key>com.apple.security.application-groups</key>
-	<array>
-		<string>group.cloud.znak99.kisou.widget</string>
-	</array>
 </dict>
 </plist>

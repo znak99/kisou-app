@@ -11,8 +11,6 @@ Flutter mobile app for **キソウ**, a weather-based personalized clothing reco
 - First-launch keychain cleanup for iOS reinstall behavior
 - Four-step onboarding: nickname, gender, cold/heat sensitivity, and location
 - Home screen with three API-provided recommendation combinations
-- iOS Small/Medium and Android home-screen widgets backed by a strict,
-  privacy-minimized rank-1 snapshot with account-safe tap routing
 - Weather comparison for today, yesterday, and two days ago
 - Forecast tab with tomorrow recommendation, D+2 through D+4 weather, and future date/place estimates
 - Server-authoritative future-estimate quota, retry-safe UUID idempotency, and
@@ -85,28 +83,6 @@ a higher unregister revision, disables FCM auto-init, deletes the FCM token and
 Firebase Installation ID, and clears only the daily-push notification
 namespace. Travel reminders are preserved unless their own account cleanup is
 running.
-
-Home-screen widgets never perform network requests and never receive an auth
-token. The authenticated Flutter app fetches `GET /widget/today`, strictly
-validates its rank-1 response and next-JST-midnight expiry, then atomically
-publishes only date, feeling, and top/bottom/outer codes. Android reads an
-`AtomicFile` below `noBackupFilesDir`; iOS reads a protected, backup-excluded
-App Group file. Missing, corrupt, expired, wrong-date, or unknown-code data
-renders a dated generic placeholder. Both native parsers reconstruct the
-fixed-order canonical envelope and require byte equality, rejecting permissive
-JSON variants such as duplicate keys, comments, or trailing content. Android
-also verifies an exact bounded read-back after `AtomicFile.finishWrite`.
-
-Logout, account switch, and deletion drain the old widget generation before
-publishing a durable `signed_out` tombstone. The native route gate restores
-that state after process restart and reopens only after a valid ready snapshot
-for the next account is published. Widget taps accept only
-`kisou[-dev]://widget/home`; Flutter's automatic deep-link handling is disabled
-so the custom bridge is the only cold/warm route owner. iOS timeline reloads
-and Android periodic updates are OS scheduling requests, not exact delivery
-guarantees. Same-account snapshot writes preserve unconsumed taps; Android
-holds taps that arrive during asynchronous route-lease hydration and delivers
-them after the lease resolves.
 
 ## API Server
 
@@ -351,11 +327,6 @@ Common manual checks:
 - On a push-enabled physical-device build, enable one daily reminder and
   confirm the API registration, generic notification content, correct tap
   destination, all-off cleanup, and account-transition isolation.
-- On physical iOS and Android devices, verify Small/Medium widget add/resize,
-  light/dark and 200% text, offline and JST-midnight placeholders, tap routing,
-  logout/account-switch tombstones, iOS privacy redaction, and OS-delayed
-  timeline/update behavior. iOS also requires owner App Group capabilities and
-  matching Runner/extension provisioning profiles for dev and prod.
 
 ## Project Structure
 

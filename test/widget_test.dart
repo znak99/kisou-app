@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -31,15 +30,6 @@ void main() {
   setUp(() {
     // 날짜 예상 화면의 일일 횟수(quota)가 SharedPreferences 를 읽는다.
     SharedPreferences.setMockInitialValues({});
-    const widgetChannel = MethodChannel('jp.kisou/widget');
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(widgetChannel, (call) async {
-          return call.method == 'consumeInitialWidgetRoute' ? false : null;
-        });
-    addTearDown(() {
-      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-          .setMockMethodCallHandler(widgetChannel, null);
-    });
   });
 
   testWidgets('shows login screen for signed out users', (

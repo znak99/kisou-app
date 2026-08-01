@@ -14,8 +14,8 @@
 | 영역 | 기술 |
 |------|------|
 | 메인 앱 | Flutter |
-| iOS 위젯 | SwiftUI + WidgetKit (Small / Medium) |
-| Android 위젯 | Kotlin + AppWidget / RemoteViews (Small / Medium) |
+| iOS 위젯 | SwiftUI + WidgetKit (MVP 이후) |
+| Android 위젯 | Kotlin + Glance 또는 AppWidget (MVP 이후) |
 | API 서버 | FastAPI |
 | DB | PostgreSQL |
 | 추천 로직 | Python 기반 |
@@ -89,16 +89,9 @@
 - 계정·설치 세대가 다른 payload 차단과 로그아웃·계정 전환·삭제 시 token/FID
   정리
 
-**홈 화면 위젯**
-
-- iOS Small·Medium 및 Android 크기 가변 Small·Medium 오늘 추천
-- 앱이 인증 API를 호출해 최소 스냅샷을 저장하고, 네이티브 위젯은 네트워크나
-  토큰 없이 공유 파일만 읽는 구조
-- 위젯 탭의 정확한 홈 이동과 홈·위젯 강제 갱신, 로그아웃·계정 전환·삭제의
-  재시작 안전 `signed_out` 경계
-
 ### 제외
 
+- 위젯 (iOS/Android 모두)
 - 로지스틱 회귀 모델 (데이터 축적 후 도입)
 - 과거 피드백 히스토리 열람 화면
 - 소셜/공유 기능
@@ -223,98 +216,6 @@ Open-Meteo 체감온도가 있으면 이미 습도·풍속·일사를 반영한 
 | null | なし |
 
 서버는 코드로 반환하고, 앱(Flutter)에서 코드 → 표시명 + 아이콘 매핑을 처리합니다.
-
-### 홈 화면 위젯
-
-`GET /widget/today`는 Bearer 인증을 사용하며 rank 1 추천만 아래 exact JSON으로
-반환합니다. `Cache-Control: private, no-store`와 `Pragma: no-cache`를 사용하고
-ETag/304는 지원하지 않습니다. 별명, 계정 ID, 위치, 날씨, 추천 컨텍스트,
-토큰은 응답과 단말 스냅샷에 포함하지 않습니다.
-
-```json
-{
-  "schema_version": 1,
-  "date": "2026-07-31",
-  "valid_until": "2026-07-31T15:00:00Z",
-  "feeling": "PERFECT",
-  "recommendation": {
-    "top": "SHORT_SLEEVE",
-    "bottom": "LONG_PANTS",
-    "outer": null
-  }
-}
-```
-
-앱은 누락·추가 필드, `1.0`/boolean schema, 알 수 없는 코드, 공백·offset·소수초·
-leap second가 있는 만료 시각을 거부합니다. `date`는 `Asia/Tokyo` 날짜이고
-`valid_until`은 그 날짜 다음 JST 자정의 초 단위 canonical UTC `Z`와 정확히
-같아야 합니다. 검증 후에만 다음 공유 envelope를 원자적으로 게시합니다.
-
-- 준비 상태:
-  `{"schema_version":1,"state":"ready","date", "valid_until","feeling",`
-  `"recommendation":{"top","bottom","outer"}}`
-- 계정 종료 상태:
-  `{"schema_version":1,"state":"signed_out"}`
-
-공유 파일은 위 고정 키 순서와 공백 없는 UTF-8 byte envelope 하나만 허용합니다.
-Android/iOS는 의미 검증 뒤 canonical envelope를 다시 조립해 원문 byte와
-일치하는지 확인하므로 중복 key, key 순서·escape·공백 변형, 주석·작은따옴표,
-trailing content처럼 native JSON parser가 관대하게 받을 수 있는 입력도
-손상 상태로 처리합니다.
-
-데이터 흐름은 `API → Dio 인증 클라이언트 → Flutter strict model/coordinator →
-MethodChannel → native 공유 파일 → 위젯 렌더러`입니다. 네이티브 위젯과 Android
-주기 갱신은 네트워크를 호출하지 않습니다. Android는 `noBackupFilesDir`의
-`AtomicFile`을 단일 IO executor에서 읽고 `fd.sync` 후 교체합니다.
-`finishWrite` 뒤에도 8KiB 이하의 저장 bytes를 다시 읽어 기대 envelope와
-완전히 같고 read-back 전후 `.bak`·`.new` 잔존 파일이 없는 경우에만 성공으로
-응답하며, finish 이후에는 닫힌 stream에 `failWrite`를 다시 호출하지 않습니다.
-iOS는
-환경별 App Group 안에 `Data.write(.atomic)`로 교체하고 `FileHandle.synchronize`
-완료 뒤 응답하며, 파일 보호와 backup 제외를 적용합니다.
-
-Flutter coordinator는 성공 후 3시간 cooldown, 최신 실패 후 1분 재시도를
-적용합니다. 오프라인 실패는 같은 JST 날짜의 기존 ready 파일을 보존하고,
-네이티브가 날짜 불일치·만료·손상·알 수 없는 코드에서 날짜가 포함된 일반
-placeholder로 fail-closed 합니다. 시작·foreground 복귀·JST 날짜 전환에서
-갱신하며, 홈 수동 갱신과 위젯 탭은 cooldown을 우회합니다. 프로필·피드백·
-초기화 mutation은 이전 응답 revision을 폐기하고 mutation 완료 후 새 결과를
-강제 조회합니다.
-
-iOS timeline은 현재 ready entry와 `valid_until`의 placeholder entry를 함께
-만들고 `.atEnd`를 요청합니다. `reloadTimelines`는 WidgetKit에 재로딩을
-요청할 뿐 렌더 완료 시각을 보장하지 않으며 OS 정책 때문에 자정 경계 반영이
-늦을 수 있습니다. Android의 30분 `updatePeriodMillis`도 공유 파일을 다시
-읽기만 합니다.
-
-계정 종료는 먼저 coordinator generation을 닫아 old API/native write를
-drain한 뒤 `signed_out` 파일과 cold route 삭제를 완료하고 네이티브 reload를
-요청합니다. 이 단계가 실패하면 인증 정보를 보존하고 coordinator lease와
-cooldown만 복구해 명시적 재시도를 허용합니다. 성공한 route-disabled 상태는
-프로세스 재시작 때 공유 파일에서 복구하며, 다음 계정의 valid ready write가
-성공하기 전에는 열지 않습니다. Dart와 양 네이티브 bridge의 epoch는 이전
-ready completion이 더 최신 tombstone을 덮거나 경로를 다시 여는 것을 막습니다.
-같은 계정의 ready 갱신 성공은 아직 Dart가 consume하지 않은 tap을 지우지
-않습니다. Android는 비동기 공유 파일 hydration이 끝나기 전의 cold/warm tap을
-보존하고 consume 요청에는 일단 `false`를 반환한 뒤, hydration 또는 ready
-게시로 route lease가 열리면 callback을 다시 보냅니다. 계정 close만 hydration과
-이전 ready를 폐기하고 pending route를 제거합니다. Android는 파일 자체가 없는
-최초 상태와, 파일은 존재하지만 unreadable·비정상 type·8KiB 초과인 손상 상태를
-구분해 손상 상태의 route를 fail-closed 합니다.
-
-위젯 URL은 prod `kisou://widget/home`, dev `kisou-dev://widget/home`만 허용하며
-user/password/port/query/fragment를 거부합니다. Flutter 자동 deep linking은
-비활성화하고 custom bridge가 cold/warm route를 단독 소유합니다. Android
-application ID/no-backup 저장소와 iOS App Group·bundle ID·URL scheme은
-dev/prod가 분리됩니다.
-
-iOS ready 내용은 `.privacySensitive()`로 OS redaction을 허용합니다. 양 플랫폼은
-라이트/다크 4.5:1 대비와 큰 글자 compact 분기를 사용하며 날짜와 상의·하의·
-겉옷은 유지합니다. 작은 큰 글자 layout에서는 공간 확보를 위해 체감 문구와
-반복 category/title을 축약할 수 있습니다. 실제 App Group capability,
-extension provisioning/profile, `xcodebuild -showBuildSettings` 9개 구성,
-WidgetKit 반영 지연·잠금 redaction·VoiceOver/TalkBack·200% 글자 크기는
-macOS와 실기기에서 소유자가 최종 확인합니다.
 
 ---
 
@@ -590,7 +491,6 @@ user_id + date에 UNIQUE 제약 (1일 1피드백 보장)
 | POST | /auth/logout | 리프레시 토큰 폐기 |
 | POST | /auth/link | 현재 계정을 Apple/Google 계정에 연동 |
 | GET | /home | 추천 3개 조합 + 날씨 비교(오늘/어제/2일 전) 통합 응답 |
-| GET | /widget/today | 위젯용 rank 1 최소 추천과 다음 JST 자정 만료 시각 |
 | GET | /users/me | 프로필 조회 |
 | PUT | /users/me | 프로필 업데이트 |
 | POST | /users/me/reset-data | 피드백 삭제 + 성향 기준 보정값 초기화 |

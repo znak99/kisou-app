@@ -5,9 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kisou_app/constants/app_strings.dart';
-import 'package:kisou_app/constants/clothing_tags.dart';
 import 'package:kisou_app/config/push_config.dart';
-import 'package:kisou_app/models/widget_recommendation.dart';
 import 'package:kisou_app/models/push_notification.dart';
 import 'package:kisou_app/providers/ad_reward_provider.dart';
 import 'package:kisou_app/providers/ads_provider.dart';
@@ -19,7 +17,6 @@ import 'package:kisou_app/providers/shell_provider.dart';
 import 'package:kisou_app/providers/theme_provider.dart';
 import 'package:kisou_app/providers/travel_plan_provider.dart';
 import 'package:kisou_app/providers/user_provider.dart';
-import 'package:kisou_app/providers/widget_recommendation_provider.dart';
 import 'package:kisou_app/models/travel_plan.dart';
 import 'package:kisou_app/models/account_deletion_status.dart';
 import 'package:kisou_app/models/outlook_quota.dart';
@@ -28,9 +25,6 @@ import 'package:kisou_app/screens/onboarding/login_screen.dart';
 import 'package:kisou_app/services/auth_service.dart';
 import 'package:kisou_app/services/travel_notification_service.dart';
 import 'package:kisou_app/services/user_service.dart';
-import 'package:kisou_app/services/widget_recommendation_coordinator.dart';
-import 'package:kisou_app/services/widget_recommendation_service.dart';
-import 'package:kisou_app/services/widget_snapshot_gateway.dart';
 import 'package:kisou_app/services/push_installation_store.dart';
 import 'package:kisou_app/services/push_local_metadata.dart';
 import 'package:kisou_app/services/push_messaging_gateway.dart';
@@ -206,140 +200,6 @@ void main() {
     expect(authService.didClearPendingAdRewardOperation, isTrue);
     expect(container.read(authProvider).requireValue.isAuthenticated, isFalse);
   });
-
-  test(
-    'logout closes the widget before server and credential cleanup',
-    () async {
-      final events = <String>[];
-      final authService = _OrderedAuthService(events)
-        ..hasTokenValue = true
-        ..onboardingCompletedValue = true;
-      final widgetGateway = _AuthBoundaryWidgetGateway(events);
-      final widgetCoordinator = WidgetRecommendationCoordinator(
-        service: _AuthWidgetSource(),
-        gateway: widgetGateway,
-      );
-      final container = ProviderContainer(
-        overrides: [
-          authServiceProvider.overrideWithValue(authService),
-          apiClientProvider.overrideWithValue(Dio()),
-          widgetRecommendationCoordinatorProvider.overrideWithValue(
-            widgetCoordinator,
-          ),
-          travelPlanRepositoryProvider.overrideWithValue(
-            MemoryTravelPlanRepository(),
-          ),
-          travelNotificationGatewayProvider.overrideWithValue(
-            MemoryTravelNotificationGateway(),
-          ),
-        ],
-      );
-      addTearDown(container.dispose);
-
-      await container.read(authProvider.future);
-      events.clear();
-      await container.read(authProvider.notifier).logout();
-
-      expect(
-        events,
-        containsAll(['widget:close', 'auth:server-logout', 'auth:tokens']),
-      );
-      expect(
-        events.indexOf('widget:close'),
-        lessThan(events.indexOf('auth:server-logout')),
-      );
-      expect(
-        events.indexOf('widget:close'),
-        lessThan(events.indexOf('auth:tokens')),
-      );
-    },
-  );
-
-  test(
-    'widget close failure preserves auth and permits explicit restore',
-    () async {
-      final events = <String>[];
-      final authService = _OrderedAuthService(events)
-        ..hasTokenValue = true
-        ..onboardingCompletedValue = true;
-      final widgetGateway = _AuthBoundaryWidgetGateway(events)
-        ..failClose = true;
-      final widgetCoordinator = WidgetRecommendationCoordinator(
-        service: _AuthWidgetSource(),
-        gateway: widgetGateway,
-      );
-      final container = ProviderContainer(
-        overrides: [
-          authServiceProvider.overrideWithValue(authService),
-          apiClientProvider.overrideWithValue(Dio()),
-          widgetRecommendationCoordinatorProvider.overrideWithValue(
-            widgetCoordinator,
-          ),
-          travelPlanRepositoryProvider.overrideWithValue(
-            MemoryTravelPlanRepository(),
-          ),
-          travelNotificationGatewayProvider.overrideWithValue(
-            MemoryTravelNotificationGateway(),
-          ),
-        ],
-      );
-      addTearDown(container.dispose);
-
-      await container.read(authProvider.future);
-      events.clear();
-      await expectLater(
-        container.read(authProvider.notifier).logout(),
-        throwsStateError,
-      );
-
-      expect(authService.hasTokenValue, isTrue);
-      expect(authService.didClearTokens, isFalse);
-      expect(events, isNot(contains('auth:server-logout')));
-      expect(events, isNot(contains('auth:tokens')));
-
-      expect(
-        await widgetCoordinator.refreshIfDue(force: true),
-        WidgetRefreshResult.updated,
-      );
-      expect(events.last, 'widget:ready');
-    },
-  );
-
-  test(
-    'missing-token startup tombstones widget before anonymous login',
-    () async {
-      final events = <String>[];
-      final authService = _OrderedAnonymousAuthService(events);
-      final widgetGateway = _AuthBoundaryWidgetGateway(events);
-      final container = ProviderContainer(
-        overrides: [
-          authServiceProvider.overrideWithValue(authService),
-          apiClientProvider.overrideWithValue(Dio()),
-          widgetRecommendationCoordinatorProvider.overrideWithValue(
-            WidgetRecommendationCoordinator(
-              service: _AuthWidgetSource(),
-              gateway: widgetGateway,
-            ),
-          ),
-          travelPlanRepositoryProvider.overrideWithValue(
-            MemoryTravelPlanRepository(),
-          ),
-          travelNotificationGatewayProvider.overrideWithValue(
-            MemoryTravelNotificationGateway(),
-          ),
-        ],
-      );
-      addTearDown(container.dispose);
-
-      final auth = await container.read(authProvider.future);
-
-      expect(auth.isAuthenticated, isTrue);
-      expect(
-        events.indexOf('widget:close'),
-        lessThan(events.indexOf('auth:anonymous-login')),
-      );
-    },
-  );
 
   test(
     'malformed push receipts are reset only after logout closes push state',
@@ -763,9 +623,6 @@ void main() {
         overrides: [
           authServiceProvider.overrideWithValue(authService),
           apiClientProvider.overrideWithValue(Dio()),
-          widgetSnapshotGatewayProvider.overrideWithValue(
-            _AuthBoundaryWidgetGateway(<String>[]),
-          ),
           travelPlanRepositoryProvider.overrideWithValue(repository),
           travelNotificationGatewayProvider.overrideWithValue(notifications),
         ],
@@ -1251,12 +1108,10 @@ void main() {
     'concurrent delete taps share one UUID and one server request',
     () async {
       final deleteGate = Completer<void>();
-      final deleteStarted = Completer<void>();
       final authService = _LoginFakeAuthService(isNewUser: false)
         ..hasTokenValue = true;
       final userService = _ControllableDeleteUserService(
         deleteGate: deleteGate.future,
-        onDelete: deleteStarted.complete,
       );
       var generatedKeys = 0;
       final container = ProviderContainer(
@@ -1274,9 +1129,6 @@ void main() {
           travelNotificationGatewayProvider.overrideWithValue(
             MemoryTravelNotificationGateway(),
           ),
-          widgetSnapshotGatewayProvider.overrideWithValue(
-            _AuthBoundaryWidgetGateway(<String>[]),
-          ),
         ],
       );
       addTearDown(container.dispose);
@@ -1285,7 +1137,7 @@ void main() {
 
       final first = controller.deleteAccount();
       final second = controller.deleteAccount();
-      await deleteStarted.future;
+      await Future<void>.delayed(Duration.zero);
       expect(userService.deleteCalls, 1);
       deleteGate.complete();
       await Future.wait([first, second]);
@@ -1353,9 +1205,6 @@ void main() {
         overrides: [
           authServiceProvider.overrideWithValue(authService),
           apiClientProvider.overrideWithValue(Dio()),
-          widgetSnapshotGatewayProvider.overrideWithValue(
-            _AuthBoundaryWidgetGateway(<String>[]),
-          ),
           userServiceProvider.overrideWithValue(userService),
           travelPlanRepositoryProvider.overrideWithValue(repository),
           travelNotificationGatewayProvider.overrideWithValue(
@@ -1497,9 +1346,6 @@ void main() {
         overrides: [
           authServiceProvider.overrideWithValue(authService),
           apiClientProvider.overrideWithValue(Dio()),
-          widgetSnapshotGatewayProvider.overrideWithValue(
-            _AuthBoundaryWidgetGateway(<String>[]),
-          ),
           userServiceProvider.overrideWithValue(userService),
           travelPlanRepositoryProvider.overrideWithValue(
             MemoryTravelPlanRepository(),
@@ -1956,73 +1802,6 @@ class _LoginFakeAuthService extends AuthService {
   Future<void> clearPendingAdRewardOperation() async {
     didClearPendingAdRewardOperation = true;
   }
-}
-
-class _OrderedAuthService extends _LoginFakeAuthService {
-  _OrderedAuthService(this.events) : super(isNewUser: false);
-
-  final List<String> events;
-
-  @override
-  Future<void> logoutServer({required Dio dio}) async {
-    events.add('auth:server-logout');
-    await super.logoutServer(dio: dio);
-  }
-
-  @override
-  Future<void> clearTokens() async {
-    events.add('auth:tokens');
-    await super.clearTokens();
-  }
-}
-
-class _OrderedAnonymousAuthService extends _OrderedAuthService {
-  _OrderedAnonymousAuthService(super.events);
-
-  @override
-  Future<bool> loginAnonymous({required Dio dio}) async {
-    events.add('auth:anonymous-login');
-    hasTokenValue = true;
-    return false;
-  }
-}
-
-class _AuthWidgetSource implements WidgetRecommendationSource {
-  @override
-  Future<WidgetRecommendation> getToday() async {
-    return WidgetRecommendation(
-      date: DateTime(2026, 7, 31),
-      validUntil: DateTime.utc(2026, 7, 31, 15),
-      feeling: 'PERFECT',
-      top: ClothingTop.shortSleeve,
-      bottom: ClothingBottom.longPants,
-      outer: null,
-    );
-  }
-}
-
-class _AuthBoundaryWidgetGateway implements WidgetSnapshotGateway {
-  _AuthBoundaryWidgetGateway(this.events);
-
-  final List<String> events;
-  bool failClose = false;
-
-  @override
-  Future<void> writeReady(WidgetRecommendation recommendation) async {
-    events.add('widget:ready');
-  }
-
-  @override
-  Future<void> closeAccount() async {
-    events.add('widget:close');
-    if (failClose) throw StateError('widget close failed');
-  }
-
-  @override
-  Future<bool> consumeInitialHomeRoute() async => false;
-
-  @override
-  void setHomeRouteHandler(WidgetHomeRouteHandler? handler) {}
 }
 
 class _BoundaryPushAccountManager extends PushAccountManager {

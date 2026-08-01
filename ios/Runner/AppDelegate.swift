@@ -9,9 +9,6 @@ import UserNotifications
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
     UNUserNotificationCenter.current().delegate = self
-    if let url = launchOptions?[.url] as? URL {
-      _ = WidgetSnapshotBridge.shared.handle(url: url)
-    }
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 
@@ -60,20 +57,6 @@ import UserNotifications
         }
       }
     }
-    WidgetSnapshotBridge.shared.configure(
-      messenger: engineBridge.applicationRegistrar.messenger()
-    )
-  }
-
-  override func application(
-    _ app: UIApplication,
-    open url: URL,
-    options: [UIApplication.OpenURLOptionsKey: Any] = [:]
-  ) -> Bool {
-    if WidgetSnapshotBridge.shared.handle(url: url) {
-      return true
-    }
-    return super.application(app, open: url, options: options)
   }
 
   private static func prepareTravelDatabaseDirectory() throws -> String {
