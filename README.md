@@ -13,12 +13,6 @@ Flutter mobile app for **キソウ**, a weather-based personalized clothing reco
 - Home screen with three API-provided recommendation combinations
 - Weather comparison for today, yesterday, and two days ago
 - Forecast tab with tomorrow recommendation, D+2 through D+4 weather, and future date/place estimates
-- Server-authoritative future-estimate quota, retry-safe UUID idempotency, and
-  an explicit rewarded-ad path after the allowance is exhausted
-- Consent-gated, non-personalized inline adaptive AdMob banner at the end of
-  the forecast scroll; ads are compile-time disabled by default
-- Offline travel plans for up to 20 major-city departures, with JST D-day
-  display and optional inexact device-local reminders
 - Linked Open-Meteo/CC BY 4.0 attribution beside every weather-data surface,
   with the Ministry of the Environment source shown in context when WBGT appears
 - Feedback bottom sheet for a recent date, outside time slots, actual clothing, and comfort feedback
@@ -39,21 +33,9 @@ Flutter mobile app for **キソウ**, a weather-based personalized clothing reco
 | Auth | Anonymous account + Apple/Google linking |
 | Token storage | flutter_secure_storage |
 | Local flags | shared_preferences |
-| Travel-plan storage | sqflite (device-local source of truth) |
-| Local reminders | flutter_local_notifications + timezone (`Asia/Tokyo`) |
-| Ads and consent | google_mobile_ads 9.x (Google Mobile Ads + UMP) |
 | Location | geolocator |
 | External URL | url_launcher |
 | UI language | Japanese |
-
-Travel plans are never sent to the API. A plan is written to SQLite before any
-notification work; notification permission denial or a temporary scheduler
-failure leaves a visible retry state without losing the plan. The app
-reconciles pending reminders at startup, resume, and JST date rollover. Logout,
-account switch, and in-app account deletion cancel this feature's reserved
-notification IDs and remove its device-local rows. Android app backup is
-disabled; iOS stores the database in a protected Application Support directory
-that is explicitly excluded from device/cloud backup.
 
 ## API Server
 
@@ -111,13 +93,6 @@ certificate registered in Play Console before distribution.
 | `API_PRODUCTION_BASE_URL` | *(empty)* | Production API base URL |
 | `SHOW_DEV_LOGIN` | `true` | Show the development login buttons |
 | `OUTLOOK_SCREENSHOT_FIXTURE` | `false` | Opt in to deterministic Outlook data for store capture |
-| `ADS_ENABLED` | `false` | Enable UMP and mobile-ad requests explicitly |
-| `ADMOB_ANDROID_APP_ID` | *(empty)* | Live Android App ID for an ads-enabled production build |
-| `ADMOB_ANDROID_BANNER_ID` | *(empty)* | Live Android inline-banner unit ID |
-| `ADMOB_ANDROID_REWARDED_ID` | *(empty)* | Live Android rewarded unit ID |
-| `ADMOB_IOS_APP_ID` | *(empty)* | Live iOS App ID for an ads-enabled production build |
-| `ADMOB_IOS_BANNER_ID` | *(empty)* | Live iOS inline-banner unit ID |
-| `ADMOB_IOS_REWARDED_ID` | *(empty)* | Live iOS rewarded unit ID |
 
 Resolution rules (`lib/config/api_config.dart`):
 
@@ -133,19 +108,6 @@ Resolution rules (`lib/config/api_config.dart`):
   운영 API와 같은 화면을 캡처하기 위해 production debug에서도 명시적으로
   켤 수 있지만 결과에 설명용 데이터 배지를 표시하며 profile·release에서는
   define 값과 관계없이 비활성화됩니다.
-- `ADS_ENABLED`의 기본값은 `false`입니다. 이 경로는 UMP, Mobile Ads SDK,
-  배너·리워드 요청을 호출하지 않습니다. development에서 명시적으로 켜면
-  Google 공식 샘플 App/광고 단위만 사용합니다. production에서 켜면
-  Android·iOS의 App/배너/리워드 ID 6개가 모두 형식에 맞는 실제 ID여야
-  하며, 누락·샘플·형식 오류는 런타임과 네이티브 빌드에서 차단됩니다.
-- 광고 활성 앱은 매 실행마다 UMP 정보를 갱신하고 필요한 동의 양식을
-  표시한 뒤 `canRequestAds`가 참일 때만 G 등급 설정으로 SDK를 한 번
-  초기화합니다. 광고 요청은 항상 비개인화 요청이며 정확 위치·닉네임·
-  체감 기록·내부 사용자 ID를 전달하지 않습니다.
-- iOS는 ATT를 요청하거나 `NSUserTrackingUsageDescription`을 선언하지
-  않습니다. Android는 병합 manifest에서 광고 ID 권한을 제거합니다.
-  양쪽 플랫폼은 앱 시작 측정을 지연하고, 운영 전환 전에는
-  `STORE_RELEASE.md`의 UMP·SSV·app-ads.txt·스토어 신고 절차가 필요합니다.
 - Android와 iOS의 `dev` flavor는 `.dev` 앱 식별자와 `KISOU Dev`
   표시명을 사용해 운영 앱의 보안 저장소와 로컬 설정을 공유하지 않습니다.
 - iOS의 로컬 네트워크 권한과 HTTP 허용은 dev Info.plist에만 있으며,
@@ -200,10 +162,8 @@ flutter run --debug --flavor prod \
 
 The fixture preselects Tokyo and JST today + 8 days, starts with three in-memory
 lookups, and returns a stable result without calling the API. It neither reads
-nor writes the persisted quota. Even when `ADS_ENABLED=true` is supplied for
-the isolation test, it makes no UMP, SDK, banner, rewarded, or quota request.
-The fixture is unavailable in profile and release builds even if the define is
-supplied.
+nor writes the persisted quota. The fixture is unavailable in profile and
+release builds even if the define is supplied.
 
 ## Verification
 
@@ -221,7 +181,6 @@ flutter test --dart-define-from-file=config/prod.json \
   test/production_config_test.dart
 flutter test --dart-define-from-file=config/prod.json \
   --dart-define=OUTLOOK_SCREENSHOT_FIXTURE=true \
-  --dart-define=ADS_ENABLED=true \
   test/outlook_screenshot_fixture_test.dart
 ```
 

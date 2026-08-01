@@ -9,15 +9,12 @@ import '../../providers/feedback_provider.dart';
 import '../../providers/analysis_provider.dart';
 import '../../providers/forecast_provider.dart';
 import '../../providers/home_provider.dart';
-import '../../providers/travel_plan_provider.dart';
 import '../../providers/user_provider.dart';
 import '../../utils/api_error.dart';
 import '../../utils/jp_date.dart';
 import '../../widgets/feedback_sheet.dart';
-import '../../widgets/forecast_inline_banner.dart';
 import '../../widgets/recommendation_card.dart';
 import '../../widgets/weather_data_attribution.dart';
-import 'travel_plans_screen.dart';
 
 /// 予報 tab: tomorrow's outfit and a feedback nudge. The date/place lookup
 /// lives on its own page ([OutlookScreen]), reached from the tab's toolbar.
@@ -31,7 +28,6 @@ class ForecastScreen extends ConsumerWidget {
         await Future.wait([
           ref.read(forecastTomorrowProvider.notifier).refresh(),
           ref.read(feedbackProvider.notifier).refresh(),
-          ref.read(travelPlanProvider.notifier).refreshAndReconcile(),
         ]);
       },
       child: ListView(
@@ -48,10 +44,7 @@ class ForecastScreen extends ConsumerWidget {
           SizedBox(height: KisouTheme.gapXs),
           WeatherDataAttribution(),
           SizedBox(height: KisouTheme.gapL),
-          TravelUpcomingSection(),
-          SizedBox(height: KisouTheme.gapL),
           _FeedbackNudge(),
-          ForecastInlineBanner(),
         ],
       ),
     );

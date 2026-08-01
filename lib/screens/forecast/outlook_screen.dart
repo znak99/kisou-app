@@ -1,6 +1,6 @@
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../config/api_config.dart';
 import '../../config/theme.dart';
@@ -8,24 +8,23 @@ import '../../constants/app_strings.dart';
 import '../../constants/major_cities.dart';
 import '../../models/forecast.dart';
 import '../../models/location.dart';
-import '../../models/outlook_quota.dart';
-import '../../providers/ad_reward_provider.dart';
-import '../../providers/ads_provider.dart';
 import '../../providers/forecast_provider.dart';
-import '../../providers/outlook_quota_provider.dart';
 import '../../utils/jp_date.dart';
 import '../../widgets/recommendation_card.dart';
 import '../../widgets/weather_data_attribution.dart';
-import 'travel_plans_screen.dart';
 
+/// Free lookups per day (JST). The unreleased rewarded-ad copy is visible only
+/// in development builds.
 const _freeLookupsPerDay = 3;
+const _quotaDateKey = 'outlook_quota_date';
+const _quotaUsedKey = 'outlook_quota_used';
 
 /// Full-page "日付で予想する": pick a future date and city, get an outfit
 /// estimate (real forecast when near, past-years average when far).
 ///
 /// Reached from the 予報 tab's toolbar. The [_lookup] call is deliberately the
-/// single funnel for running an estimate. Reward ads grant a server-side
-/// credit, but never trigger this method automatically.
+/// single funnel for running an estimate — a future rewarded-ad gate ("watch
+/// an ad for one lookup") wraps that one method and nothing else.
 class OutlookScreen extends ConsumerStatefulWidget {
   const OutlookScreen({super.key});
 
@@ -40,7 +39,12 @@ class _OutlookScreenState extends ConsumerState<OutlookScreen> {
   DateTime? _date;
   LocationValue _city = majorCities.first;
 
-  int _fixtureRemaining = _freeLookupsPerDay;
+  /// Lookups left today. Null while loading from storage.
+  int? _remaining;
+
+  /// City shown with the current result (captured when 予想する is pressed, so
+  /// changing the picker afterwards doesn't relabel an old result).
+  LocationValue? _lookedUpCity;
 
   bool _isLookupInFlight = false;
 
@@ -56,6 +60,47 @@ class _OutlookScreenState extends ConsumerState<OutlookScreen> {
     if (ApiConfig.outlookScreenshotFixtureEnabled) {
       _date = jstToday().add(const Duration(days: 8));
     }
+    _loadQuota();
+  }
+
+  Future<void> _loadQuota() async {
+    if (ApiConfig.outlookScreenshotFixtureEnabled) {
+      if (mounted) {
+        setState(() => _remaining = _freeLookupsPerDay);
+      }
+      return;
+    }
+    final prefs = await SharedPreferences.getInstance();
+    final today = formatIsoDate(jstToday());
+    final used = prefs.getString(_quotaDateKey) == today
+        ? (prefs.getInt(_quotaUsedKey) ?? 0)
+        : 0; // 날짜가 바뀌면 리셋.
+    if (mounted) {
+      setState(() => _remaining = (_freeLookupsPerDay - used).clamp(0, 99));
+    }
+  }
+
+  Future<void> _consumeQuota() async {
+    if (ApiConfig.outlookScreenshotFixtureEnabled) {
+      if (mounted) {
+        setState(() {
+          _remaining = ((_remaining ?? _freeLookupsPerDay) - 1).clamp(0, 99);
+        });
+      }
+      return;
+    }
+    final prefs = await SharedPreferences.getInstance();
+    final today = formatIsoDate(jstToday());
+    final used = prefs.getString(_quotaDateKey) == today
+        ? (prefs.getInt(_quotaUsedKey) ?? 0)
+        : 0;
+    await prefs.setString(_quotaDateKey, today);
+    await prefs.setInt(_quotaUsedKey, used + 1);
+    if (mounted) {
+      setState(() {
+        _remaining = (_freeLookupsPerDay - used - 1).clamp(0, 99);
+      });
+    }
   }
 
   Future<void> _pickDate() async {
@@ -66,8 +111,7 @@ class _OutlookScreenState extends ConsumerState<OutlookScreen> {
       firstDate: tomorrow,
       lastDate: tomorrow.add(const Duration(days: 329)),
     );
-    if (picked != null && mounted && picked != _date) {
-      ref.read(forecastOutlookProvider.notifier).resetPendingOperation();
+    if (picked != null && mounted) {
       setState(() => _date = picked);
     }
   }
@@ -95,40 +139,33 @@ class _OutlookScreenState extends ConsumerState<OutlookScreen> {
         );
       },
     );
-    if (picked != null && mounted && picked.code != _city.code) {
-      ref.read(forecastOutlookProvider.notifier).resetPendingOperation();
+    if (picked != null && mounted) {
       setState(() => _city = picked);
     }
   }
 
   Future<void> _lookup() async {
     final date = _date;
-    final remaining = ApiConfig.outlookScreenshotFixtureEnabled
-        ? _fixtureRemaining
-        : ref.read(outlookQuotaProvider).value?.totalRemaining ?? 0;
-    if (date == null || remaining <= 0 || _isLookupInFlight) {
+    if (date == null || (_remaining ?? 0) <= 0 || _isLookupInFlight) {
       return;
     }
     final city = _city;
     setState(() {
       _isLookupInFlight = true;
+      _lookedUpCity = city;
     });
     try {
-      final outcome = await ref
+      final succeeded = await ref
           .read(forecastOutlookProvider.notifier)
           .lookup(
             date: formatIsoDate(date),
-            cityCode: city.code!,
-            cityName: city.regionName,
             latitude: city.latitude,
             longitude: city.longitude,
           );
-      if (outcome.succeeded) {
-        if (ApiConfig.outlookScreenshotFixtureEnabled && mounted) {
-          setState(() {
-            _fixtureRemaining = (_fixtureRemaining - 1).clamp(0, 99);
-          });
-        }
+      // Only a successful estimate consumes the daily count — failures retry
+      // for free.
+      if (succeeded) {
+        await _consumeQuota();
         WidgetsBinding.instance.addPostFrameCallback((_) {
           final resultContext = _resultKey.currentContext;
           if (!mounted || resultContext == null) {
@@ -143,19 +180,6 @@ class _OutlookScreenState extends ConsumerState<OutlookScreen> {
             alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtEnd,
           );
         });
-      } else if (mounted) {
-        final error = outcome.error;
-        final status = error is DioException
-            ? error.response?.statusCode
-            : null;
-        final message = switch (status) {
-          409 => AppStrings.forecastOutlookConflict,
-          429 => AppStrings.forecastOutlookRateLimited,
-          _ => AppStrings.forecastOutlookFailed,
-        };
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(message)));
       }
     } finally {
       if (mounted) {
@@ -169,28 +193,6 @@ class _OutlookScreenState extends ConsumerState<OutlookScreen> {
     final c = context.kisou;
     final textTheme = Theme.of(context).textTheme;
     final outlookState = ref.watch(forecastOutlookProvider);
-    final quotaState = ApiConfig.outlookScreenshotFixtureEnabled
-        ? AsyncData(OutlookQuota.screenshotFixture(formatIsoDate(jstToday())))
-        : ref.watch(outlookQuotaProvider);
-    final quota = ApiConfig.outlookScreenshotFixtureEnabled
-        ? OutlookQuota(
-            date: formatIsoDate(jstToday()),
-            freeLimit: _freeLookupsPerDay,
-            freeUsed: _freeLookupsPerDay - _fixtureRemaining,
-            freeRemaining: _fixtureRemaining,
-            rewardCredits: 0,
-            totalRemaining: _fixtureRemaining,
-            resetsAt: DateTime.utc(2100),
-            adsAvailable: false,
-          )
-        : quotaState.value;
-    final adsState = ApiConfig.outlookScreenshotFixtureEnabled
-        ? AdsState.initial(enabled: false)
-        : ref.watch(adsProvider);
-    final rewardState = ApiConfig.outlookScreenshotFixtureEnabled
-        ? const RewardFlowState.idle()
-        : ref.watch(adRewardProvider);
-    final remaining = quota?.totalRemaining;
 
     return Scaffold(
       backgroundColor: c.bg,
@@ -228,11 +230,8 @@ class _OutlookScreenState extends ConsumerState<OutlookScreen> {
                     const SizedBox(width: KisouTheme.gapXs),
                     Expanded(
                       child: Text(
-                        switch (remaining) {
-                          null =>
-                            quotaState.hasError
-                                ? AppStrings.forecastOutlookQuotaFailed
-                                : AppStrings.forecastOutlookQuotaLoading,
+                        switch (_remaining) {
+                          null => '',
                           0 => AppStrings.forecastOutlookQuotaEmpty,
                           final n => AppStrings.forecastOutlookQuota(n),
                         },
@@ -241,17 +240,21 @@ class _OutlookScreenState extends ConsumerState<OutlookScreen> {
                         ),
                       ),
                     ),
-                    if (quotaState.hasError &&
-                        !ApiConfig.outlookScreenshotFixtureEnabled)
-                      IconButton(
-                        tooltip: AppStrings.retry,
-                        onPressed: () {
-                          ref.read(outlookQuotaProvider.notifier).refresh();
-                        },
-                        icon: const Icon(Icons.refresh_rounded),
-                      ),
                   ],
                 ),
+                if (ApiConfig.developmentFeaturesEnabled) ...[
+                  const SizedBox(height: 2),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 21),
+                    child: Text(
+                      AppStrings.forecastOutlookAdNote,
+                      style: textTheme.bodySmall?.copyWith(
+                        color: c.softInk,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ),
+                ],
                 const SizedBox(height: KisouTheme.gapL),
                 LayoutBuilder(
                   builder: (context, constraints) {
@@ -292,37 +295,13 @@ class _OutlookScreenState extends ConsumerState<OutlookScreen> {
                   child: FilledButton(
                     onPressed:
                         _date == null ||
-                            (remaining ?? 0) <= 0 ||
+                            (_remaining ?? 0) <= 0 ||
                             _isLookupInFlight
                         ? null
                         : _lookup,
                     child: const Text(AppStrings.forecastOutlookSubmit),
                   ),
                 ),
-                if (quota != null &&
-                    quota.totalRemaining == 0 &&
-                    adsState.enabled &&
-                    (quota.adsAvailable ||
-                        rewardState.phase != RewardFlowPhase.idle)) ...[
-                  const SizedBox(height: KisouTheme.gapM),
-                  _RewardCreditAction(
-                    adsState: adsState,
-                    rewardState: rewardState,
-                    newChallengeAvailable: quota.adsAvailable,
-                    onPressed: () {
-                      ref.read(adRewardProvider.notifier).earnCredit();
-                    },
-                  ),
-                ] else if (rewardState.phase == RewardFlowPhase.credited) ...[
-                  const SizedBox(height: KisouTheme.gapM),
-                  Text(
-                    AppStrings.forecastOutlookRewardCredited,
-                    style: textTheme.bodySmall?.copyWith(
-                      color: c.success,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ],
               ],
             ),
           ),
@@ -336,108 +315,16 @@ class _OutlookScreenState extends ConsumerState<OutlookScreen> {
                 error: (_, _) => _OutlookErrorCard(
                   onRetry: _isLookupInFlight ? null : _lookup,
                 ),
-                data: (result) => _OutlookSurface(
+                data: (outlook) => _OutlookSurface(
                   child: _OutlookResult(
-                    outlook: result.outlook,
-                    cityName: result.cityName,
-                    onSaveTravelPlan: () => showTravelPlanEditor(
-                      context: context,
-                      ref: ref,
-                      initialDate: DateTime.parse(result.outlook.date),
-                      initialCityCode: result.cityCode,
-                    ),
+                    outlook: outlook,
+                    cityName: _lookedUpCity?.regionName ?? _city.regionName,
                   ),
                 ),
               ),
             },
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _RewardCreditAction extends StatelessWidget {
-  const _RewardCreditAction({
-    required this.adsState,
-    required this.rewardState,
-    required this.newChallengeAvailable,
-    required this.onPressed,
-  });
-
-  final AdsState adsState;
-  final RewardFlowState rewardState;
-  final bool newChallengeAvailable;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.kisou;
-    final phase = rewardState.phase;
-    final message = switch (phase) {
-      RewardFlowPhase.loadingAd => AppStrings.forecastOutlookRewardLoadingAd,
-      RewardFlowPhase.issuingChallenge =>
-        AppStrings.forecastOutlookRewardIssuing,
-      RewardFlowPhase.showingAd => AppStrings.forecastOutlookRewardShowing,
-      RewardFlowPhase.settling => AppStrings.forecastOutlookRewardSettling,
-      RewardFlowPhase.delayed => AppStrings.forecastOutlookRewardDelayed,
-      RewardFlowPhase.dismissed => AppStrings.forecastOutlookRewardDismissed,
-      RewardFlowPhase.failed => AppStrings.forecastOutlookRewardFailed,
-      RewardFlowPhase.credited => AppStrings.forecastOutlookRewardCredited,
-      RewardFlowPhase.idle =>
-        !adsState.mayLoadAds
-            ? AppStrings.forecastOutlookRewardUnavailable
-            : null,
-    };
-    final canStart =
-        newChallengeAvailable &&
-        adsState.mayLoadAds &&
-        rewardState.canRequestNewChallenge;
-    final buttonLabel = switch (phase) {
-      RewardFlowPhase.loadingAd => AppStrings.forecastOutlookRewardLoadingAd,
-      RewardFlowPhase.issuingChallenge =>
-        AppStrings.forecastOutlookRewardIssuing,
-      RewardFlowPhase.showingAd => AppStrings.forecastOutlookRewardShowing,
-      RewardFlowPhase.settling => AppStrings.forecastOutlookRewardSettling,
-      _ => AppStrings.forecastOutlookRewardAction,
-    };
-
-    return Semantics(
-      container: true,
-      liveRegion: phase != RewardFlowPhase.idle,
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(KisouTheme.gapM),
-        decoration: BoxDecoration(
-          color: c.surfaceAlt,
-          borderRadius: BorderRadius.circular(KisouTheme.rSm),
-          border: Border.all(color: c.hairline),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            FilledButton.tonalIcon(
-              onPressed: canStart ? onPressed : null,
-              icon: rewardState.isBusy
-                  ? const SizedBox.square(
-                      dimension: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.ondemand_video_outlined),
-              label: Text(buttonLabel, textAlign: TextAlign.center),
-            ),
-            if (message != null) ...[
-              const SizedBox(height: KisouTheme.gapS),
-              Text(
-                message,
-                textAlign: TextAlign.center,
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(color: c.softInk),
-              ),
-            ],
-          ],
-        ),
       ),
     );
   }
@@ -673,15 +560,10 @@ class _PickerField extends StatelessWidget {
 }
 
 class _OutlookResult extends StatelessWidget {
-  const _OutlookResult({
-    required this.outlook,
-    required this.cityName,
-    required this.onSaveTravelPlan,
-  });
+  const _OutlookResult({required this.outlook, required this.cityName});
 
   final ForecastOutlook outlook;
   final String cityName;
-  final VoidCallback onSaveTravelPlan;
 
   @override
   Widget build(BuildContext context) {
@@ -828,15 +710,6 @@ class _OutlookResult extends StatelessWidget {
         ),
         const SizedBox(height: KisouTheme.gapXs),
         const WeatherDataAttribution(),
-        const SizedBox(height: KisouTheme.gapM),
-        SizedBox(
-          width: double.infinity,
-          child: OutlinedButton.icon(
-            onPressed: onSaveTravelPlan,
-            icon: const Icon(Icons.luggage_outlined),
-            label: const Text(AppStrings.travelSaveFromOutlook),
-          ),
-        ),
       ],
     );
   }

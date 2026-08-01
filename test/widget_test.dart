@@ -14,13 +14,9 @@ import 'package:kisou_app/constants/app_strings.dart';
 import 'package:kisou_app/providers/api_provider.dart';
 import 'package:kisou_app/providers/auth_provider.dart';
 import 'package:kisou_app/providers/external_link_provider.dart';
-import 'package:kisou_app/providers/travel_plan_provider.dart';
 import 'package:kisou_app/providers/user_provider.dart';
-import 'package:kisou_app/repositories/travel_plan_repository.dart';
-import 'package:kisou_app/screens/analysis/analysis_screen.dart';
 import 'package:kisou_app/screens/onboarding/onboarding_screen.dart';
 import 'package:kisou_app/services/auth_service.dart';
-import 'package:kisou_app/services/travel_notification_service.dart';
 import 'package:kisou_app/services/user_service.dart';
 import 'package:kisou_app/utils/jp_date.dart';
 import 'package:kisou_app/widgets/feeling_headline.dart';
@@ -39,12 +35,6 @@ void main() {
         overrides: [
           authServiceProvider.overrideWithValue(
             _FakeAuthService(hasTokenValue: false),
-          ),
-          travelPlanRepositoryProvider.overrideWithValue(
-            MemoryTravelPlanRepository(),
-          ),
-          travelNotificationGatewayProvider.overrideWithValue(
-            MemoryTravelNotificationGateway(),
           ),
         ],
         child: const KisouApp(),
@@ -156,54 +146,6 @@ void main() {
     expect(find.text(AppStrings.analysisAverageNotice), findsOneWidget);
   });
 
-  testWidgets('menu comfort analysis opens the analysis screen and returns', (
-    WidgetTester tester,
-  ) async {
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          authServiceProvider.overrideWithValue(
-            _FakeAuthService(
-              hasTokenValue: true,
-              onboardingCompletedValue: true,
-            ),
-          ),
-          apiClientProvider.overrideWithValue(_createAppDio()),
-        ],
-        child: const KisouApp(),
-      ),
-    );
-    await pumpPastSplash(tester);
-
-    await tester.tap(find.text(AppStrings.tabProfile));
-    await tester.pumpAndSettle();
-    await Scrollable.ensureVisible(
-      tester.element(find.text(AppStrings.analysisTitle)),
-      alignment: 0.5,
-    );
-    await tester.pumpAndSettle();
-
-    expect(find.text(AppStrings.profileCategoryComfort), findsOneWidget);
-    expect(find.text(AppStrings.analysisEntryDescription), findsOneWidget);
-
-    await tester.tap(find.bySemanticsLabel(AppStrings.analysisTitle));
-    await tester.pumpAndSettle();
-
-    expect(find.byType(AnalysisScreen), findsOneWidget);
-    expect(find.text(AppStrings.analysisAverageNotice), findsOneWidget);
-
-    expect(find.byType(BackButton), findsOneWidget);
-    await tester.tap(find.byType(BackButton));
-    await tester.pumpAndSettle();
-
-    expect(find.byType(AnalysisScreen), findsNothing);
-    expect(find.text(AppStrings.analysisEntryDescription), findsOneWidget);
-    expect(
-      find.bySemanticsLabel(AppStrings.selectedTab(AppStrings.tabProfile)),
-      findsOneWidget,
-    );
-  });
-
   testWidgets('予報 탭: 내일 카드·피드백 유도·날짜 예상 입구가 보인다', (WidgetTester tester) async {
     await tester.pumpWidget(
       ProviderScope(
@@ -275,8 +217,7 @@ void main() {
     expect(find.text(AppStrings.feedbackEditingSaved), findsOneWidget);
   });
 
-  testWidgets('予報 탭: 기후 극값은 숨기고 평균 범위와 근거만 표시한다', (WidgetTester tester) async {
-    final semantics = tester.ensureSemantics();
+  testWidgets('予報 탭: 날짜를 골라 예상하면 예년 범위와 각주가 나온다', (WidgetTester tester) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -336,14 +277,6 @@ void main() {
     expect(find.text(AppStrings.openMeteoDataAttribution), findsOneWidget);
     expect(find.text(AppStrings.openMeteoLicense), findsOneWidget);
     expect(find.text(AppStrings.weatherDataModified), findsOneWidget);
-    for (final extreme in ['-91', '67', '-83', '79']) {
-      expect(find.textContaining(extreme), findsNothing);
-      expect(
-        find.bySemanticsLabel(RegExp(RegExp.escape(extreme))),
-        findsNothing,
-      );
-    }
-    semantics.dispose();
   });
 
   testWidgets('shows complete settings list from home', (
@@ -636,12 +569,6 @@ void main() {
           _FakeAuthService(hasTokenValue: true, onboardingCompletedValue: true),
         ),
         apiClientProvider.overrideWithValue(_createAppDio()),
-        travelPlanRepositoryProvider.overrideWithValue(
-          MemoryTravelPlanRepository(),
-        ),
-        travelNotificationGatewayProvider.overrideWithValue(
-          MemoryTravelNotificationGateway(),
-        ),
       ],
     );
     addTearDown(container.dispose);
@@ -671,12 +598,6 @@ void main() {
       overrides: [
         authServiceProvider.overrideWithValue(authService),
         apiClientProvider.overrideWithValue(_createAppDio()),
-        travelPlanRepositoryProvider.overrideWithValue(
-          MemoryTravelPlanRepository(),
-        ),
-        travelNotificationGatewayProvider.overrideWithValue(
-          MemoryTravelNotificationGateway(),
-        ),
       ],
     );
     addTearDown(container.dispose);
@@ -714,24 +635,12 @@ void main() {
       onboardingCompletedValue: false,
     );
     final userService = _DeleteTrackingUserService();
-    final container = ProviderContainer(
-      overrides: [
-        authServiceProvider.overrideWithValue(authService),
-        userServiceProvider.overrideWithValue(userService),
-        travelPlanRepositoryProvider.overrideWithValue(
-          MemoryTravelPlanRepository(),
-        ),
-        travelNotificationGatewayProvider.overrideWithValue(
-          MemoryTravelNotificationGateway(),
-        ),
-      ],
-    );
-    addTearDown(container.dispose);
-    await container.read(authProvider.future);
-
     await tester.pumpWidget(
-      UncontrolledProviderScope(
-        container: container,
+      ProviderScope(
+        overrides: [
+          authServiceProvider.overrideWithValue(authService),
+          userServiceProvider.overrideWithValue(userService),
+        ],
         child: const MaterialApp(home: OnboardingScreen()),
       ),
     );
@@ -1123,13 +1032,6 @@ void _resolveAppRequest(
           },
         ),
       );
-    case '/forecast/outlook/quota':
-      handler.resolve(
-        Response<Map<String, dynamic>>(
-          requestOptions: options,
-          data: _outlookQuota(remaining: 3),
-        ),
-      );
     case '/forecast/outlook':
       final requestData = options.data as Map<String, dynamic>;
       handler.resolve(
@@ -1152,35 +1054,20 @@ void _resolveAppRequest(
             'weather': null,
             'climate': {
               'temp_low_avg': 15.2,
-              'temp_low_min': -91.0,
-              'temp_low_max': 67.0,
+              'temp_low_min': 9.2,
+              'temp_low_max': 20.7,
               'temp_high_avg': 24.2,
-              'temp_high_min': -83.0,
-              'temp_high_max': 79.0,
+              'temp_high_min': 17.8,
+              'temp_high_max': 27.9,
               'years_used': 5,
               'sample_days': 35,
             },
-            'quota_consumed': 'free',
-            'quota': _outlookQuota(remaining: 2),
           },
         ),
       );
     default:
       handler.reject(DioException(requestOptions: options));
   }
-}
-
-Map<String, dynamic> _outlookQuota({required int remaining}) {
-  return {
-    'date': '2026-07-31',
-    'free_limit': 3,
-    'free_used': 3 - remaining,
-    'free_remaining': remaining,
-    'reward_credits': 0,
-    'total_remaining': remaining,
-    'resets_at': '2026-07-31T15:00:00Z',
-    'ads_available': remaining == 0,
-  };
 }
 
 Dio _createHomeErrorDio(DioExceptionType type) {
@@ -1300,27 +1187,9 @@ class _FakeAuthService extends AuthService {
   final bool onboardingCompletedValue;
   final bool failLocalCleanup;
   bool didClearLocalAccountData = false;
-  LocalCleanupTransition? localCleanupTransition;
 
   @override
   Future<void> clearKeychainOnFirstLaunch() async {}
-
-  @override
-  Future<LocalCleanupTransition?> readLocalCleanupTransition() async {
-    return localCleanupTransition;
-  }
-
-  @override
-  Future<void> markLocalCleanupTransition(
-    LocalCleanupTransition transition,
-  ) async {
-    localCleanupTransition = transition;
-  }
-
-  @override
-  Future<void> clearLocalCleanupTransition() async {
-    localCleanupTransition = null;
-  }
 
   @override
   Future<bool> hasToken() async {

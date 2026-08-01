@@ -92,38 +92,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
-    final cleanupScope = authState.value?.localCleanupScope;
-    final cleanupRequired = cleanupScope != null;
+    final cleanupRequired = authState.value?.localCleanupRequired ?? false;
     final isLoading = authState.isLoading || _cleanupRetrying;
     final kind = authState.value?.startupErrorKind;
     final c = context.kisou;
-    final (title, body, icon) = switch ((cleanupScope, kind)) {
-      (LocalCleanupScope.logout, _) => (
-        AppStrings.logoutLocalCleanupTitle,
-        AppStrings.logoutLocalCleanupFailed,
-        Icons.phonelink_erase_rounded,
-      ),
-      (LocalCleanupScope.accountSwitch, _) => (
-        AppStrings.accountSwitchLocalCleanupTitle,
-        AppStrings.accountSwitchLocalCleanupFailed,
-        Icons.phonelink_erase_rounded,
-      ),
-      (LocalCleanupScope.accountDeletionRequest, _) => (
-        AppStrings.accountDeleteRequestRecoveryTitle,
-        AppStrings.accountDeleteRequestRecoveryFailed,
-        Icons.person_remove_alt_1_outlined,
-      ),
-      (LocalCleanupScope.accountDeletion, _) => (
+    final (title, body, icon) = switch ((cleanupRequired, kind)) {
+      (true, _) => (
         AppStrings.accountDeleteLocalCleanupTitle,
         AppStrings.accountDeleteLocalCleanupFailed,
         Icons.phonelink_erase_rounded,
       ),
-      (null, ApiErrorKind.offline) => (
+      (false, ApiErrorKind.offline) => (
         AppStrings.offlineError,
         AppStrings.startupOfflineBody,
         Icons.wifi_off_rounded,
       ),
-      (null, ApiErrorKind.timeout) => (
+      (false, ApiErrorKind.timeout) => (
         AppStrings.timeoutError,
         AppStrings.startupTimeoutBody,
         Icons.cloud_off_rounded,
@@ -206,25 +190,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                               )
                             : Text(
                                 cleanupRequired
-                                    ? switch (cleanupScope) {
-                                        LocalCleanupScope.logout =>
-                                          AppStrings.logoutLocalCleanupRetry,
-                                        LocalCleanupScope.accountSwitch =>
-                                          AppStrings
-                                              .accountSwitchLocalCleanupRetry,
-                                        LocalCleanupScope
-                                            .accountDeletionRequest =>
-                                          AppStrings
-                                              .accountDeleteRequestRecoveryRetry,
-                                        _ =>
-                                          AppStrings
-                                              .accountDeleteLocalCleanupRetry,
-                                      }
+                                    ? AppStrings.accountDeleteLocalCleanupRetry
                                     : AppStrings.retry,
                               ),
                       ),
-                      if (!cleanupRequired &&
-                          ApiConfig.showDevelopmentLogin) ...[
+                      if (ApiConfig.showDevelopmentLogin) ...[
                         const SizedBox(height: KisouTheme.gapL),
                         ExpansionTile(
                           tilePadding: EdgeInsets.zero,

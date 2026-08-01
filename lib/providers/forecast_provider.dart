@@ -1,14 +1,14 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:dio/dio.dart';
-import 'package:uuid/uuid.dart';
 
 import '../config/api_config.dart';
 import '../debug/outlook_screenshot_fixture.dart';
 import '../models/forecast.dart';
-import 'forecast_service_provider.dart';
-import 'outlook_quota_provider.dart';
+import '../services/forecast_service.dart';
+import 'api_provider.dart';
 
-export 'forecast_service_provider.dart' show forecastServiceProvider;
+final forecastServiceProvider = Provider<ForecastService>((ref) {
+  return ForecastService(ref.watch(apiClientProvider));
+});
 
 /// Tomorrow's recommendation for the 予報 tab. Loads on first watch, like the
 /// home provider.
@@ -42,124 +42,35 @@ class ForecastTomorrowController extends AsyncNotifier<ForecastTomorrow> {
 /// user-triggered: null until the first lookup, then holds the latest result
 /// (or its loading/error state) so the card survives tab switches.
 final forecastOutlookProvider =
-    NotifierProvider<
-      ForecastOutlookController,
-      AsyncValue<ForecastOutlookResult>?
-    >(ForecastOutlookController.new);
+    NotifierProvider<ForecastOutlookController, AsyncValue<ForecastOutlook>?>(
+      ForecastOutlookController.new,
+    );
 
-class ForecastOutlookResult {
-  const ForecastOutlookResult({
-    required this.outlook,
-    required this.cityCode,
-    required this.cityName,
-  });
-
-  final ForecastOutlook outlook;
-  final String cityCode;
-  final String cityName;
-}
-
-class OutlookLookupOutcome {
-  const OutlookLookupOutcome._({required this.succeeded, this.error});
-
-  const OutlookLookupOutcome.success() : this._(succeeded: true);
-
-  const OutlookLookupOutcome.failure(Object error)
-    : this._(succeeded: false, error: error);
-
-  final bool succeeded;
-  final Object? error;
-}
-
-final outlookIdempotencyKeyFactoryProvider = Provider<String Function()>((ref) {
-  const uuid = Uuid();
-  return uuid.v4;
-});
-
-class ForecastOutlookController
-    extends Notifier<AsyncValue<ForecastOutlookResult>?> {
-  String? _pendingRequestSignature;
-  String? _pendingIdempotencyKey;
-
+class ForecastOutlookController extends Notifier<AsyncValue<ForecastOutlook>?> {
   @override
-  AsyncValue<ForecastOutlookResult>? build() => null;
+  AsyncValue<ForecastOutlook>? build() => null;
 
-  /// Runs a lookup with one UUID per semantic request. Network/timeout retries
-  /// reuse that UUID, while a changed input or a success starts a new operation.
-  Future<OutlookLookupOutcome> lookup({
+  /// Runs a lookup; returns whether it succeeded (quota is only consumed on
+  /// success — a network failure must not eat the user's daily count).
+  Future<bool> lookup({
     required String date,
-    required String cityCode,
-    required String cityName,
     required double latitude,
     required double longitude,
   }) async {
+    state = const AsyncLoading<ForecastOutlook>();
     if (ApiConfig.outlookScreenshotFixtureEnabled) {
-      state = AsyncData(
-        ForecastOutlookResult(
-          outlook: buildOutlookScreenshotFixture(date: date),
-          cityCode: cityCode,
-          cityName: cityName,
-        ),
-      );
-      return const OutlookLookupOutcome.success();
+      state = AsyncData(buildOutlookScreenshotFixture(date: date));
+      return true;
     }
-
-    final signature = '$date|${latitude.toString()}|${longitude.toString()}';
-    if (_pendingRequestSignature != signature ||
-        _pendingIdempotencyKey == null) {
-      _pendingRequestSignature = signature;
-      _pendingIdempotencyKey = ref.read(outlookIdempotencyKeyFactoryProvider)();
-    }
-    final idempotencyKey = _pendingIdempotencyKey!;
-    final previous = state;
-    if (previous?.value == null) {
-      state = const AsyncLoading<ForecastOutlookResult>();
-    }
-    try {
-      final response = await ref
+    state = await AsyncValue.guard(() {
+      return ref
           .read(forecastServiceProvider)
-          .getOutlook(
-            date: date,
-            latitude: latitude,
-            longitude: longitude,
-            idempotencyKey: idempotencyKey,
-          );
-      state = AsyncData(
-        ForecastOutlookResult(
-          outlook: response.outlook,
-          cityCode: cityCode,
-          cityName: cityName,
-        ),
-      );
-      ref.read(outlookQuotaProvider.notifier).applyServerQuota(response.quota);
-      _pendingRequestSignature = null;
-      _pendingIdempotencyKey = null;
-      return const OutlookLookupOutcome.success();
-    } catch (error, stackTrace) {
-      if (error is DioException &&
-          (error.response?.statusCode == 409 ||
-              error.response?.statusCode == 429)) {
-        await ref.read(outlookQuotaProvider.notifier).refresh();
-        if (error.response?.statusCode == 409) {
-          resetPendingOperation();
-        }
-      }
-      if (previous?.value case final value?) {
-        state = AsyncData(value);
-      } else {
-        state = AsyncError(error, stackTrace);
-      }
-      return OutlookLookupOutcome.failure(error);
-    }
+          .getOutlook(date: date, latitude: latitude, longitude: longitude);
+    });
+    return state?.hasError == false;
   }
 
   void clear() {
     state = null;
-    resetPendingOperation();
-  }
-
-  void resetPendingOperation() {
-    _pendingRequestSignature = null;
-    _pendingIdempotencyKey = null;
   }
 }

@@ -12,10 +12,6 @@ void main() {
   ).readAsStringSync();
   final workflow = File('.github/workflows/ci.yml').readAsStringSync();
   final gitignore = File('.gitignore').readAsStringSync();
-  final adConfig = File('lib/config/ad_config.dart').readAsStringSync();
-  final forecastScreen = File(
-    'lib/screens/forecast/forecast_screen.dart',
-  ).readAsStringSync();
   final rootShell = File('lib/screens/root_shell.dart').readAsStringSync();
   final outlookScreen = File(
     'lib/screens/forecast/outlook_screen.dart',
@@ -69,13 +65,16 @@ void main() {
     expect(verifyScript, contains('unsigned entries'));
   });
 
-  test('advertising is opt-in and uses the completed runtime surfaces', () {
-    expect(adConfig, contains("'ADS_ENABLED'"));
-    expect(adConfig, contains('defaultValue: false'));
-    expect(adConfig, contains('!ApiConfig.outlookScreenshotFixtureEnabled'));
-    expect(forecastScreen, contains('ForecastInlineBanner()'));
-    expect(outlookScreen, contains('ref.watch(adRewardProvider)'));
-    expect(rootShell, isNot(contains('AdSlot')));
+  test('unfinished advertising UI is gated out of production', () {
+    expect(
+      rootShell,
+      contains('if (ApiConfig.developmentFeaturesEnabled) const AdSlot()'),
+    );
+    expect(
+      outlookScreen,
+      contains('if (ApiConfig.developmentFeaturesEnabled)'),
+    );
+    expect(outlookScreen, contains('AppStrings.forecastOutlookAdNote'));
   });
 
   test('owner signing material is excluded from version control', () {

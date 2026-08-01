@@ -9,11 +9,9 @@ import 'config/api_config.dart';
 import 'config/theme.dart';
 import 'constants/app_strings.dart';
 import 'providers/api_provider.dart';
-import 'providers/ads_provider.dart';
 import 'providers/auth_provider.dart';
 import 'providers/home_provider.dart';
 import 'providers/theme_provider.dart';
-import 'providers/travel_plan_provider.dart';
 import 'screens/onboarding/login_screen.dart';
 import 'screens/onboarding/onboarding_screen.dart';
 import 'screens/root_shell.dart';
@@ -27,30 +25,6 @@ class KisouApp extends ConsumerStatefulWidget {
 }
 
 class _KisouAppState extends ConsumerState<KisouApp> {
-  @override
-  void initState() {
-    super.initState();
-    Future.microtask(() async {
-      await ref.read(adsProvider.notifier).start();
-    });
-    Future.microtask(() async {
-      try {
-        await ref
-            .read(travelNotificationGatewayProvider)
-            .initialize(
-              onTap: (planId) {
-                ref
-                    .read(travelNotificationNavigationProvider.notifier)
-                    .queue(planId);
-              },
-            );
-      } catch (_) {
-        // Notification initialization is retried by travel-plan
-        // reconciliation and must not block app startup.
-      }
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     final themeMode = ref.watch(themeModeProvider);
