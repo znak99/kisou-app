@@ -12,6 +12,12 @@
 .swiftpm/
 migrate_working_dir/
 
+# Local environment files
+.env
+.env.*
+!.env.example
+!.env.*.example
+
 # IntelliJ related
 *.iml
 *.ipr
@@ -49,6 +55,13 @@ app.*.map.json
 *.p12
 *.pfx
 *.pkcs12
+*.mobileprovision
+*.provisionprofile
+*.cer
+
+# Firebase is configured through validated build defines in this project.
+/android/app/google-services.json
+/ios/Runner/GoogleService-Info.plist
 
 # 개인용 환경 override (예: LAN IP는 네트워크마다 달라짐)
 # config/dev.json 을 복사해 만들고 --dart-define-from-file=config/dev.local.json 로 사용
