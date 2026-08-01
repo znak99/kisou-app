@@ -112,28 +112,6 @@ labels. Never display an unvalidated API code or arbitrary server string.
   clearing tokens, onboarding, or invoking the global unauthorized callback;
   the outer cleanup gate owns credential removal after platform cleanup.
 - Store access/refresh tokens and `device_secret` only in `flutter_secure_storage`
-- Keep the plaintext external account-deletion code out of user/auth models,
-  Riverpod state, logs, and `SharedPreferences`. Store it through the dedicated
-  deletion-credential repository with its support ID and server version; use a
-  non-synchronizing, device-bound iOS Keychain accessibility class
-- A sensitive clipboard helper may retain only a one-way fingerprint for
-  conditional cleanup, never the code itself. Serialize clipboard writes so an
-  older cleanup cannot overwrite a newer copy. After every asynchronous secure
-  read or clipboard write, re-check that the screen is mounted, resumed, and
-  still owns the current operation before displaying or retaining the value
-- Do not turn an ambiguous Keychain/Keystore `PlatformException` into silent
-  credential loss. Preserve the local entry, offer retry first, and require an
-  explicit destructive confirmation before discarding it for code replacement
-- Never issue or rotate a deletion code as a side effect of a GET, app launch,
-  or screen entry. Require an explicit user confirmation, and invalidate the
-  prior local backup acknowledgement and all in-flight plaintext reads whenever
-  the version changes. A stale read may return no value, but must not delete the
-  newer stored credential
-- Preserve the deletion credential when an anonymous account is linked because
-  its server user ID is unchanged. Remove it before a full logout so a later
-  account on the same device cannot inherit the prior account's local code.
-  After a session-expired login succeeds, remove the prior local credential
-  before exposing the newly selected account
 - After account deletion, clear all secure-storage credentials and local
   preferences immediately. Route onboarding and profile through one deletion
   coordinator, keep local-cleanup failure visible after the auth screen
@@ -160,17 +138,16 @@ labels. Never display an unvalidated API code or arbitrary server string.
   marker to account switch. Restore an anonymous session only with the existing
   `device_secret`, without the normal create-new-guest fallback, and always
   reuse the same UUID. If the exact account cannot be restored, preserve local
-  data and link the recovery UI to the public deletion page for users who saved
-  their support ID and deletion code.
+  data and keep the recovery UI limited to receipt-status retry and an explicit
+  local-only abandonment path.
 - Offer local-only abandonment only when the exact session cannot be restored
   and the latest receipt lookup is a definitive 404—not on timeout, offline,
   429, 5xx, or malformed data. Warn that server deletion is unconfirmed, server
-  data may remain, the public Web flow should be used first when saved
-  credentials exist, and local erasure is irreversible. Confirmation must send
+  data may remain and local erasure is irreversible. Confirmation must send
   no DELETE and claim no server success: atomically replace the deletion marker
   with a dedicated `unconfirmedAccountDiscard` marker, erase every local
   identity credential (including `device_secret`), account preference, travel
-  plan/notification, deletion code, reward operation, and theme, and clear the
+  plan/notification, reward operation, and theme, and clear the
   marker last. Do not reuse logout/account-switch cleanup because those preserve
   same-guest restoration. A marker-write failure preserves the deletion UUID
   and local data; later cleanup failure resumes from the dedicated marker after

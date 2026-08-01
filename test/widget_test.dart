@@ -13,7 +13,6 @@ import 'package:kisou_app/config/app_links.dart';
 import 'package:kisou_app/config/theme.dart';
 import 'package:kisou_app/constants/app_strings.dart';
 import 'package:kisou_app/models/account_deletion_status.dart';
-import 'package:kisou_app/providers/account_deletion_credential_provider.dart';
 import 'package:kisou_app/providers/api_provider.dart';
 import 'package:kisou_app/providers/auth_provider.dart';
 import 'package:kisou_app/providers/external_link_provider.dart';
@@ -23,7 +22,6 @@ import 'package:kisou_app/repositories/travel_plan_repository.dart';
 import 'package:kisou_app/screens/analysis/analysis_screen.dart';
 import 'package:kisou_app/screens/onboarding/onboarding_screen.dart';
 import 'package:kisou_app/services/auth_service.dart';
-import 'package:kisou_app/services/account_deletion_credential_store.dart';
 import 'package:kisou_app/services/travel_notification_service.dart';
 import 'package:kisou_app/services/user_service.dart';
 import 'package:kisou_app/utils/jp_date.dart';
@@ -52,9 +50,6 @@ void main() {
         overrides: [
           authServiceProvider.overrideWithValue(
             _FakeAuthService(hasTokenValue: false),
-          ),
-          accountDeletionCredentialStoreProvider.overrideWithValue(
-            _NoopDeletionCredentialStore(),
           ),
           travelPlanRepositoryProvider.overrideWithValue(
             MemoryTravelPlanRepository(),
@@ -411,10 +406,8 @@ void main() {
         matching: find.byType(Scrollable),
       ),
     );
-    // 게스트 계정은 세션 복구형 로그아웃을 노출하지 않지만 외부 삭제용
-    // 자격정보에는 접근할 수 있다.
+    // 게스트 계정은 세션 복구형 로그아웃을 노출하지 않는다.
     expect(find.text(AppStrings.logout), findsNothing);
-    expect(find.text(AppStrings.accountDeletionCredentials), findsOneWidget);
     expect(find.text(AppStrings.accountDelete), findsOneWidget);
     expect(find.text(AppStrings.profileCategorySupport), findsOneWidget);
     expect(find.text(AppStrings.aboutKisou), findsOneWidget);
@@ -654,9 +647,6 @@ void main() {
           _FakeAuthService(hasTokenValue: true, onboardingCompletedValue: true),
         ),
         apiClientProvider.overrideWithValue(_createAppDio()),
-        accountDeletionCredentialStoreProvider.overrideWithValue(
-          _NoopDeletionCredentialStore(),
-        ),
         travelPlanRepositoryProvider.overrideWithValue(
           MemoryTravelPlanRepository(),
         ),
@@ -692,9 +682,6 @@ void main() {
       overrides: [
         authServiceProvider.overrideWithValue(authService),
         apiClientProvider.overrideWithValue(_createAppDio()),
-        accountDeletionCredentialStoreProvider.overrideWithValue(
-          _NoopDeletionCredentialStore(),
-        ),
         travelPlanRepositoryProvider.overrideWithValue(
           MemoryTravelPlanRepository(),
         ),
@@ -742,9 +729,6 @@ void main() {
       overrides: [
         authServiceProvider.overrideWithValue(authService),
         userServiceProvider.overrideWithValue(userService),
-        accountDeletionCredentialStoreProvider.overrideWithValue(
-          _NoopDeletionCredentialStore(),
-        ),
         travelPlanRepositoryProvider.overrideWithValue(
           MemoryTravelPlanRepository(),
         ),
@@ -1432,9 +1416,4 @@ class _DeleteTrackingUserService extends UserService {
           )
         : null;
   }
-}
-
-class _NoopDeletionCredentialStore extends AccountDeletionCredentialStore {
-  @override
-  Future<void> delete() async {}
 }

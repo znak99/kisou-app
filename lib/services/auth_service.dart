@@ -6,7 +6,6 @@ import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
 import '../config/api_config.dart';
 import '../models/auth.dart';
-import 'account_deletion_credential_store.dart';
 import 'ad_reward_operation_store.dart';
 import 'push_local_metadata.dart';
 
@@ -81,7 +80,6 @@ class AuthService {
       _deviceSecretKey,
       _localCleanupTransitionKey,
       AdRewardOperationStore.storageKey,
-      AccountDeletionCredentialStore.storageKey,
     ]) {
       await _storage.delete(key: key);
     }

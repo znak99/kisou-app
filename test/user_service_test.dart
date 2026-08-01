@@ -30,7 +30,7 @@ void main() {
     expect(captured.extra['preserveAccountDeletionRecovery'], isTrue);
   });
 
-  test('parses a completed public deletion receipt', () async {
+  test('parses a completed unauthenticated deletion receipt', () async {
     final dio = Dio();
     dio.interceptors.add(
       InterceptorsWrapper(

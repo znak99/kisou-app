@@ -6,11 +6,6 @@ class AppLinks {
     '/privacy/',
   );
 
-  static final accountDeletion = Uri.https(
-    'kisou-pages.znak-llm.chatgpt.site',
-    '/account-deletion/',
-  );
-
   static final openMeteoTerms = Uri.https('open-meteo.com', '/en/terms');
 
   static final openMeteo = Uri.https('open-meteo.com', '/');

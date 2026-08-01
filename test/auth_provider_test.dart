@@ -9,7 +9,6 @@ import 'package:kisou_app/constants/clothing_tags.dart';
 import 'package:kisou_app/config/push_config.dart';
 import 'package:kisou_app/models/widget_recommendation.dart';
 import 'package:kisou_app/models/push_notification.dart';
-import 'package:kisou_app/providers/account_deletion_credential_provider.dart';
 import 'package:kisou_app/providers/ad_reward_provider.dart';
 import 'package:kisou_app/providers/ads_provider.dart';
 import 'package:kisou_app/providers/api_provider.dart';
@@ -27,7 +26,6 @@ import 'package:kisou_app/models/outlook_quota.dart';
 import 'package:kisou_app/repositories/travel_plan_repository.dart';
 import 'package:kisou_app/screens/onboarding/login_screen.dart';
 import 'package:kisou_app/services/auth_service.dart';
-import 'package:kisou_app/services/account_deletion_credential_store.dart';
 import 'package:kisou_app/services/travel_notification_service.dart';
 import 'package:kisou_app/services/user_service.dart';
 import 'package:kisou_app/services/widget_recommendation_coordinator.dart';
@@ -47,12 +45,10 @@ void main() {
 
   test('login with new user routes to onboarding state', () async {
     final authService = _LoginFakeAuthService(isNewUser: true);
-    final deletionStore = _TrackingDeletionStore();
     final container = ProviderContainer(
       overrides: [
         authServiceProvider.overrideWithValue(authService),
         apiClientProvider.overrideWithValue(Dio()),
-        accountDeletionCredentialStoreProvider.overrideWithValue(deletionStore),
         travelPlanRepositoryProvider.overrideWithValue(
           MemoryTravelPlanRepository(),
         ),
@@ -70,17 +66,14 @@ void main() {
     expect(state.isAuthenticated, isTrue);
     expect(state.isNewUser, isTrue);
     expect(authService.onboardingCompletedValue, isFalse);
-    expect(deletionStore.deleted, isTrue);
   });
 
   test('login with existing user routes to home state', () async {
     final authService = _LoginFakeAuthService(isNewUser: false);
-    final deletionStore = _TrackingDeletionStore();
     final container = ProviderContainer(
       overrides: [
         authServiceProvider.overrideWithValue(authService),
         apiClientProvider.overrideWithValue(Dio()),
-        accountDeletionCredentialStoreProvider.overrideWithValue(deletionStore),
         travelPlanRepositoryProvider.overrideWithValue(
           MemoryTravelPlanRepository(),
         ),
@@ -101,7 +94,6 @@ void main() {
     expect(state.isAuthenticated, isTrue);
     expect(state.isNewUser, isFalse);
     expect(authService.onboardingCompletedValue, isTrue);
-    expect(deletionStore.deleted, isTrue);
   });
 
   test('login finalization failure revokes the new local session', () async {
@@ -113,9 +105,6 @@ void main() {
       overrides: [
         authServiceProvider.overrideWithValue(authService),
         apiClientProvider.overrideWithValue(Dio()),
-        accountDeletionCredentialStoreProvider.overrideWithValue(
-          _TrackingDeletionStore(),
-        ),
         travelPlanRepositoryProvider.overrideWithValue(
           MemoryTravelPlanRepository(),
         ),
@@ -146,9 +135,6 @@ void main() {
       overrides: [
         authServiceProvider.overrideWithValue(authService),
         apiClientProvider.overrideWithValue(Dio()),
-        accountDeletionCredentialStoreProvider.overrideWithValue(
-          _TrackingDeletionStore(),
-        ),
         travelPlanRepositoryProvider.overrideWithValue(
           MemoryTravelPlanRepository(),
         ),
@@ -170,12 +156,10 @@ void main() {
 
   test('switching accounts resets the selected shell tab', () async {
     final authService = _LoginFakeAuthService(isNewUser: false);
-    final deletionStore = _TrackingDeletionStore();
     final container = ProviderContainer(
       overrides: [
         authServiceProvider.overrideWithValue(authService),
         apiClientProvider.overrideWithValue(Dio()),
-        accountDeletionCredentialStoreProvider.overrideWithValue(deletionStore),
         travelPlanRepositoryProvider.overrideWithValue(
           MemoryTravelPlanRepository(),
         ),
@@ -195,17 +179,14 @@ void main() {
         .loginWithDevelopmentExistingUser();
 
     expect(container.read(shellTabProvider), ShellTab.home);
-    expect(deletionStore.deleted, isTrue);
   });
 
-  test('full logout clears the account-bound deletion credential', () async {
+  test('full logout clears account-bound local data', () async {
     final authService = _LoginFakeAuthService(isNewUser: false);
-    final deletionStore = _TrackingDeletionStore();
     final container = ProviderContainer(
       overrides: [
         authServiceProvider.overrideWithValue(authService),
         apiClientProvider.overrideWithValue(Dio()),
-        accountDeletionCredentialStoreProvider.overrideWithValue(deletionStore),
         travelPlanRepositoryProvider.overrideWithValue(
           MemoryTravelPlanRepository(),
         ),
@@ -222,7 +203,6 @@ void main() {
         .loginWithDevelopmentExistingUser();
     await container.read(authProvider.notifier).logout();
 
-    expect(deletionStore.deleted, isTrue);
     expect(authService.didClearPendingAdRewardOperation, isTrue);
     expect(container.read(authProvider).requireValue.isAuthenticated, isFalse);
   });
@@ -245,9 +225,6 @@ void main() {
           apiClientProvider.overrideWithValue(Dio()),
           widgetRecommendationCoordinatorProvider.overrideWithValue(
             widgetCoordinator,
-          ),
-          accountDeletionCredentialStoreProvider.overrideWithValue(
-            _TrackingDeletionStore(),
           ),
           travelPlanRepositoryProvider.overrideWithValue(
             MemoryTravelPlanRepository(),
@@ -298,9 +275,6 @@ void main() {
           widgetRecommendationCoordinatorProvider.overrideWithValue(
             widgetCoordinator,
           ),
-          accountDeletionCredentialStoreProvider.overrideWithValue(
-            _TrackingDeletionStore(),
-          ),
           travelPlanRepositoryProvider.overrideWithValue(
             MemoryTravelPlanRepository(),
           ),
@@ -347,9 +321,6 @@ void main() {
               gateway: widgetGateway,
             ),
           ),
-          accountDeletionCredentialStoreProvider.overrideWithValue(
-            _TrackingDeletionStore(),
-          ),
           travelPlanRepositoryProvider.overrideWithValue(
             MemoryTravelPlanRepository(),
           ),
@@ -385,9 +356,6 @@ void main() {
         overrides: [
           authServiceProvider.overrideWithValue(authService),
           apiClientProvider.overrideWithValue(Dio()),
-          accountDeletionCredentialStoreProvider.overrideWithValue(
-            _TrackingDeletionStore(),
-          ),
           travelPlanRepositoryProvider.overrideWithValue(
             MemoryTravelPlanRepository(),
           ),
@@ -432,9 +400,6 @@ void main() {
         overrides: [
           authServiceProvider.overrideWithValue(authService),
           apiClientProvider.overrideWithValue(Dio()),
-          accountDeletionCredentialStoreProvider.overrideWithValue(
-            _TrackingDeletionStore(),
-          ),
           travelPlanRepositoryProvider.overrideWithValue(
             MemoryTravelPlanRepository(),
           ),
@@ -494,9 +459,6 @@ void main() {
         overrides: [
           authServiceProvider.overrideWithValue(authService),
           apiClientProvider.overrideWithValue(Dio()),
-          accountDeletionCredentialStoreProvider.overrideWithValue(
-            _TrackingDeletionStore(),
-          ),
           travelPlanRepositoryProvider.overrideWithValue(
             MemoryTravelPlanRepository(),
           ),
@@ -547,9 +509,6 @@ void main() {
         overrides: [
           authServiceProvider.overrideWithValue(authService),
           apiClientProvider.overrideWithValue(Dio()),
-          accountDeletionCredentialStoreProvider.overrideWithValue(
-            _TrackingDeletionStore(),
-          ),
           travelPlanRepositoryProvider.overrideWithValue(
             MemoryTravelPlanRepository(),
           ),
@@ -601,14 +560,12 @@ void main() {
       ..hasTokenValue = true
       ..onboardingCompletedValue = true
       ..localCleanupTransition = LocalCleanupTransition.accountSwitch;
-    final deletionStore = _FlakyDeletionStore()..failDelete = true;
     final messaging = MemoryPushMessagingGateway();
-    final pushManager = _BoundaryPushAccountManager();
+    final pushManager = _BoundaryPushAccountManager(failClose: true);
     final container = ProviderContainer(
       overrides: [
         authServiceProvider.overrideWithValue(authService),
         apiClientProvider.overrideWithValue(Dio()),
-        accountDeletionCredentialStoreProvider.overrideWithValue(deletionStore),
         travelPlanRepositoryProvider.overrideWithValue(
           MemoryTravelPlanRepository(),
         ),
@@ -630,8 +587,6 @@ void main() {
     expect(authService.hasTokenValue, isTrue);
     expect(authService.onboardingCompletedValue, isTrue);
 
-    deletionStore.failDelete = false;
-    pushManager.failClose = true;
     expect(
       await container.read(authProvider.notifier).retryLocalAccountCleanup(),
       isFalse,
@@ -665,9 +620,6 @@ void main() {
       overrides: [
         authServiceProvider.overrideWithValue(authService),
         apiClientProvider.overrideWithValue(Dio()),
-        accountDeletionCredentialStoreProvider.overrideWithValue(
-          _TrackingDeletionStore(),
-        ),
         travelPlanRepositoryProvider.overrideWithValue(
           MemoryTravelPlanRepository(),
         ),
@@ -719,9 +671,6 @@ void main() {
         overrides: [
           authServiceProvider.overrideWithValue(authService),
           apiClientProvider.overrideWithValue(Dio()),
-          accountDeletionCredentialStoreProvider.overrideWithValue(
-            _TrackingDeletionStore(),
-          ),
           travelPlanRepositoryProvider.overrideWithValue(
             MemoryTravelPlanRepository(),
           ),
@@ -772,9 +721,6 @@ void main() {
         overrides: [
           authServiceProvider.overrideWithValue(authService),
           apiClientProvider.overrideWithValue(Dio()),
-          accountDeletionCredentialStoreProvider.overrideWithValue(
-            _TrackingDeletionStore(),
-          ),
           travelPlanRepositoryProvider.overrideWithValue(repository),
           travelNotificationGatewayProvider.overrideWithValue(
             MemoryTravelNotificationGateway(),
@@ -813,16 +759,12 @@ void main() {
       final authService = _LoginFakeAuthService(isNewUser: false);
       final repository = MemoryTravelPlanRepository();
       final notifications = _FailingCancellationGateway();
-      final deletionStore = _TrackingDeletionStore();
       final container = ProviderContainer(
         overrides: [
           authServiceProvider.overrideWithValue(authService),
           apiClientProvider.overrideWithValue(Dio()),
           widgetSnapshotGatewayProvider.overrideWithValue(
             _AuthBoundaryWidgetGateway(<String>[]),
-          ),
-          accountDeletionCredentialStoreProvider.overrideWithValue(
-            deletionStore,
           ),
           travelPlanRepositoryProvider.overrideWithValue(repository),
           travelNotificationGatewayProvider.overrideWithValue(notifications),
@@ -861,7 +803,6 @@ void main() {
       expect(authService.onboardingCompletedValue, isTrue);
       expect(authService.didClearTokens, isFalse);
       expect(authService.didClearOnboarding, isFalse);
-      expect(deletionStore.deleted, isTrue);
       expect(await repository.listVisible(), hasLength(1));
       expect(authService.localCleanupTransition, LocalCleanupTransition.logout);
 
@@ -898,48 +839,6 @@ void main() {
     },
   );
 
-  test('logout retries a failed deletion-credential cleanup', () async {
-    final authService = _LoginFakeAuthService(isNewUser: false);
-    final deletionStore = _FlakyDeletionStore();
-    final container = ProviderContainer(
-      overrides: [
-        authServiceProvider.overrideWithValue(authService),
-        apiClientProvider.overrideWithValue(Dio()),
-        accountDeletionCredentialStoreProvider.overrideWithValue(deletionStore),
-        travelPlanRepositoryProvider.overrideWithValue(
-          MemoryTravelPlanRepository(),
-        ),
-        travelNotificationGatewayProvider.overrideWithValue(
-          MemoryTravelNotificationGateway(),
-        ),
-      ],
-    );
-    addTearDown(container.dispose);
-
-    await container.read(authProvider.future);
-    await container
-        .read(authProvider.notifier)
-        .loginWithDevelopmentExistingUser();
-    deletionStore.failDelete = true;
-
-    await expectLater(
-      container.read(authProvider.notifier).logout(),
-      throwsA(isA<LocalAccountCleanupException>()),
-    );
-    expect(
-      container.read(authProvider).requireValue.localCleanupScope,
-      LocalCleanupScope.logout,
-    );
-
-    deletionStore.failDelete = false;
-    expect(
-      await container.read(authProvider.notifier).retryLocalAccountCleanup(),
-      isTrue,
-    );
-    expect(deletionStore.deleteCalls, greaterThanOrEqualTo(4));
-    expect(authService.didClearLocalAccountData, isFalse);
-  });
-
   test(
     'persisted logout marker blocks a stale token after process restart',
     () async {
@@ -949,9 +848,6 @@ void main() {
       final overrides = [
         authServiceProvider.overrideWithValue(authService),
         apiClientProvider.overrideWithValue(Dio()),
-        accountDeletionCredentialStoreProvider.overrideWithValue(
-          _TrackingDeletionStore(),
-        ),
         travelPlanRepositoryProvider.overrideWithValue(repository),
         travelNotificationGatewayProvider.overrideWithValue(notifications),
       ];
@@ -1000,9 +896,6 @@ void main() {
         authServiceProvider.overrideWithValue(authService),
         apiClientProvider.overrideWithValue(Dio()),
         userServiceProvider.overrideWithValue(userService),
-        accountDeletionCredentialStoreProvider.overrideWithValue(
-          _TrackingDeletionStore(),
-        ),
         travelPlanRepositoryProvider.overrideWithValue(repository),
         travelNotificationGatewayProvider.overrideWithValue(
           MemoryTravelNotificationGateway(),
@@ -1075,9 +968,6 @@ void main() {
               receiptCompleted: true,
             ),
           ),
-          accountDeletionCredentialStoreProvider.overrideWithValue(
-            _TrackingDeletionStore(),
-          ),
           travelPlanRepositoryProvider.overrideWithValue(repository),
           travelNotificationGatewayProvider.overrideWithValue(
             MemoryTravelNotificationGateway(),
@@ -1115,9 +1005,6 @@ void main() {
         userServiceProvider.overrideWithValue(
           _ControllableDeleteUserService(responseStatus: 404),
         ),
-        accountDeletionCredentialStoreProvider.overrideWithValue(
-          _TrackingDeletionStore(),
-        ),
         travelPlanRepositoryProvider.overrideWithValue(repository),
         travelNotificationGatewayProvider.overrideWithValue(
           MemoryTravelNotificationGateway(),
@@ -1144,7 +1031,6 @@ void main() {
     final authService = _AutoLoginFakeAuthService();
     final repository = MemoryTravelPlanRepository();
     final notifications = _FailingCancellationGateway();
-    final deletionStore = _TrackingDeletionStore();
     await repository.create(
       TravelPlanDraft(
         cityCode: 'tokyo',
@@ -1157,7 +1043,6 @@ void main() {
       overrides: [
         authServiceProvider.overrideWithValue(authService),
         apiClientProvider.overrideWithValue(Dio()),
-        accountDeletionCredentialStoreProvider.overrideWithValue(deletionStore),
         travelPlanRepositoryProvider.overrideWithValue(repository),
         travelNotificationGatewayProvider.overrideWithValue(notifications),
       ],
@@ -1191,9 +1076,6 @@ void main() {
       overrides: [
         authServiceProvider.overrideWithValue(authService),
         apiClientProvider.overrideWithValue(Dio()),
-        accountDeletionCredentialStoreProvider.overrideWithValue(
-          _TrackingDeletionStore(),
-        ),
         travelPlanRepositoryProvider.overrideWithValue(
           MemoryTravelPlanRepository(),
         ),
@@ -1225,9 +1107,6 @@ void main() {
         overrides: [
           authServiceProvider.overrideWithValue(authService),
           apiClientProvider.overrideWithValue(Dio()),
-          accountDeletionCredentialStoreProvider.overrideWithValue(
-            _TrackingDeletionStore(),
-          ),
           travelPlanRepositoryProvider.overrideWithValue(
             MemoryTravelPlanRepository(),
           ),
@@ -1283,9 +1162,6 @@ void main() {
         overrides: [
           authServiceProvider.overrideWithValue(authService),
           apiClientProvider.overrideWithValue(Dio()),
-          accountDeletionCredentialStoreProvider.overrideWithValue(
-            _TrackingDeletionStore(),
-          ),
           travelPlanRepositoryProvider.overrideWithValue(repository),
           travelNotificationGatewayProvider.overrideWithValue(
             MemoryTravelNotificationGateway(),
@@ -1333,9 +1209,6 @@ void main() {
           authServiceProvider.overrideWithValue(authService),
           apiClientProvider.overrideWithValue(Dio()),
           userServiceProvider.overrideWithValue(userService),
-          accountDeletionCredentialStoreProvider.overrideWithValue(
-            _TrackingDeletionStore(),
-          ),
           travelPlanRepositoryProvider.overrideWithValue(repository),
           travelNotificationGatewayProvider.overrideWithValue(
             MemoryTravelNotificationGateway(),
@@ -1395,9 +1268,6 @@ void main() {
             generatedKeys++;
             return '11111111-1111-4111-8111-111111111111';
           }),
-          accountDeletionCredentialStoreProvider.overrideWithValue(
-            _TrackingDeletionStore(),
-          ),
           travelPlanRepositoryProvider.overrideWithValue(
             MemoryTravelPlanRepository(),
           ),
@@ -1437,9 +1307,6 @@ void main() {
         authServiceProvider.overrideWithValue(authService),
         apiClientProvider.overrideWithValue(Dio()),
         userServiceProvider.overrideWithValue(userService),
-        accountDeletionCredentialStoreProvider.overrideWithValue(
-          _TrackingDeletionStore(),
-        ),
         travelPlanRepositoryProvider.overrideWithValue(
           MemoryTravelPlanRepository(),
         ),
@@ -1461,7 +1328,7 @@ void main() {
   });
 
   testWidgets(
-    'unrelated 401 and missing receipt preserve data and show Web recovery',
+    'unrelated 401 and missing receipt preserve data and show recovery',
     (tester) async {
       final authService = _LoginFakeAuthService(isNewUser: false)
         ..hasTokenValue = true
@@ -1490,9 +1357,6 @@ void main() {
             _AuthBoundaryWidgetGateway(<String>[]),
           ),
           userServiceProvider.overrideWithValue(userService),
-          accountDeletionCredentialStoreProvider.overrideWithValue(
-            _TrackingDeletionStore(),
-          ),
           travelPlanRepositoryProvider.overrideWithValue(repository),
           travelNotificationGatewayProvider.overrideWithValue(
             MemoryTravelNotificationGateway(),
@@ -1525,7 +1389,6 @@ void main() {
         find.text(AppStrings.accountDeleteRequestAuthenticationRequired),
         findsOneWidget,
       );
-      expect(find.text(AppStrings.accountDeleteRequestOpenWeb), findsOneWidget);
       expect(
         find.text(AppStrings.accountDeleteRequestDiscardLocalOnly),
         findsOneWidget,
@@ -1581,16 +1444,12 @@ void main() {
           reminder: TravelReminder.none,
         ),
       );
-      final deletionStore = _TrackingDeletionStore();
       final userService = _ControllableDeleteUserService();
       final container = ProviderContainer(
         overrides: [
           authServiceProvider.overrideWithValue(authService),
           apiClientProvider.overrideWithValue(Dio()),
           userServiceProvider.overrideWithValue(userService),
-          accountDeletionCredentialStoreProvider.overrideWithValue(
-            deletionStore,
-          ),
           travelPlanRepositoryProvider.overrideWithValue(repository),
           travelNotificationGatewayProvider.overrideWithValue(
             MemoryTravelNotificationGateway(),
@@ -1612,7 +1471,6 @@ void main() {
 
       expect(userService.deleteCalls, 0);
       expect(await repository.listAll(), isEmpty);
-      expect(deletionStore.deleted, isTrue);
       expect(authService.didClearPendingAdRewardOperation, isTrue);
       expect(authService.didClearTokens, isTrue);
       expect(authService.didClearOnboarding, isTrue);
@@ -1635,7 +1493,6 @@ void main() {
         ..accountDeletionIdempotencyKey =
             '11111111-1111-4111-8111-111111111111';
       final userService = _ControllableDeleteUserService();
-      final deletionStore = _TrackingDeletionStore();
       final container = ProviderContainer(
         overrides: [
           authServiceProvider.overrideWithValue(authService),
@@ -1644,9 +1501,6 @@ void main() {
             _AuthBoundaryWidgetGateway(<String>[]),
           ),
           userServiceProvider.overrideWithValue(userService),
-          accountDeletionCredentialStoreProvider.overrideWithValue(
-            deletionStore,
-          ),
           travelPlanRepositoryProvider.overrideWithValue(
             MemoryTravelPlanRepository(),
           ),
@@ -1681,7 +1535,6 @@ void main() {
       expect(authService.anonymousLoginCount, 1);
       expect(authService.didClearLocalAccountData, isTrue);
       expect(authService.localCleanupTransition, isNull);
-      expect(deletionStore.deleted, isTrue);
       expect(userService.deleteCalls, 0);
     },
   );
@@ -1704,16 +1557,12 @@ void main() {
           reminder: TravelReminder.none,
         ),
       );
-      final deletionStore = _TrackingDeletionStore();
       final container = ProviderContainer(
         overrides: [
           authServiceProvider.overrideWithValue(authService),
           apiClientProvider.overrideWithValue(Dio()),
           userServiceProvider.overrideWithValue(
             _ControllableDeleteUserService(),
-          ),
-          accountDeletionCredentialStoreProvider.overrideWithValue(
-            deletionStore,
           ),
           travelPlanRepositoryProvider.overrideWithValue(repository),
           travelNotificationGatewayProvider.overrideWithValue(
@@ -1741,7 +1590,6 @@ void main() {
         LocalCleanupTransition.accountDeletionRequested,
       );
       expect(await repository.listVisible(), hasLength(1));
-      expect(deletionStore.deleted, isFalse);
     },
   );
 
@@ -1754,12 +1602,11 @@ void main() {
             LocalCleanupTransition.accountDeletionRequested
         ..accountDeletionIdempotencyKey =
             '11111111-1111-4111-8111-111111111111';
-      final deletionStore = _FlakyDeletionStore()..failDelete = true;
+      authService.failLocalCleanup = true;
       final overrides = [
         authServiceProvider.overrideWithValue(authService),
         apiClientProvider.overrideWithValue(Dio()),
         userServiceProvider.overrideWithValue(_ControllableDeleteUserService()),
-        accountDeletionCredentialStoreProvider.overrideWithValue(deletionStore),
         travelPlanRepositoryProvider.overrideWithValue(
           MemoryTravelPlanRepository(),
         ),
@@ -1789,14 +1636,14 @@ void main() {
       );
       first.dispose();
 
-      deletionStore.failDelete = false;
+      authService.failLocalCleanup = false;
       final restarted = ProviderContainer(overrides: overrides);
       addTearDown(restarted.dispose);
       final recovered = await restarted.read(authProvider.future);
 
       expect(recovered.localCleanupScope, isNull);
       expect(authService.localCleanupTransition, isNull);
-      expect(deletionStore.deleteCalls, greaterThanOrEqualTo(2));
+      expect(authService.didClearLocalAccountData, isTrue);
     },
   );
 
@@ -1816,9 +1663,6 @@ void main() {
           authServiceProvider.overrideWithValue(authService),
           apiClientProvider.overrideWithValue(Dio()),
           userServiceProvider.overrideWithValue(userService),
-          accountDeletionCredentialStoreProvider.overrideWithValue(
-            _TrackingDeletionStore(),
-          ),
           travelPlanRepositoryProvider.overrideWithValue(
             MemoryTravelPlanRepository(),
           ),
@@ -1873,9 +1717,6 @@ void main() {
                 statusError: statusError,
               ),
             ),
-            accountDeletionCredentialStoreProvider.overrideWithValue(
-              _TrackingDeletionStore(),
-            ),
             travelPlanRepositoryProvider.overrideWithValue(repository),
             travelNotificationGatewayProvider.overrideWithValue(
               MemoryTravelNotificationGateway(),
@@ -1925,9 +1766,6 @@ void main() {
             apiClientProvider.overrideWithValue(Dio()),
             userServiceProvider.overrideWithValue(
               _ControllableDeleteUserService(statusError: statusError),
-            ),
-            accountDeletionCredentialStoreProvider.overrideWithValue(
-              _TrackingDeletionStore(),
             ),
             travelPlanRepositoryProvider.overrideWithValue(
               MemoryTravelPlanRepository(),
@@ -2187,15 +2025,6 @@ class _AuthBoundaryWidgetGateway implements WidgetSnapshotGateway {
   void setHomeRouteHandler(WidgetHomeRouteHandler? handler) {}
 }
 
-class _TrackingDeletionStore extends AccountDeletionCredentialStore {
-  var deleted = false;
-
-  @override
-  Future<void> delete() async {
-    deleted = true;
-  }
-}
-
 class _BoundaryPushAccountManager extends PushAccountManager {
   _BoundaryPushAccountManager({this.failClose = false})
     : super(
@@ -2253,19 +2082,6 @@ class _UnusedPushApi implements PushApiGateway {
 }
 
 Future<String> _unusedAppVersion() async => '1.0.0+1';
-
-class _FlakyDeletionStore extends AccountDeletionCredentialStore {
-  bool failDelete = false;
-  int deleteCalls = 0;
-
-  @override
-  Future<void> delete() async {
-    deleteCalls++;
-    if (failDelete) {
-      throw StateError('deletion credential cleanup failed');
-    }
-  }
-}
 
 class _AutoLoginFakeAuthService extends _LoginFakeAuthService {
   _AutoLoginFakeAuthService() : super(isNewUser: false);

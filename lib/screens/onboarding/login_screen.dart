@@ -3,10 +3,8 @@ import 'dart:async';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../config/api_config.dart';
-import '../../config/app_links.dart';
 import '../../config/theme.dart';
 import '../../constants/app_strings.dart';
 import '../../providers/auth_provider.dart';
@@ -89,26 +87,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     if (succeeded) {
       ref.invalidate(authProvider);
     }
-  }
-
-  Future<void> _openAccountDeletionHelp() async {
-    var opened = false;
-    try {
-      opened = await launchUrl(
-        AppLinks.accountDeletion,
-        mode: LaunchMode.externalApplication,
-      );
-    } catch (_) {
-      // Fall through to the same visible error as a rejected launch.
-    }
-    if (!mounted || opened) {
-      return;
-    }
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text(AppStrings.accountDeleteRequestOpenWebFailed),
-      ),
-    );
   }
 
   Future<void> _discardUnconfirmedLocalData() async {
@@ -322,29 +300,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                                     : AppStrings.retry,
                               ),
                       ),
-                      if (deletionAuthenticationRequired) ...[
-                        const SizedBox(height: KisouTheme.gapM),
-                        OutlinedButton.icon(
+                      if (deletionAuthenticationRequired &&
+                          canDiscardUnconfirmedAccountData) ...[
+                        const SizedBox(height: KisouTheme.gapS),
+                        TextButton.icon(
                           onPressed: isLoading
                               ? null
-                              : _openAccountDeletionHelp,
-                          icon: const Icon(Icons.open_in_new_rounded),
+                              : _discardUnconfirmedLocalData,
+                          icon: const Icon(Icons.delete_forever_outlined),
                           label: const Text(
-                            AppStrings.accountDeleteRequestOpenWeb,
+                            AppStrings.accountDeleteRequestDiscardLocalOnly,
                           ),
                         ),
-                        if (canDiscardUnconfirmedAccountData) ...[
-                          const SizedBox(height: KisouTheme.gapS),
-                          TextButton.icon(
-                            onPressed: isLoading
-                                ? null
-                                : _discardUnconfirmedLocalData,
-                            icon: const Icon(Icons.delete_forever_outlined),
-                            label: const Text(
-                              AppStrings.accountDeleteRequestDiscardLocalOnly,
-                            ),
-                          ),
-                        ],
                       ],
                       if (!cleanupRequired &&
                           ApiConfig.showDevelopmentLogin) ...[

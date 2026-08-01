@@ -6,7 +6,6 @@ import '../services/auth_service.dart';
 import '../services/push_installation_store.dart';
 import '../services/push_messaging_gateway.dart';
 import '../utils/api_error.dart';
-import 'account_deletion_credential_provider.dart';
 import 'ad_reward_provider.dart';
 import 'forecast_provider.dart';
 import 'api_provider.dart';
@@ -518,10 +517,6 @@ class AuthController extends AsyncNotifier<AuthState> {
           ref.invalidate(adRewardProvider);
         },
         () => ref.read(travelPlanProvider.notifier).clearAllLocalData(),
-        // Linking preserves this code because the user ID stays the same. A
-        // full account transition removes it before another account can use
-        // the device.
-        () => ref.read(accountDeletionCredentialStoreProvider).delete(),
       ],
       LocalCleanupScope.accountDeletion ||
       LocalCleanupScope.unconfirmedAccountDiscard => [
@@ -531,7 +526,6 @@ class AuthController extends AsyncNotifier<AuthState> {
           ref.invalidate(adRewardProvider);
         },
         () => ref.read(travelPlanProvider.notifier).clearAllLocalData(),
-        () => ref.read(accountDeletionCredentialStoreProvider).delete(),
         () async {
           ref.read(themeModeProvider.notifier).resetAfterAccountDeletion();
         },
@@ -734,7 +728,6 @@ class AuthController extends AsyncNotifier<AuthState> {
     ref.invalidate(adRewardProvider);
     ref.invalidate(feedbackProvider);
     ref.invalidate(userProvider);
-    ref.invalidate(accountDeletionCredentialProvider);
     ref.invalidate(travelPlanProvider);
     ref.invalidate(travelNotificationNavigationProvider);
     ref.invalidate(pushSettingsProvider);
