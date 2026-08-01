@@ -64,13 +64,11 @@ class UserController extends AsyncNotifier<User?> {
     }
   }
 
-  Future<void> deleteMe({required String idempotencyKey}) async {
+  Future<void> deleteMe() async {
     final previous = state;
     state = const AsyncLoading<User?>();
     try {
-      await ref
-          .read(userServiceProvider)
-          .deleteMe(idempotencyKey: idempotencyKey);
+      await ref.read(userServiceProvider).deleteMe();
       state = const AsyncData(null);
     } catch (error, stackTrace) {
       state = previous.hasValue

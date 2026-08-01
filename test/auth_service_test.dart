@@ -79,23 +79,6 @@ void main() {
   });
 
   test(
-    'session-only cleanup preserves the anonymous restoration secret',
-    () async {
-      FlutterSecureStorage.setMockInitialValues({
-        'jwt_token': 'access-token',
-        'refresh_token': 'refresh-token',
-        'device_secret': 'same-guest-secret',
-      });
-      const storage = FlutterSecureStorage();
-      final service = AuthService(storage: storage);
-
-      await service.clearTokens();
-
-      expect(await storage.readAll(), {'device_secret': 'same-guest-secret'});
-    },
-  );
-
-  test(
     'account deletion clears auth keys without erasing the transition marker',
     () async {
       SharedPreferences.setMockInitialValues({
@@ -109,7 +92,6 @@ void main() {
         'refresh_token': 'refresh-token',
         'device_secret': 'anonymous-secret',
         'local_cleanup_transition_v1': 'accountDeletion',
-        'ad_reward_operation_v1': 'old-account-operation',
       });
 
       const storage = FlutterSecureStorage();
@@ -136,106 +118,9 @@ void main() {
       await service.readLocalCleanupTransition(),
       LocalCleanupTransition.accountSwitch,
     );
-    await service.markLocalCleanupTransition(
-      LocalCleanupTransition.unconfirmedAccountDiscard,
-    );
-    expect(
-      await service.readLocalCleanupTransition(),
-      LocalCleanupTransition.unconfirmedAccountDiscard,
-    );
     await service.clearLocalCleanupTransition();
     expect(await service.readLocalCleanupTransition(), isNull);
   });
-
-  test(
-    'atomically stores deletion phase and canonical UUID capability',
-    () async {
-      FlutterSecureStorage.setMockInitialValues({});
-      const storage = FlutterSecureStorage();
-      final service = AuthService(storage: storage);
-      const key = '11111111-1111-4111-8111-111111111111';
-
-      await service.markAccountDeletionRequested(key);
-
-      expect(
-        await storage.read(key: 'local_cleanup_transition_v1'),
-        'accountDeletionRequested:v2:$key',
-      );
-      expect(
-        await service.readLocalCleanupTransition(),
-        LocalCleanupTransition.accountDeletionRequested,
-      );
-      expect(await service.readAccountDeletionRequestIdempotencyKey(), key);
-
-      await service.markAccountDeletionConfirmed(key);
-      expect(
-        await storage.read(key: 'local_cleanup_transition_v1'),
-        'accountDeletion:v2:$key',
-      );
-    },
-  );
-
-  test('rejects a non-v4 or non-canonical deletion capability', () async {
-    FlutterSecureStorage.setMockInitialValues({});
-    const storage = FlutterSecureStorage();
-    final service = AuthService(storage: storage);
-
-    expect(
-      () => service.markAccountDeletionRequested(
-        'AAAAAAAA-AAAA-4AAA-8AAA-AAAAAAAAAAAA',
-      ),
-      throwsFormatException,
-    );
-    expect(
-      () => service.markAccountDeletionRequested(
-        '11111111-1111-1111-8111-111111111111',
-      ),
-      throwsFormatException,
-    );
-    expect(await storage.read(key: 'local_cleanup_transition_v1'), isNull);
-  });
-
-  test(
-    'strict deletion restore never creates a replacement anonymous account',
-    () async {
-      FlutterSecureStorage.setMockInitialValues({
-        'device_secret': 'same-account-secret',
-      });
-      const storage = FlutterSecureStorage();
-      final service = AuthService(storage: storage);
-      final requests = <Map<String, dynamic>>[];
-      final dio = Dio();
-      dio.interceptors.add(
-        InterceptorsWrapper(
-          onRequest: (options, handler) {
-            requests.add(
-              Map<String, dynamic>.from(options.data as Map<String, dynamic>),
-            );
-            handler.reject(
-              DioException(
-                requestOptions: options,
-                response: Response<void>(
-                  requestOptions: options,
-                  statusCode: 401,
-                ),
-                type: DioExceptionType.badResponse,
-              ),
-            );
-          },
-        ),
-      );
-
-      expect(
-        await service.restoreAnonymousSessionForDeletion(dio: dio),
-        isFalse,
-      );
-
-      expect(requests, [
-        {'device_secret': 'same-account-secret'},
-      ]);
-      expect(await storage.read(key: 'device_secret'), 'same-account-secret');
-    },
-  );
 
   test(
     'successful account linking removes the obsolete anonymous secret',

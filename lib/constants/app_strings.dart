@@ -282,25 +282,6 @@ class AppStrings {
   static const accountDeleteRequestRecoveryFailed =
       '通信を確認して、アカウント削除を再開してください。完了するまで別のアカウントは開始できません。';
   static const accountDeleteRequestRecoveryRetry = 'アカウント削除を再開';
-  static const accountDeleteRequestAuthenticationRequired =
-      '削除結果は確認できず、元のアカウントのセッションも復元できませんでした。'
-      '端末のデータは消去していません。通信が回復した後に削除完了を再確認してください。';
-  static const accountDeleteRequestStatusRetry = '削除完了を再確認';
-  static const accountDeleteRequestDiscardLocalOnly = 'この端末のデータだけ消去';
-  static const accountDeleteRequestDiscardLocalTitle =
-      'サーバー未確認のまま端末データを消去しますか？';
-  static const accountDeleteRequestDiscardLocalBody =
-      'アカウントがサーバーから削除されたことは確認できていません。'
-      'サーバー上のデータが残っている可能性があります。'
-      'この端末のデータを消去すると元に戻せません。';
-  static const accountDeleteRequestDiscardLocalConfirm = '端末データを消去';
-  static const accountDeleteRequestDiscardLocalFailed =
-      '端末データを消去できませんでした。もう一度お試しください。';
-  static const unconfirmedAccountDiscardCleanupTitle = '端末内データを消去できませんでした';
-  static const unconfirmedAccountDiscardCleanupBody =
-      'サーバー上のアカウント削除は確認されていません。'
-      'この端末に残った以前のアカウント情報をもう一度消去してください。';
-  static const unconfirmedAccountDiscardCleanupRetry = '端末データの消去を再試行';
   static const logoutLocalCleanupTitle = 'ログアウト後の端末整理を完了できませんでした';
   static const logoutLocalCleanupFailed =
       'ログアウトしましたが、以前のアカウントの端末内データを消去できませんでした。'

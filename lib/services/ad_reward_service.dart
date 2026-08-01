@@ -10,15 +10,13 @@ class AdRewardService {
 
   Future<AdRewardChallenge> issueChallenge(
     KisouAdPlatform platform,
-    String adUnitId, {
-    required String idempotencyKey,
-  }) async {
+    String adUnitId,
+  ) async {
     final response = await _dio.post<Map<String, dynamic>>(
       '/ads/rewards/challenges',
       data: {
         'platform': platform == KisouAdPlatform.android ? 'android' : 'ios',
         'ad_unit_id': adUnitId,
-        'idempotency_key': idempotencyKey,
       },
     );
     return AdRewardChallenge.fromJson(_requiredData(response));

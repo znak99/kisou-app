@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -15,7 +13,6 @@ import 'package:kisou_app/providers/theme_provider.dart';
 import 'package:kisou_app/providers/travel_plan_provider.dart';
 import 'package:kisou_app/providers/user_provider.dart';
 import 'package:kisou_app/models/travel_plan.dart';
-import 'package:kisou_app/models/account_deletion_status.dart';
 import 'package:kisou_app/models/outlook_quota.dart';
 import 'package:kisou_app/repositories/travel_plan_repository.dart';
 import 'package:kisou_app/screens/onboarding/login_screen.dart';
@@ -190,7 +187,6 @@ void main() {
         .loginWithDevelopmentExistingUser();
     await container.read(authProvider.notifier).logout();
 
-    expect(authService.didClearPendingAdRewardOperation, isTrue);
     expect(container.read(authProvider).requireValue.isAuthenticated, isFalse);
   });
 
@@ -441,7 +437,7 @@ void main() {
 
       await expectLater(
         firstContainer.read(authProvider.notifier).deleteAccount(),
-        throwsA(isA<AccountDeletionConfirmationException>()),
+        throwsA(isA<DioException>()),
       );
       expect(
         authService.localCleanupTransition,
@@ -469,7 +465,7 @@ void main() {
   );
 
   test(
-    'a lost successful deletion response requires a completed receipt',
+    'a lost successful deletion response accepts the deleted-user 401',
     () async {
       final authService = _LoginFakeAuthService(isNewUser: false)
         ..hasTokenValue = true
@@ -488,10 +484,7 @@ void main() {
           authServiceProvider.overrideWithValue(authService),
           apiClientProvider.overrideWithValue(Dio()),
           userServiceProvider.overrideWithValue(
-            _ControllableDeleteUserService(
-              responseStatus: 401,
-              receiptCompleted: true,
-            ),
+            _ControllableDeleteUserService(responseStatus: 401),
           ),
           travelPlanRepositoryProvider.overrideWithValue(repository),
           travelNotificationGatewayProvider.overrideWithValue(
@@ -669,651 +662,6 @@ void main() {
       expect(authService.localCleanupTransition, isNull);
     },
   );
-
-  test(
-    'expireSession never downgrades a persisted deletion request marker',
-    () async {
-      final authService = _LoginFakeAuthService(isNewUser: false)
-        ..hasTokenValue = true;
-      final repository = MemoryTravelPlanRepository();
-      await repository.create(
-        TravelPlanDraft(
-          cityCode: 'tokyo',
-          departureAtUtc: DateTime.utc(2030, 8, 10),
-          reminder: TravelReminder.none,
-        ),
-      );
-      final container = ProviderContainer(
-        overrides: [
-          authServiceProvider.overrideWithValue(authService),
-          apiClientProvider.overrideWithValue(Dio()),
-          travelPlanRepositoryProvider.overrideWithValue(repository),
-          travelNotificationGatewayProvider.overrideWithValue(
-            MemoryTravelNotificationGateway(),
-          ),
-        ],
-      );
-      addTearDown(container.dispose);
-      await container.read(authProvider.future);
-      await authService.markAccountDeletionRequested(
-        '11111111-1111-4111-8111-111111111111',
-      );
-
-      await container.read(authProvider.notifier).expireSession();
-
-      expect(
-        authService.localCleanupTransition,
-        LocalCleanupTransition.accountDeletionRequested,
-      );
-      expect(
-        authService.accountDeletionIdempotencyKey,
-        '11111111-1111-4111-8111-111111111111',
-      );
-      expect(
-        container.read(authProvider).requireValue.localCleanupScope,
-        LocalCleanupScope.accountDeletionRequest,
-      );
-      expect(await repository.listVisible(), hasLength(1));
-      expect(authService.didClearTokens, isFalse);
-    },
-  );
-
-  test(
-    'queued session expiry cannot overtake the atomic deletion marker write',
-    () async {
-      final markerStarted = Completer<void>();
-      final markerGate = Completer<void>();
-      final authService = _LoginFakeAuthService(isNewUser: false)
-        ..hasTokenValue = true
-        ..markDeletionRequestedStarted = markerStarted
-        ..markDeletionRequestedGate = markerGate.future;
-      final userService = _ControllableDeleteUserService(failOffline: true);
-      final repository = MemoryTravelPlanRepository();
-      final container = ProviderContainer(
-        overrides: [
-          authServiceProvider.overrideWithValue(authService),
-          apiClientProvider.overrideWithValue(Dio()),
-          userServiceProvider.overrideWithValue(userService),
-          travelPlanRepositoryProvider.overrideWithValue(repository),
-          travelNotificationGatewayProvider.overrideWithValue(
-            MemoryTravelNotificationGateway(),
-          ),
-        ],
-      );
-      addTearDown(container.dispose);
-      await container.read(authProvider.future);
-
-      final deleting = container.read(authProvider.notifier).deleteAccount();
-      await markerStarted.future;
-      await container.read(authProvider.notifier).expireSession();
-
-      expect(container.read(authProvider).requireValue.isAuthenticated, isTrue);
-      expect(
-        container.read(authProvider).requireValue.localCleanupScope,
-        isNull,
-      );
-      expect(authService.localCleanupTransition, isNull);
-
-      markerGate.complete();
-      await expectLater(
-        deleting,
-        throwsA(isA<AccountDeletionConfirmationException>()),
-      );
-
-      expect(
-        authService.localCleanupTransition,
-        LocalCleanupTransition.accountDeletionRequested,
-      );
-      expect(
-        container.read(authProvider).requireValue.localCleanupScope,
-        LocalCleanupScope.accountDeletionRequest,
-      );
-      expect(authService.didClearTokens, isFalse);
-    },
-  );
-
-  test(
-    'concurrent delete taps share one UUID and one server request',
-    () async {
-      final deleteGate = Completer<void>();
-      final authService = _LoginFakeAuthService(isNewUser: false)
-        ..hasTokenValue = true;
-      final userService = _ControllableDeleteUserService(
-        deleteGate: deleteGate.future,
-      );
-      var generatedKeys = 0;
-      final container = ProviderContainer(
-        overrides: [
-          authServiceProvider.overrideWithValue(authService),
-          apiClientProvider.overrideWithValue(Dio()),
-          userServiceProvider.overrideWithValue(userService),
-          accountDeletionIdempotencyKeyFactoryProvider.overrideWithValue(() {
-            generatedKeys++;
-            return '11111111-1111-4111-8111-111111111111';
-          }),
-          travelPlanRepositoryProvider.overrideWithValue(
-            MemoryTravelPlanRepository(),
-          ),
-          travelNotificationGatewayProvider.overrideWithValue(
-            MemoryTravelNotificationGateway(),
-          ),
-        ],
-      );
-      addTearDown(container.dispose);
-      await container.read(authProvider.future);
-      final controller = container.read(authProvider.notifier);
-
-      final first = controller.deleteAccount();
-      final second = controller.deleteAccount();
-      await Future<void>.delayed(Duration.zero);
-      expect(userService.deleteCalls, 1);
-      deleteGate.complete();
-      await Future.wait([first, second]);
-
-      expect(generatedKeys, 1);
-      expect(userService.idempotencyKeys, [
-        '11111111-1111-4111-8111-111111111111',
-      ]);
-    },
-  );
-
-  test('secure deletion marker failure prevents the DELETE request', () async {
-    final authService = _LoginFakeAuthService(isNewUser: false)
-      ..hasTokenValue = true
-      ..failMarkDeletionRequested = true;
-    final userService = _ControllableDeleteUserService();
-    final container = ProviderContainer(
-      overrides: [
-        authServiceProvider.overrideWithValue(authService),
-        apiClientProvider.overrideWithValue(Dio()),
-        userServiceProvider.overrideWithValue(userService),
-        travelPlanRepositoryProvider.overrideWithValue(
-          MemoryTravelPlanRepository(),
-        ),
-        travelNotificationGatewayProvider.overrideWithValue(
-          MemoryTravelNotificationGateway(),
-        ),
-      ],
-    );
-    addTearDown(container.dispose);
-    await container.read(authProvider.future);
-
-    await expectLater(
-      container.read(authProvider.notifier).deleteAccount(),
-      throwsStateError,
-    );
-
-    expect(userService.deleteCalls, 0);
-    expect(authService.localCleanupTransition, isNull);
-  });
-
-  testWidgets(
-    'unrelated 401 and missing receipt preserve data and show recovery',
-    (tester) async {
-      final authService = _LoginFakeAuthService(isNewUser: false)
-        ..hasTokenValue = true
-        ..localCleanupTransition =
-            LocalCleanupTransition.accountDeletionRequested
-        ..accountDeletionIdempotencyKey =
-            '11111111-1111-4111-8111-111111111111';
-      final repository = MemoryTravelPlanRepository();
-      await repository.create(
-        TravelPlanDraft(
-          cityCode: 'tokyo',
-          departureAtUtc: DateTime.utc(2030, 8, 10),
-          reminder: TravelReminder.none,
-        ),
-      );
-      late final _ControllableDeleteUserService userService;
-      userService = _ControllableDeleteUserService(
-        responseStatus: 401,
-        onDelete: () => authService.hasTokenValue = false,
-      );
-      final container = ProviderContainer(
-        overrides: [
-          authServiceProvider.overrideWithValue(authService),
-          apiClientProvider.overrideWithValue(Dio()),
-          userServiceProvider.overrideWithValue(userService),
-          travelPlanRepositoryProvider.overrideWithValue(repository),
-          travelNotificationGatewayProvider.overrideWithValue(
-            MemoryTravelNotificationGateway(),
-          ),
-        ],
-      );
-      addTearDown(container.dispose);
-
-      final recovered = await container.read(authProvider.future);
-      expect(
-        recovered.accountDeletionRecoveryKind,
-        AccountDeletionRecoveryKind.authenticationRequired,
-      );
-      expect(recovered.canDiscardUnconfirmedAccountData, isTrue);
-      expect(await repository.listVisible(), hasLength(1));
-      expect(
-        authService.localCleanupTransition,
-        LocalCleanupTransition.accountDeletionRequested,
-      );
-
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: const MaterialApp(home: LoginScreen()),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      expect(
-        find.text(AppStrings.accountDeleteRequestAuthenticationRequired),
-        findsOneWidget,
-      );
-      expect(
-        find.text(AppStrings.accountDeleteRequestDiscardLocalOnly),
-        findsOneWidget,
-      );
-      expect(find.text(AppStrings.developerOptions), findsNothing);
-
-      await tester.ensureVisible(
-        find.text(AppStrings.accountDeleteRequestDiscardLocalOnly),
-      );
-      await tester.tap(
-        find.text(AppStrings.accountDeleteRequestDiscardLocalOnly),
-      );
-      await tester.pumpAndSettle();
-
-      expect(
-        find.text(AppStrings.accountDeleteRequestDiscardLocalTitle),
-        findsOneWidget,
-      );
-      expect(
-        find.text(AppStrings.accountDeleteRequestDiscardLocalBody),
-        findsOneWidget,
-      );
-      expect(
-        find.text(AppStrings.accountDeleteRequestDiscardLocalConfirm),
-        findsOneWidget,
-      );
-      await tester.tap(find.text(AppStrings.cancel));
-      await tester.pumpAndSettle();
-
-      expect(userService.deleteCalls, 1);
-      expect(await repository.listVisible(), hasLength(1));
-      expect(
-        authService.localCleanupTransition,
-        LocalCleanupTransition.accountDeletionRequested,
-      );
-    },
-  );
-
-  test(
-    'explicit local-only discard cleans account stores without another DELETE',
-    () async {
-      final authService = _LoginFakeAuthService(isNewUser: false)
-        ..hasTokenValue = false
-        ..localCleanupTransition =
-            LocalCleanupTransition.accountDeletionRequested
-        ..accountDeletionIdempotencyKey =
-            '11111111-1111-4111-8111-111111111111';
-      final repository = MemoryTravelPlanRepository();
-      await repository.create(
-        TravelPlanDraft(
-          cityCode: 'tokyo',
-          departureAtUtc: DateTime.utc(2030, 8, 10),
-          reminder: TravelReminder.none,
-        ),
-      );
-      final userService = _ControllableDeleteUserService();
-      final container = ProviderContainer(
-        overrides: [
-          authServiceProvider.overrideWithValue(authService),
-          apiClientProvider.overrideWithValue(Dio()),
-          userServiceProvider.overrideWithValue(userService),
-          travelPlanRepositoryProvider.overrideWithValue(repository),
-          travelNotificationGatewayProvider.overrideWithValue(
-            MemoryTravelNotificationGateway(),
-          ),
-        ],
-      );
-      addTearDown(container.dispose);
-
-      final blocked = await container.read(authProvider.future);
-      expect(blocked.canDiscardUnconfirmedAccountData, isTrue);
-      expect(userService.deleteCalls, 0);
-
-      expect(
-        await container
-            .read(authProvider.notifier)
-            .discardUnconfirmedAccountData(),
-        isTrue,
-      );
-
-      expect(userService.deleteCalls, 0);
-      expect(await repository.listAll(), isEmpty);
-      expect(authService.didClearPendingAdRewardOperation, isTrue);
-      expect(authService.didClearTokens, isTrue);
-      expect(authService.didClearOnboarding, isTrue);
-      expect(authService.didClearLocalAccountData, isTrue);
-      expect(authService.localCleanupTransition, isNull);
-      expect(
-        container.read(authProvider).requireValue.localCleanupScope,
-        isNull,
-      );
-    },
-  );
-
-  testWidgets(
-    'confirmed local-only discard starts a new anonymous account automatically',
-    (tester) async {
-      final authService = _AutoLoginFakeAuthService()
-        ..hasTokenValue = false
-        ..localCleanupTransition =
-            LocalCleanupTransition.accountDeletionRequested
-        ..accountDeletionIdempotencyKey =
-            '11111111-1111-4111-8111-111111111111';
-      final userService = _ControllableDeleteUserService();
-      final container = ProviderContainer(
-        overrides: [
-          authServiceProvider.overrideWithValue(authService),
-          apiClientProvider.overrideWithValue(Dio()),
-          userServiceProvider.overrideWithValue(userService),
-          travelPlanRepositoryProvider.overrideWithValue(
-            MemoryTravelPlanRepository(),
-          ),
-          travelNotificationGatewayProvider.overrideWithValue(
-            MemoryTravelNotificationGateway(),
-          ),
-        ],
-      );
-      addTearDown(container.dispose);
-      await container.read(authProvider.future);
-
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: const MaterialApp(home: LoginScreen()),
-        ),
-      );
-      await tester.pumpAndSettle();
-      await tester.ensureVisible(
-        find.text(AppStrings.accountDeleteRequestDiscardLocalOnly),
-      );
-      await tester.tap(
-        find.text(AppStrings.accountDeleteRequestDiscardLocalOnly),
-      );
-      await tester.pumpAndSettle();
-      await tester.tap(
-        find.text(AppStrings.accountDeleteRequestDiscardLocalConfirm),
-      );
-      await tester.pumpAndSettle();
-
-      expect(container.read(authProvider).requireValue.isAuthenticated, isTrue);
-      expect(authService.anonymousLoginCount, 1);
-      expect(authService.didClearLocalAccountData, isTrue);
-      expect(authService.localCleanupTransition, isNull);
-      expect(userService.deleteCalls, 0);
-    },
-  );
-
-  test(
-    'local-only discard marker failure preserves deletion recovery and data',
-    () async {
-      final authService = _LoginFakeAuthService(isNewUser: false)
-        ..hasTokenValue = false
-        ..failUnconfirmedDiscardMarker = true
-        ..localCleanupTransition =
-            LocalCleanupTransition.accountDeletionRequested
-        ..accountDeletionIdempotencyKey =
-            '11111111-1111-4111-8111-111111111111';
-      final repository = MemoryTravelPlanRepository();
-      await repository.create(
-        TravelPlanDraft(
-          cityCode: 'tokyo',
-          departureAtUtc: DateTime.utc(2030, 8, 10),
-          reminder: TravelReminder.none,
-        ),
-      );
-      final container = ProviderContainer(
-        overrides: [
-          authServiceProvider.overrideWithValue(authService),
-          apiClientProvider.overrideWithValue(Dio()),
-          userServiceProvider.overrideWithValue(
-            _ControllableDeleteUserService(),
-          ),
-          travelPlanRepositoryProvider.overrideWithValue(repository),
-          travelNotificationGatewayProvider.overrideWithValue(
-            MemoryTravelNotificationGateway(),
-          ),
-        ],
-      );
-      addTearDown(container.dispose);
-
-      expect(
-        (await container.read(
-          authProvider.future,
-        )).canDiscardUnconfirmedAccountData,
-        isTrue,
-      );
-      expect(
-        await container
-            .read(authProvider.notifier)
-            .discardUnconfirmedAccountData(),
-        isFalse,
-      );
-
-      expect(
-        authService.localCleanupTransition,
-        LocalCleanupTransition.accountDeletionRequested,
-      );
-      expect(await repository.listVisible(), hasLength(1));
-    },
-  );
-
-  test(
-    'failed local-only cleanup resumes from its dedicated marker after restart',
-    () async {
-      final authService = _LoginFakeAuthService(isNewUser: false)
-        ..hasTokenValue = false
-        ..localCleanupTransition =
-            LocalCleanupTransition.accountDeletionRequested
-        ..accountDeletionIdempotencyKey =
-            '11111111-1111-4111-8111-111111111111';
-      authService.failLocalCleanup = true;
-      final overrides = [
-        authServiceProvider.overrideWithValue(authService),
-        apiClientProvider.overrideWithValue(Dio()),
-        userServiceProvider.overrideWithValue(_ControllableDeleteUserService()),
-        travelPlanRepositoryProvider.overrideWithValue(
-          MemoryTravelPlanRepository(),
-        ),
-        travelNotificationGatewayProvider.overrideWithValue(
-          MemoryTravelNotificationGateway(),
-        ),
-      ];
-      final first = ProviderContainer(overrides: overrides);
-
-      expect(
-        (await first.read(
-          authProvider.future,
-        )).canDiscardUnconfirmedAccountData,
-        isTrue,
-      );
-      expect(
-        await first.read(authProvider.notifier).discardUnconfirmedAccountData(),
-        isFalse,
-      );
-      expect(
-        first.read(authProvider).requireValue.localCleanupScope,
-        LocalCleanupScope.unconfirmedAccountDiscard,
-      );
-      expect(
-        authService.localCleanupTransition,
-        LocalCleanupTransition.unconfirmedAccountDiscard,
-      );
-      first.dispose();
-
-      authService.failLocalCleanup = false;
-      final restarted = ProviderContainer(overrides: overrides);
-      addTearDown(restarted.dispose);
-      final recovered = await restarted.read(authProvider.future);
-
-      expect(recovered.localCleanupScope, isNull);
-      expect(authService.localCleanupTransition, isNull);
-      expect(authService.didClearLocalAccountData, isTrue);
-    },
-  );
-
-  test(
-    'strict guest restore retries DELETE with the persisted UUID only',
-    () async {
-      final authService = _LoginFakeAuthService(isNewUser: false)
-        ..hasTokenValue = false
-        ..strictAnonymousRestoreSucceeds = true
-        ..localCleanupTransition =
-            LocalCleanupTransition.accountDeletionRequested
-        ..accountDeletionIdempotencyKey =
-            '11111111-1111-4111-8111-111111111111';
-      final userService = _ControllableDeleteUserService();
-      final container = ProviderContainer(
-        overrides: [
-          authServiceProvider.overrideWithValue(authService),
-          apiClientProvider.overrideWithValue(Dio()),
-          userServiceProvider.overrideWithValue(userService),
-          travelPlanRepositoryProvider.overrideWithValue(
-            MemoryTravelPlanRepository(),
-          ),
-          travelNotificationGatewayProvider.overrideWithValue(
-            MemoryTravelNotificationGateway(),
-          ),
-        ],
-      );
-      addTearDown(container.dispose);
-
-      final recovered = await container.read(authProvider.future);
-
-      expect(recovered.isAuthenticated, isFalse);
-      expect(userService.idempotencyKeys, [
-        '11111111-1111-4111-8111-111111111111',
-      ]);
-      expect(authService.didClearLocalAccountData, isTrue);
-      expect(authService.localCleanupTransition, isNull);
-    },
-  );
-
-  test(
-    'status 429, server error, and parse failure all preserve local data',
-    () async {
-      final statusErrors = <Object>[
-        _dioStatusError(429),
-        _dioStatusError(503),
-        const FormatException('malformed receipt'),
-      ];
-      for (final statusError in statusErrors) {
-        final authService = _LoginFakeAuthService(isNewUser: false)
-          ..hasTokenValue = true
-          ..localCleanupTransition =
-              LocalCleanupTransition.accountDeletionRequested
-          ..accountDeletionIdempotencyKey =
-              '11111111-1111-4111-8111-111111111111';
-        final repository = MemoryTravelPlanRepository();
-        await repository.create(
-          TravelPlanDraft(
-            cityCode: 'tokyo',
-            departureAtUtc: DateTime.utc(2030, 8, 10),
-            reminder: TravelReminder.none,
-          ),
-        );
-        final container = ProviderContainer(
-          overrides: [
-            authServiceProvider.overrideWithValue(authService),
-            apiClientProvider.overrideWithValue(Dio()),
-            userServiceProvider.overrideWithValue(
-              _ControllableDeleteUserService(
-                failOffline: true,
-                statusError: statusError,
-              ),
-            ),
-            travelPlanRepositoryProvider.overrideWithValue(repository),
-            travelNotificationGatewayProvider.overrideWithValue(
-              MemoryTravelNotificationGateway(),
-            ),
-          ],
-        );
-
-        final recovered = await container.read(authProvider.future);
-
-        expect(
-          recovered.localCleanupScope,
-          LocalCleanupScope.accountDeletionRequest,
-        );
-        expect(recovered.canDiscardUnconfirmedAccountData, isFalse);
-        expect(await repository.listVisible(), hasLength(1));
-        expect(
-          authService.localCleanupTransition,
-          LocalCleanupTransition.accountDeletionRequested,
-        );
-        container.dispose();
-      }
-    },
-  );
-
-  test(
-    'unavailable receipt never enables local-only discard without a session',
-    () async {
-      final statusErrors = <Object>[
-        DioException(
-          requestOptions: RequestOptions(path: '/account-deletion/status'),
-          type: DioExceptionType.connectionError,
-        ),
-        _dioStatusError(429),
-        _dioStatusError(503),
-        const FormatException('malformed receipt'),
-      ];
-      for (final statusError in statusErrors) {
-        final authService = _LoginFakeAuthService(isNewUser: false)
-          ..hasTokenValue = false
-          ..localCleanupTransition =
-              LocalCleanupTransition.accountDeletionRequested
-          ..accountDeletionIdempotencyKey =
-              '11111111-1111-4111-8111-111111111111';
-        final container = ProviderContainer(
-          overrides: [
-            authServiceProvider.overrideWithValue(authService),
-            apiClientProvider.overrideWithValue(Dio()),
-            userServiceProvider.overrideWithValue(
-              _ControllableDeleteUserService(statusError: statusError),
-            ),
-            travelPlanRepositoryProvider.overrideWithValue(
-              MemoryTravelPlanRepository(),
-            ),
-            travelNotificationGatewayProvider.overrideWithValue(
-              MemoryTravelNotificationGateway(),
-            ),
-          ],
-        );
-
-        final recovered = await container.read(authProvider.future);
-
-        expect(
-          recovered.accountDeletionRecoveryKind,
-          AccountDeletionRecoveryKind.authenticationRequired,
-        );
-        expect(recovered.canDiscardUnconfirmedAccountData, isFalse);
-        expect(
-          authService.localCleanupTransition,
-          LocalCleanupTransition.accountDeletionRequested,
-        );
-        container.dispose();
-      }
-    },
-  );
-}
-
-DioException _dioStatusError(int statusCode) {
-  final request = RequestOptions(path: '/account-deletion/status');
-  return DioException(
-    requestOptions: request,
-    response: Response<void>(requestOptions: request, statusCode: statusCode),
-    type: DioExceptionType.badResponse,
-  );
 }
 
 class _LoginFakeAuthService extends AuthService {
@@ -1333,13 +681,6 @@ class _LoginFakeAuthService extends AuthService {
   bool didClearLocalAccountData = false;
   bool didClearTokens = false;
   bool didClearOnboarding = false;
-  bool didClearPendingAdRewardOperation = false;
-  String? accountDeletionIdempotencyKey;
-  bool strictAnonymousRestoreSucceeds = false;
-  bool failMarkDeletionRequested = false;
-  bool failUnconfirmedDiscardMarker = false;
-  Completer<void>? markDeletionRequestedStarted;
-  Future<void>? markDeletionRequestedGate;
   int serverLogoutCallCount = 0;
   LocalCleanupTransition? localCleanupTransition;
 
@@ -1355,41 +696,12 @@ class _LoginFakeAuthService extends AuthService {
   Future<void> markLocalCleanupTransition(
     LocalCleanupTransition transition,
   ) async {
-    if (transition == LocalCleanupTransition.unconfirmedAccountDiscard &&
-        failUnconfirmedDiscardMarker) {
-      throw StateError('unconfirmed discard marker write failed');
-    }
     localCleanupTransition = transition;
-  }
-
-  @override
-  Future<void> markAccountDeletionRequested(String idempotencyKey) async {
-    markDeletionRequestedStarted?.complete();
-    if (markDeletionRequestedGate case final gate?) {
-      await gate;
-    }
-    if (failMarkDeletionRequested) {
-      throw StateError('secure marker write failed');
-    }
-    localCleanupTransition = LocalCleanupTransition.accountDeletionRequested;
-    accountDeletionIdempotencyKey = idempotencyKey;
-  }
-
-  @override
-  Future<void> markAccountDeletionConfirmed(String idempotencyKey) async {
-    localCleanupTransition = LocalCleanupTransition.accountDeletion;
-    accountDeletionIdempotencyKey = idempotencyKey;
-  }
-
-  @override
-  Future<String?> readAccountDeletionRequestIdempotencyKey() async {
-    return accountDeletionIdempotencyKey;
   }
 
   @override
   Future<void> clearLocalCleanupTransition() async {
     localCleanupTransition = null;
-    accountDeletionIdempotencyKey = null;
   }
 
   @override
@@ -1415,14 +727,6 @@ class _LoginFakeAuthService extends AuthService {
   }
 
   @override
-  Future<bool> restoreAnonymousSessionForDeletion({required Dio dio}) async {
-    if (strictAnonymousRestoreSucceeds) {
-      hasTokenValue = true;
-    }
-    return strictAnonymousRestoreSucceeds;
-  }
-
-  @override
   Future<void> setOnboardingCompleted(bool isCompleted) async {
     if (failOnboardingPersistence) {
       throw StateError('onboarding persistence failed');
@@ -1437,9 +741,6 @@ class _LoginFakeAuthService extends AuthService {
     }
     hasTokenValue = false;
     didClearLocalAccountData = true;
-    didClearTokens = true;
-    didClearOnboarding = true;
-    didClearPendingAdRewardOperation = true;
   }
 
   @override
@@ -1463,11 +764,6 @@ class _LoginFakeAuthService extends AuthService {
   Future<void> clearOnboardingCompleted() async {
     didClearOnboarding = true;
   }
-
-  @override
-  Future<void> clearPendingAdRewardOperation() async {
-    didClearPendingAdRewardOperation = true;
-  }
 }
 
 class _AutoLoginFakeAuthService extends _LoginFakeAuthService {
@@ -1478,7 +774,6 @@ class _AutoLoginFakeAuthService extends _LoginFakeAuthService {
   @override
   Future<bool> loginAnonymous({required Dio dio}) async {
     anonymousLoginCount++;
-    hasTokenValue = true;
     return false;
   }
 }
@@ -1499,29 +794,15 @@ class _ControllableDeleteUserService extends UserService {
   _ControllableDeleteUserService({
     this.failOffline = false,
     this.responseStatus,
-    this.receiptCompleted = false,
-    this.statusError,
-    this.onDelete,
-    this.deleteGate,
   }) : super(Dio());
 
   bool failOffline;
   final int? responseStatus;
-  bool receiptCompleted;
-  final Object? statusError;
-  final void Function()? onDelete;
-  final Future<void>? deleteGate;
   int deleteCalls = 0;
-  final List<String> idempotencyKeys = [];
 
   @override
-  Future<void> deleteMe({required String idempotencyKey}) async {
+  Future<void> deleteMe() async {
     deleteCalls++;
-    idempotencyKeys.add(idempotencyKey);
-    onDelete?.call();
-    if (deleteGate case final gate?) {
-      await gate;
-    }
     final request = RequestOptions(path: '/users/me');
     if (failOffline) {
       throw DioException(
@@ -1538,23 +819,6 @@ class _ControllableDeleteUserService extends UserService {
         ),
       );
     }
-    receiptCompleted = true;
-  }
-
-  @override
-  Future<AccountDeletionStatus?> getDeletionStatus({
-    required String idempotencyKey,
-  }) async {
-    if (statusError case final error?) {
-      throw error;
-    }
-    if (!receiptCompleted) {
-      return null;
-    }
-    return AccountDeletionStatus(
-      completedAt: DateTime.utc(2026, 7, 31),
-      expiresAt: DateTime.utc(2026, 8, 1),
-    );
   }
 }
 

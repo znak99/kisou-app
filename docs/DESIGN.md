@@ -487,8 +487,7 @@ user_id + date에 UNIQUE 제약 (1일 1피드백 보장)
 | GET | /users/me | 프로필 조회 |
 | PUT | /users/me | 프로필 업데이트 |
 | POST | /users/me/reset-data | 피드백 삭제 + 성향 기준 보정값 초기화 |
-| DELETE | /users/me | canonical UUID v4 `Idempotency-Key`로 계정·관련 데이터 삭제 및 24시간 완료 영수증 생성 |
-| POST | /account-deletion/status | JWT 없이 삭제 UUID의 `completed` 영수증 확인(없음·만료는 404) |
+| DELETE | /users/me | 계정·피드백·리프레시 토큰 삭제 |
 | POST | /feedback | 오늘~7일 전 피드백 제출/수정 + 보정값 업데이트 |
 | GET | /feedback/today | 오늘 피드백 제출 여부 확인 |
 | GET | /feedback/recent | 오늘부터 7일 전까지 기록 유무와 저장 내용 일괄 조회 |
@@ -496,7 +495,7 @@ user_id + date에 UNIQUE 제약 (1일 1피드백 보장)
 | GET | /forecast/tomorrow | 내일 추천·오늘 비교·D+2~D+4 요약 |
 | GET | /forecast/outlook/quota | JST 기준 무료 횟수·검증된 보상 크레딧·광고 발급 가능 상태 |
 | POST | /forecast/outlook | 미래 날짜·좌표의 실예보 또는 과거 기후 추정, 멱등 UUID로 1회 차감 |
-| POST | /ads/rewards/challenges | 플랫폼·실제 로드한 광고 단위·클라이언트 UUID가 일치하는 멱등 SSV challenge 발급 |
+| POST | /ads/rewards/challenges | 플랫폼·실제 로드한 광고 단위가 일치하는 1회용 SSV challenge 발급 |
 | GET | /ads/rewards/challenges/{id} | pending·settling·credited·consumed·expired 상태 조회 |
 | POST | /ads/rewards/challenges/{id}/development-confirm | 공식 테스트 광고의 개발 전용 보상 확인 |
 
@@ -697,22 +696,8 @@ GET /home:
 - 서버 합계가 0이고 `ads_available=true`일 때만 사용자가 명시적으로 누를
   수 있는 리워드 버튼을 표시합니다. 광고 로드 성공 뒤에만 challenge를
   발급하고, 로드에 사용한 광고 단위를 요청 본문에도 보내 서버 설정과
-  정확히 대조합니다. API 호출 전에 canonical UUID v4를 보안 저장소에
-  `issuing`으로 기록하며 timeout·응답 유실·프로세스 재시작에는 서버
-  `expires_at`까지 같은 UUID만 재사용합니다. 최초 발급 응답 자체가 유실돼
-  `expires_at`을 모르는 `issuing` 작업은 서버의 최대 60분에 1분 여유를 둔
-  생성 후 61분까지 같은 UUID만 재사용합니다. 새 UUID와 `created_at`은 광고
-  로드가 성공한 뒤 challenge API 직전에만 기록하므로, no-fill에는 미전송
-  작업이 남지 않고 광고 로드 시간이 로컬 재생 상한을 앞당기지 않습니다.
-  발급 응답을 받으면 challenge ID와 시각을 `issued`, 네이티브 SDK 진입
-  전에는 `presented`로 기록하지만 43자 원문은 저장하지 않습니다.
-- 재발급 응답이 `pending`일 때만 메모리의 challenge 원문을 SSV
-  `customData`에 넣어 광고를 표시하고 `userId`는 설정하지 않습니다.
-  `settling`은 표시 없이 polling, `credited`는 표시 없이 quota 갱신,
-  `consumed|expired`는 로컬 작업 정리로 분기합니다. 계정 전환은 reward
-  provider를 먼저 닫고 account-generation lease를 무효화한 뒤 진행 중
-  보안 저장소 쓰기를 drain하고 마지막 delete를 수행합니다.
-- 광고 시청만으로 앱이 운영 크레딧을 직접
+  정확히 대조합니다. challenge 원문은 SSV `customData`에만 평문으로 넣고
+  `userId`는 설정하지 않습니다. 광고 시청만으로 앱이 운영 크레딧을 직접
   추가하지 않으며, 1·2·4·8초 이후 5초 간격으로 약 30초 동안 서버의
   `pending|settling|credited|consumed|expired`를 조회합니다. credited에서
   quota를 갱신하고 지연되면 안내를 유지한 채 foreground 복귀 시 다시
@@ -873,30 +858,13 @@ GET /home:
 - 삭제 시 사용자 프로필과 인증 정보, feedbacks·refresh_tokens를 서버에서
   삭제하고, 성공한 단말의 보안 저장소와 로컬 설정 삭제를 시도합니다.
 - 서버 삭제 요청 전에 보안 저장소에 `requested` 전환 단계를 기록하고,
-  canonical UUID v4를 하나의 versioned 값으로 원자적으로 기록하고 DELETE
-  `Idempotency-Key`로 보냅니다. 앱 재시작은 token보다 이 값을 먼저
-  검사하며, JWT가 필요 없는 `POST /account-deletion/status`가 24시간
-  영수증의 `completed`를 반환할 때만 UUID를 포함한 `confirmed` 단계로
-  전환해 단말 데이터를 지웁니다. 모든 단말 저장소 삭제가 끝날 때까지
-  confirmed marker와 UUID를 유지합니다.
-- DELETE 401, status 404·429·5xx·파싱 오류·네트워크 오류는 삭제 성공
-  증거가 아니므로 marker, token이 아닌 계정 로컬 데이터와 여행 일정을
-  보존합니다. 401 interceptor와 동시 세션 만료도 삭제
-  marker를 account switch로 덮지 않습니다. 익명 계정은 기존
-  `device_secret`으로 같은 계정만 엄격 복원하고 새 guest 생성 fallback은
-  사용하지 않습니다. 복원할 수 없으면 로컬 데이터를 보존하고 복구 화면에서
-  삭제 완료 상태를 다시 확인할 수 있게 합니다.
-- 원계정 세션을 복원할 수 없고 status의 최신 결과가 네트워크 오류나
-  429·5xx가 아닌 확정 404일 때만 `이 기기의 데이터만 삭제` 보조 동작을
-  표시합니다. 확인 창은 서버 삭제 미확인·서버 데이터 잔존 가능성과 로컬
-  삭제를 복구할 수 없음을 명시합니다. 사용자가 확인해도 서버 삭제 성공으로
-  표시하거나 DELETE를 다시 보내지 않습니다. 먼저 crash-safe
-  `unconfirmedAccountDiscard` marker로 전환한 뒤 여행·알림·테마와
-  access/refresh token·익명 `device_secret`·계정 설정을 전부 정리하고
-  마지막에 marker를 지웁니다. marker 기록 실패는 기존 삭제 UUID와 로컬
-  데이터를 유지하며, 이후 정리 실패나 프로세스 종료는 전용 marker로
-  재시작 복구합니다. 일반 로그아웃·계정 전환의 동일 guest 복원 정책과
-  섞지 않으며, 정리 성공 뒤에만 새 익명 계정을 시작합니다.
+  성공 응답 뒤 `confirmed` 단계에서만 단말 데이터를 지웁니다. 앱 재시작은
+  token 판정보다 이 단계를 먼저 검사하며, 네트워크 실패 시 token과 marker를
+  유지한 복구 화면에서 삭제 요청을 재시도합니다. 현재 API 계약에서 응답
+  유실 뒤 재시도의 401만 삭제 완료 fallback으로 간주하며, 404와 네트워크
+  오류는 `requested` 상태를 유지합니다. 401도 일반 token 무효와 구분되지
+  않아 삭제 성공의 확정 증거가 아닙니다. 이 모호성을 제거할 서버
+  idempotency receipt/status API는 루트 작업 목록에서 별도 추적합니다.
 - 서버 삭제 후 단말 저장소 정리에 실패하면 인증 화면으로 전환해 계정은 이미
   삭제됐음을 알리고, 단말 데이터 재삭제 버튼과 앱 재설치 절차를 표시합니다.
 - 사용자 ID를 직접 부여하지 않은 공용 weather_cache, 제한된 운영 로그,

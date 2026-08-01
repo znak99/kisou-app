@@ -48,9 +48,7 @@ class ApiClient {
             // Refresh failed → the session is truly gone. Clear it and surface.
             await authService.clearTokens();
             await authService.clearOnboardingCompleted();
-            if (request.extra['preserveAccountDeletionRecovery'] != true) {
-              onUnauthorized?.call();
-            }
+            onUnauthorized?.call();
           }
           handler.next(error);
         },
