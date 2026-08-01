@@ -7,7 +7,6 @@ import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import '../config/api_config.dart';
 import '../models/auth.dart';
 import 'ad_reward_operation_store.dart';
-import 'push_local_metadata.dart';
 
 enum AuthLoginProvider {
   apple('apple'),
@@ -70,19 +69,7 @@ class AuthService {
       return;
     }
 
-    // iOS Keychain survives reinstall. Clear every known identity-owned key
-    // individually so the install-scoped push UUID/revision/cleanup marker is
-    // never erased before accountSwitch can tombstone the old registration and
-    // delete its token/FID. Unknown keys are inert because no code reads them.
-    for (final key in const [
-      _tokenKey,
-      _refreshTokenKey,
-      _deviceSecretKey,
-      _localCleanupTransitionKey,
-      AdRewardOperationStore.storageKey,
-    ]) {
-      await _storage.delete(key: key);
-    }
+    await _storage.deleteAll();
     await preferences.setBool(_hasLaunchedBeforeKey, true);
   }
 
@@ -245,28 +232,7 @@ class AuthService {
     await _storage.delete(key: _deviceSecretKey);
     await clearPendingAdRewardOperation();
     final preferences = await _preferencesFactory();
-    // OS permission history and consume-once delivery receipts are
-    // installation-scoped, not account data. Preserve them across the broad
-    // preference wipe so an old delivery cannot route twice for a later user.
-    final pushPromptCount = preferences.getInt(
-      pushPermissionPromptCountStorageKey,
-    );
-    final pushDeliveryReceipts = preferences.getString(
-      pushDeliveryReceiptStorageKey,
-    );
     await preferences.clear();
-    if (pushPromptCount != null) {
-      await preferences.setInt(
-        pushPermissionPromptCountStorageKey,
-        pushPromptCount,
-      );
-    }
-    if (pushDeliveryReceipts != null) {
-      await preferences.setString(
-        pushDeliveryReceiptStorageKey,
-        pushDeliveryReceipts,
-      );
-    }
   }
 
   Future<String> signInWithApple() async {

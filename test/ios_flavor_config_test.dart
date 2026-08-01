@@ -103,21 +103,9 @@ void main() {
     ]) {
       final entitlements = File(path).readAsStringSync();
       expect(entitlements, contains('<key>keychain-access-groups</key>'));
-      expect(
-        RegExp(
-          r'<key>keychain-access-groups</key>\s*<array\s*/>',
-        ).hasMatch(entitlements),
-        isTrue,
-      );
+      expect(entitlements, contains('<array/>'));
+      expect(entitlements, isNot(contains('<string>')));
     }
-    expect(
-      File('ios/Runner/Runner-Dev.entitlements').readAsStringSync(),
-      contains('<string>development</string>'),
-    );
-    expect(
-      File('ios/Runner/Runner.entitlements').readAsStringSync(),
-      contains('<string>production</string>'),
-    );
   });
 }
 

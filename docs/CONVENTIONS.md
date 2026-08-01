@@ -101,10 +101,6 @@ The mapping from API code (`"THIN_LONG"`) → enum → Japanese display name →
 - Use `dio` as HTTP client
 - Auth interceptor adds `Authorization: Bearer <token>` to all requests
 - On a 401, refresh once with the stored rotating refresh token and retry the request; simultaneous 401s share one refresh operation
-- A push-unregister request made by an account-transition coordinator marks
-  auth recovery as suppressed. If its refresh fails, surface the 401 without
-  clearing tokens, onboarding, or invoking the global unauthorized callback;
-  the outer cleanup gate owns credential removal after platform cleanup.
 - Store access/refresh tokens and `device_secret` only in `flutter_secure_storage`
 - After account deletion, clear all secure-storage credentials and local
   preferences immediately. Route onboarding and profile through one deletion
@@ -114,12 +110,6 @@ The mapping from API code (`"THIN_LONG"`) → enum → Japanese display name →
 - Persist account transitions independently from access-token state before
   login, logout, session expiry, or account deletion begins. Check that marker
   before `hasToken`; clear it only after every scoped local cleanup succeeds.
-  For logout and account switch, run push close and every independent
-  account-bound store as the first best-effort phase. If any operation fails,
-  preserve access/refresh tokens and onboarding state for an authenticated
-  retry. Only after that whole phase succeeds may the final auth-owned phase
-  clear pending reward state, onboarding, and—last—the session tokens. Startup,
-  explicit retry, login replacement, and session expiry must share this gate.
   Before in-app deletion, atomically persist the requested phase and a
   canonical lowercase UUID v4 in one secure-storage value, then send that UUID
   as `Idempotency-Key`. Only a `completed` result from the JWT-free
@@ -260,63 +250,6 @@ The mapping from API code (`"THIN_LONG"`) → enum → Japanese display name →
 - On logout, account switch, or account deletion, cancel only the travel
   notification namespace before deleting its local rows. If cancellation
   fails, keep the rows/outbox available for a visible cleanup retry.
-
-## Daily remote notifications
-
-- Keep `PUSH_NOTIFICATIONS_ENABLED` exactly boolean and false by default.
-  Validate enabled Firebase options against the selected Android/iOS platform,
-  environment, sender ID, and iOS bundle ID before app/network/storage startup.
-  A disabled build may initialize Firebase only when a durable prior cleanup
-  marker requires it.
-- Keep FCM native auto-init and Firebase Analytics collection false. Request OS
-  notification permission only from the user's explicit enable action. Persist
-  the platform cleanup marker before enabling auto-init or reading a token.
-- Never persist a raw FCM token locally or log it. Store only its SHA-256
-  fingerprint with the secure install UUID, platform, app version, and monotonic
-  int64 client revision. Send the raw token only in the authenticated device
-  registration request.
-- Treat register/unregister as a crash-safe state machine. Persist a mutation
-  and revision before the API request, replay response-loss with the exact same
-  revision and semantic body, and let account close synchronously invalidate
-  queued refreshes before writing a strictly higher unregister revision.
-- Accept only the exact four-string payload contract:
-  `schema_version`, `type`, `delivery_id`, `client_revision`. Reject extra
-  fields, non-canonical UUID/revision forms, unsupported types, and any revision
-  not routable by the current secure installation record. Never put nickname,
-  user/account ID, install UUID, token, location, weather, recommendation
-  details, or credentials in notification content or data.
-- Reserve each delivery UUID durably before foreground action or navigation.
-  Bound receipt history, preserve pending navigation across restart, and mark
-  completion only after routing succeeds. At an account boundary, reset a
-  corrupt receipt only after the durable revision/platform cleanup boundary is
-  complete.
-- Turning all daily reminders off and every logout/account switch/deletion must
-  run auto-init off → FCM token deletion → Firebase Installation ID deletion.
-  Clear the platform marker only when all three succeed. Run server unregister
-  and platform cleanup independently so an offline API cannot postpone local
-  identity deletion. A failed push close must leave the account transition
-  marker and old auth session available; never clear auth credentials while
-  server unregister or required platform cleanup is still retryable. This
-  includes a 401/refresh failure inside the API interceptor.
-- Treat deterministic installation-record corruption as evidence of possible
-  past Firebase activation. Do no server mutation with untrusted IDs; perform
-  conservative platform cleanup and replace it with a fresh revision-zero
-  record only after cleanup succeeds. Preserve the corrupt value on cleanup or
-  secure-write failure. Never erase or guess after an unexplained secure-store
-  `PlatformException`.
-- Keep daily push and travel notification namespaces disjoint. Android uses
-  channel `push_daily_v1` and tag `kisou_daily_push_v1`; iOS uses thread ID
-  `kisou_daily_push_v1`. Native displayed-notification cleanup must select only
-  that tag/channel/thread and must never use a global cancel-all operation.
-- Foreground notification UI must use app strings, remain accessible at 200%
-  text scaling, and avoid duplicate actions. Route morning notifications to a
-  refreshed home and evening notifications through the shared feedback entry.
-  Handle both `onMessageOpenedApp` and `getInitialMessage`.
-- Once a released environment has enabled push, keep its Firebase identifiers
-  available in later disabled builds until retained cleanup markers and stale
-  clients are retired. Document APNs/provisioning, service-account, physical
-  device, privacy disclosure, and Firebase's external FID deletion window as
-  owner release gates.
 
 ## Theming & Design
 

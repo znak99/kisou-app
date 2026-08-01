@@ -11,37 +11,6 @@ class AppStrings {
   static const themeLight = 'ライト';
   static const themeDark = 'ダーク';
 
-  // Daily push notifications
-  static const pushSettings = '毎日の通知';
-  static const pushSettingsDescription = '朝の服装と夜の記録をお知らせ';
-  static const pushSettingsIntro = '通知時刻は日本時間です。端末ごとに通知の許可が必要です。';
-  static const pushUnavailable = '通知機能は現在利用できません';
-  static const pushUnavailableBody =
-      'アプリの通知設定が準備されていません。服装のおすすめと記録は引き続きアプリ内で確認できます。';
-  static const pushMorningTitle = '朝の服装おすすめ';
-  static const pushMorningDescription = '今日の天気に合う服装を確認する時間をお知らせします';
-  static const pushEveningTitle = '夜の体感記録';
-  static const pushEveningDescription = 'その日の服装と体感を記録する時間をお知らせします';
-  static const pushTimeLabel = '通知時刻';
-  static const pushJst = '日本時間';
-  static const pushPermissionNotDetermined = '通知をオンにすると、端末の許可画面を表示します。';
-  static const pushPermissionDenied = '通知が許可されませんでした。もう一度試すか、端末の設定で許可してください。';
-  static const pushPermissionBlocked = '通知は端末でブロックされています。アプリの通知設定を開いて許可してください。';
-  static const pushPermissionAllowed = 'この端末で通知が許可されています';
-  static const pushPermissionRequest = '通知を許可';
-  static const pushOpenDeviceSettings = '端末の設定を開く';
-  static const pushSaveFailed = '通知設定を保存できませんでした。もう一度お試しください。';
-  static const pushRegistrationFailed =
-      'この端末を通知に登録できませんでした。通信状態を確認して再試行してください。';
-  static const pushPermissionFailed = '通知の許可状態を確認できませんでした。';
-  static const pushSettingsOpenFailed = '端末の通知設定を開けませんでした。';
-  static const pushForegroundMorningTitle = '今日の服装を確認できます';
-  static const pushForegroundMorningBody = 'キソウを開いて、今日のおすすめを確認しましょう。';
-  static const pushForegroundEveningTitle = '今日の体感を記録しませんか';
-  static const pushForegroundEveningBody = '服装と体感を記録すると、次のおすすめに反映されます。';
-  static const pushForegroundOpen = '開く';
-  static const pushForegroundDismiss = '閉じる';
-
   // Bottom navigation
   static const tabHome = 'ホーム';
   static const tabAnalysis = '分析';

@@ -19,7 +19,7 @@
 | API 서버 | FastAPI |
 | DB | PostgreSQL |
 | 추천 로직 | Python 기반 |
-| 푸시 알림 | Firebase Cloud Messaging + Firebase Installations |
+| 푸시 알림 | Firebase Cloud Messaging (MVP 이후) |
 | 크래시 분석 | Firebase Crashlytics (미도입) |
 | 행동 분석 | Firebase Analytics (미도입) |
 | 광고·동의 | google_mobile_ads 9.x (Google Mobile Ads + UMP) |
@@ -81,17 +81,10 @@
 - 날짜 지정 예측 횟수가 소진된 뒤 사용자가 명시적으로 시작하는
   서버 검증형 리워드 광고
 
-**매일 푸시 알림**
-
-- 사용자가 명시적으로 켜는 아침 복장 추천·저녁 체감 기록 알림
-- 각 알림의 `Asia/Tokyo` 기준 시각 설정과 foreground·background·종료 상태
-  탭 이동
-- 계정·설치 세대가 다른 payload 차단과 로그아웃·계정 전환·삭제 시 token/FID
-  정리
-
 ### 제외
 
 - 위젯 (iOS/Android 모두)
+- 알림 (푸시 알림)
 - 로지스틱 회귀 모델 (데이터 축적 후 도입)
 - 과거 피드백 히스토리 열람 화면
 - 소셜/공유 기능
@@ -506,10 +499,6 @@ user_id + date에 UNIQUE 제약 (1일 1피드백 보장)
 | POST | /ads/rewards/challenges | 플랫폼·실제 로드한 광고 단위·클라이언트 UUID가 일치하는 멱등 SSV challenge 발급 |
 | GET | /ads/rewards/challenges/{id} | pending·settling·credited·consumed·expired 상태 조회 |
 | POST | /ads/rewards/challenges/{id}/development-confirm | 공식 테스트 광고의 개발 전용 보상 확인 |
-| GET | /push/preferences | 아침·저녁 사용 여부와 `Asia/Tokyo` 시각 조회 |
-| PUT | /push/preferences | 아침·저녁 사용 여부와 시각 원자적 갱신 |
-| PUT | /push/devices | install UUID·단조 증가 client revision으로 FCM token 멱등 등록 |
-| POST | /push/devices/unregister | 더 높은 client revision으로 설치 등록 tombstone 전환 |
 
 ### 설계 원칙
 
@@ -663,75 +652,6 @@ GET /home:
   취소한 뒤 단말 DB를 삭제합니다. 공개 웹 삭제는 분실·고장 단말을 원격으로
   지울 수 없습니다.
 
-#### 아침 추천·저녁 피드백 푸시
-
-- 설정 기본값은 아침 `07:00`, 저녁 `20:00`, 양쪽 모두 꺼짐이며 모든 시각은
-  단말 시간대가 아니라 `Asia/Tokyo` 기준입니다. 선택한 시각은 정확 알람이
-  아닌 서버 발송 목표이므로 APNs·FCM·운영체제 상태에 따라 지연되거나
-  전달되지 않을 수 있습니다.
-- `PUSH_NOTIFICATIONS_ENABLED`의 기본값은 `false`입니다. 활성 빌드만 Android·
-  iOS Firebase 식별자를 플랫폼·환경과 대조하며, 잘못된 boolean 또는 누락·
-  형식 오류는 앱 상태나 네트워크에 접근하기 전에 fail-closed 처리합니다.
-  Firebase 단말 초기화 실패는 날씨·인증·피드백 등 핵심 기능을 막지 않고
-  알림 설정과 foreground 복귀에서 재시도합니다.
-- Android manifest와 iOS Info.plist는 FCM auto-init과 Firebase Analytics
-  수집을 기본 비활성화합니다. 사용자가 설정에서 처음 아침 또는 저녁 스위치를
-  켠 동작만 OS 알림 권한 요청을 시작합니다. 권한이 없거나 거부되면 server
-  preference를 켜지 않고, 차단 상태에는 단말 설정 이동을 제공합니다.
-- 활성화는 보안 저장소에 `platform_cleanup_required`를 먼저 기록한 뒤
-  auto-init 활성화 → token 조회 → 서버 등록 순으로 직렬화합니다. 단말에는
-  raw FCM token을 저장하지 않고 SHA-256 fingerprint, canonical lowercase
-  install UUID v4, 앱 버전, 플랫폼, 단조 증가 int64 client revision만
-  보관합니다. 응답 유실 재시도는 같은 UUID·revision·의미상 같은 요청을
-  재전송합니다.
-- 서버가 보내는 data payload는 정확히
-  `schema_version`, `type`, `delivery_id`, `client_revision` 네 문자열만
-  허용합니다. type은 `morning_recommendation|evening_feedback`,
-  `delivery_id`는 canonical lowercase UUID v4, revision은 canonical 양의
-  int64 decimal입니다. 별명, 내부 user ID, 위치, 날씨, 추천 상세, token,
-  install UUID는 제목·본문·payload에 포함하지 않습니다.
-- 앱은 현재 설치 레코드의 active revision 또는 응답 유실로 남은 pending
-  register revision과 정확히 일치하는 payload만 처리합니다. pending
-  unregister와 과거·미래 revision은 모두 거부합니다. delivery UUID는
-  SharedPreferences의 최대 64개 versioned receipt로 foreground 표시와
-  navigation pending·완료를 crash-safe하게 1회 처리합니다.
-- foreground에서는 시스템 배너를 중복 표시하지 않고 앱 내부 배너를
-  제공합니다. morning 탭은 홈으로 이동해 추천을 새로 읽고, evening 탭은
-  공통 피드백 입력을 엽니다. background는 `onMessageOpenedApp`, 종료 상태는
-  `getInitialMessage`를 사용하며, pending route는 재시작 뒤에도 revision을
-  다시 검증합니다.
-- 양쪽 알림을 끄거나 로그아웃·계정 전환·앱 내 계정 삭제를 시작하면 이전
-  계정 세대를 먼저 닫고 더 높은 unregister revision을 보안 저장소에
-  기록합니다. 서버 unregister와 단말 정리는 독립적으로 시작하며, 단말은
-  auto-init 비활성화 → FCM token 삭제 → Firebase Installation ID 삭제
-  순서를 전부 완료해야 cleanup marker를 지웁니다. 전환 전후에 종료 상태
-  message를 소진하고 이미 표시된 매일 푸시만 제거합니다.
-- 로그아웃·계정 전환의 로컬 정리는 push close와 여행·삭제 코드 등 독립
-  계정 저장소를 먼저 모두 시도하는 선행 단계와 auth 소유 데이터의 최종
-  단계로 나눕니다. 선행 단계 하나라도 실패하면 transition marker,
-  access/refresh token, onboarding 상태를 유지해 인증된 unregister와 단말
-  정리를 재시도합니다. 선행 단계가 전부 성공한 경우에만 pending reward,
-  onboarding, 마지막으로 session token을 지웁니다. 재시작 복구, 명시적
-  재시도, 새 로그인 전 account switch, 세션 만료가 같은 gate를 사용합니다.
-  이 전환이 보낸 unregister의 401·refresh 실패는 API interceptor에서도
-  token·onboarding을 지우거나 전역 세션 만료 callback을 부르지 않고 선행
-  단계 실패로 반환하며, 최종 auth 단계만 credential 삭제를 소유합니다.
-- 설치 메타데이터의 확정적 JSON/형식 손상은 key 존재 자체를 과거 Firebase
-  활성화 가능성으로 봅니다. 서버 UUID·revision은 신뢰하지 않고 token/FID
-  정리를 완료한 뒤에만 새 revision-0 레코드로 교체합니다. 정리나 secure
-  write가 실패하면 손상값을 retry marker로 유지합니다. 원인불명의 Keychain·
-  Keystore `PlatformException`은 값을 지우거나 추정하지 않고 계정 전환을
-  차단해 재시도합니다.
-- receipt 손상은 push close보다 먼저 전환을 막지 않습니다. durable
-  unregister 경계와 필요한 token/FID 정리가 끝난 뒤에만 손상 receipt key를
-  제거하며, close 실패에는 그대로 보존합니다. 서버에서 식별할 수 없는
-  손상 레코드의 과거 token row는 token/FID 무효화 후 서버의 invalid token·
-  30일 stale 정리 대상이 됩니다.
-- Android daily channel은 `push_daily_v1`, 표시 정리 tag는
-  `kisou_daily_push_v1`입니다. iOS는 같은 값을 `thread-id`로 사용합니다.
-  native 정리는 이 namespace만 대상으로 하므로 SQLite 여행 알림
-  `travel:`/ID `100000..199999`는 건드리지 않습니다.
-
 #### 미래 날짜·장소 예측 화면 상태 설계
 
 - 입력 카드는 날짜와 장소 선택, 서버가 반환한 무료 횟수와 보상 크레딧의
@@ -833,9 +753,6 @@ GET /home:
 
 - 섹션은 개인 정보 → 체감 설정 → 표시 설정 → 계정 설정 → 법률·지원 정보
   순으로 배치하고 개인정보처리방침은 콘텐츠의 마지막에 둡니다.
-- 표시 설정에는 `毎日の通知` 진입을 두고, 아침·저녁 사용 여부와 JST 시각,
-  OS 권한 상태, 저장·등록 오류와 재시도를 독립 스크롤 화면으로 제공합니다.
-  320dp·200% 글자 크기에서도 두 카드와 권한 동작에 접근할 수 있어야 합니다.
 - 체감 설정의 `体感分析`은 현재 체감 유형과 추위·적정·더위 기록 분포를
   표시합니다. 기록이 없으면 시작 안내, 4건 이하이면 평균 데이터를
   바탕으로 예상 중이라는 안내와 상세 분석까지 남은 횟수, 5건 이상이면
@@ -884,7 +801,6 @@ GET /home:
 - 위치 변경 (GPS 재설정 또는 수동 지역 선택)
 - 체감 데이터 초기화
 - 테마 선택 및 개인정보처리방침 열기
-- 아침 추천·저녁 피드백 푸시 사용 여부와 JST 시각 설정
 - Apple/Google 계정 연동 상태 표시 코드는 유지하지만 신규 연동 행동은
   운영판에서 비활성화
 - 연결 계정 로그아웃
@@ -932,10 +848,6 @@ GET /home:
 | 피드백 기록 | 이용 기록 | 앱 사용 중 |
 | 보정값 | 이용 기록 | 자동 생성 |
 | 여행 장소 코드·출발 일시·알림 선택/상태 | 단말 이용 정보 | 사용자가 입력하며 해당 단말에만 저장, 서버 미전송 |
-| FCM 등록 token·Firebase Installation ID | 단말 식별정보 | 사용자가 매일 알림을 켠 단말에서 Firebase가 발급 |
-| push install UUID·client revision·플랫폼·앱 버전 | 단말/보안 메타데이터 | 앱 보안 저장소와 기기 등록 API |
-| 아침·저녁 사용 여부와 JST 시각 | 계정 설정 | 사용자의 알림 설정 |
-| push delivery UUID·type·revision·처리 단계 | 중복 처리 메타데이터 | 서버 발송과 단말 SharedPreferences |
 
 ### MVP 필수 구현 사항
 
@@ -946,9 +858,6 @@ GET /home:
 - 메뉴의 `プライバシーポリシー`에서 같은 HTTPS URL을 시스템 기본
   외부 브라우저로 표시하고, 열기 실패 시 일본어 오류 안내 제공
 - 포함 내용: 수집 항목, 이용 목적, 제3자 제공 여부, 보관 기간, 사용자 권리, 문의처
-- Firebase Cloud Messaging/Installations 처리, token/FID 삭제와 외부
-  live·backup 삭제에 최대 180일이 걸릴 수 있는 범위, 전달 시각 비보장,
-  운영체제 알림 권한을 공개 정책과 스토어 개인정보·데이터 안전 신고에 반영
 
 **위치정보**
 
@@ -990,19 +899,15 @@ GET /home:
   섞지 않으며, 정리 성공 뒤에만 새 익명 계정을 시작합니다.
 - 서버 삭제 후 단말 저장소 정리에 실패하면 인증 화면으로 전환해 계정은 이미
   삭제됐음을 알리고, 단말 데이터 재삭제 버튼과 앱 재설치 절차를 표시합니다.
-- 매일 푸시를 사용한 단말은 계정 삭제 전 더 높은 unregister revision을
-  기록하고 FCM auto-init·token·FID를 정리합니다. Firebase 문서상 FID와
-  연결된 외부 live·backup 데이터 삭제에는 최대 180일이 걸릴 수 있습니다.
 - 사용자 ID를 직접 부여하지 않은 공용 weather_cache, 제한된 운영 로그,
   외부 처리업체가 보유하는 로그·백업은 계정 삭제 대상이 아닙니다. 실제
   보존 상태와 외부 삭제 범위는 공개 개인정보처리방침에 따릅니다.
 
 **ATT (앱 추적 투명성)**
 
-- Firebase Core·Cloud Messaging·Installations는 매일 푸시에 사용하지만
-  Firebase Analytics는 설치하지 않았고 native 수집도 비활성화합니다.
-  Google Mobile Ads와 UMP는 설치되어 있지만 광고 요청을 비개인화/문맥형으로
-  제한하고 앱에서 IDFA나 앱·웹 간 추적을 사용하지 않습니다. 따라서
+- Firebase Analytics는 설치하지 않았습니다. Google Mobile Ads와 UMP는
+  설치되어 있지만 광고 요청을 비개인화/문맥형으로 제한하고 앱에서 IDFA나
+  앱·웹 간 추적을 사용하지 않습니다. 따라서
   `NSUserTrackingUsageDescription`을 선언하지 않고 ATT 팝업도 요청하지
   않습니다.
 - 광고를 운영 활성화하기 전 Google SDK의 당시 데이터 처리 명세, UMP
@@ -1014,10 +919,6 @@ GET /home:
 
 - 계정에 연결된 프로필·위치 설정·체감 기록·인증 레코드는 계정 존재 기간
   동안 보관하고 계정 삭제 시 삭제합니다.
-- 활성 push token과 preference는 계정·설치 등록 기간에 보관하고 all-off,
-  로그아웃, 계정 전환, 계정 삭제에서 등록 해제합니다. 앱의 raw token은
-  요청 메모리에서만 사용하고 단말 영구 저장에는 SHA-256만 남깁니다.
-  Firebase FID 삭제의 외부 완료 범위는 Google 정책상 최대 180일입니다.
 - 공용 weather_cache에는 현재 기간 기반 자동 삭제가 없고, 운영 Docker
   로그는 용량 기준으로 순환합니다. Gmail 문의와 외부 기반의 보존 설정을
   포함한 현재 상태와 미확정 사항은 공개 개인정보처리방침에 명시합니다.
@@ -1095,13 +996,6 @@ GET /home:
   ID로 격리합니다. 운영 secure-storage service 이름은 기존 세션을
   보존하고 dev만 별도 service를 사용하며, dev/prod를 잇는 공용
   Keychain group은 구성하지 않습니다.
-- push는 환경별 Firebase Android/iOS 앱을 runtime define으로 구성하고
-  `PUSH_NOTIFICATIONS_ENABLED=false`를 기본으로 유지합니다. 활성화 전
-  Firebase service account·서버 scheduler, Apple Push capability와 APNs
-  key 업로드, provisioning을 소유자가 구성하고 Android·iOS 실기기에서
-  foreground/background/terminated와 token refresh를 검증합니다. 한번
-  활성 배포한 환경은 이후 feature flag를 내려도 이전 설치 cleanup을 위해
-  같은 Firebase 식별자를 빌드에 유지합니다.
 - 외부 삭제용 코드 원문은 세션 자격정보와 분리한 repository·secure-store
   경로에서 처리합니다. iOS Keychain은 `synchronizable: false`와
   `unlocked_this_device`를 사용하고, Android는 백업 제외와 Keystore 암호화를

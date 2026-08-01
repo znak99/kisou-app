@@ -5,15 +5,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kisou_app/constants/app_strings.dart';
-import 'package:kisou_app/config/push_config.dart';
-import 'package:kisou_app/models/push_notification.dart';
 import 'package:kisou_app/providers/ad_reward_provider.dart';
 import 'package:kisou_app/providers/ads_provider.dart';
 import 'package:kisou_app/providers/api_provider.dart';
 import 'package:kisou_app/providers/auth_provider.dart';
-import 'package:kisou_app/providers/outlook_quota_provider.dart';
-import 'package:kisou_app/providers/push_provider.dart';
 import 'package:kisou_app/providers/shell_provider.dart';
+import 'package:kisou_app/providers/outlook_quota_provider.dart';
 import 'package:kisou_app/providers/theme_provider.dart';
 import 'package:kisou_app/providers/travel_plan_provider.dart';
 import 'package:kisou_app/providers/user_provider.dart';
@@ -25,10 +22,6 @@ import 'package:kisou_app/screens/onboarding/login_screen.dart';
 import 'package:kisou_app/services/auth_service.dart';
 import 'package:kisou_app/services/travel_notification_service.dart';
 import 'package:kisou_app/services/user_service.dart';
-import 'package:kisou_app/services/push_installation_store.dart';
-import 'package:kisou_app/services/push_local_metadata.dart';
-import 'package:kisou_app/services/push_messaging_gateway.dart';
-import 'package:kisou_app/services/push_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -202,325 +195,6 @@ void main() {
   });
 
   test(
-    'malformed push receipts are reset only after logout closes push state',
-    () async {
-      SharedPreferences.setMockInitialValues({
-        pushDeliveryReceiptStorageKey: '{corrupt',
-      });
-      final authService = _LoginFakeAuthService(isNewUser: false)
-        ..hasTokenValue = true
-        ..onboardingCompletedValue = true;
-      final messaging = MemoryPushMessagingGateway();
-      final pushManager = _BoundaryPushAccountManager();
-      final container = ProviderContainer(
-        overrides: [
-          authServiceProvider.overrideWithValue(authService),
-          apiClientProvider.overrideWithValue(Dio()),
-          travelPlanRepositoryProvider.overrideWithValue(
-            MemoryTravelPlanRepository(),
-          ),
-          travelNotificationGatewayProvider.overrideWithValue(
-            MemoryTravelNotificationGateway(),
-          ),
-          pushRuntimeEnabledProvider.overrideWithValue(true),
-          pushMessagingGatewayProvider.overrideWithValue(messaging),
-          pushAccountManagerProvider.overrideWithValue(pushManager),
-        ],
-      );
-      addTearDown(() async {
-        container.dispose();
-        await messaging.close();
-      });
-
-      await container.read(authProvider.future);
-      await container.read(authProvider.notifier).logout();
-
-      final preferences = await SharedPreferences.getInstance();
-      expect(pushManager.closeCalls, 1);
-      expect(preferences.containsKey(pushDeliveryReceiptStorageKey), isFalse);
-      expect(
-        container.read(authProvider).requireValue.isAuthenticated,
-        isFalse,
-      );
-    },
-  );
-
-  test(
-    'interactive logout preserves auth and receipts until push close succeeds',
-    () async {
-      SharedPreferences.setMockInitialValues({
-        pushDeliveryReceiptStorageKey: '{corrupt',
-      });
-      final authService = _LoginFakeAuthService(isNewUser: false)
-        ..hasTokenValue = true
-        ..onboardingCompletedValue = true;
-      final messaging = MemoryPushMessagingGateway();
-      final pushManager = _BoundaryPushAccountManager(failClose: true);
-      final container = ProviderContainer(
-        overrides: [
-          authServiceProvider.overrideWithValue(authService),
-          apiClientProvider.overrideWithValue(Dio()),
-          travelPlanRepositoryProvider.overrideWithValue(
-            MemoryTravelPlanRepository(),
-          ),
-          travelNotificationGatewayProvider.overrideWithValue(
-            MemoryTravelNotificationGateway(),
-          ),
-          pushRuntimeEnabledProvider.overrideWithValue(true),
-          pushMessagingGatewayProvider.overrideWithValue(messaging),
-          pushAccountManagerProvider.overrideWithValue(pushManager),
-        ],
-      );
-      addTearDown(() async {
-        container.dispose();
-        await messaging.close();
-      });
-
-      await container.read(authProvider.future);
-      await expectLater(
-        container.read(authProvider.notifier).logout(),
-        throwsStateError,
-      );
-
-      final preferences = await SharedPreferences.getInstance();
-      expect(pushManager.closeCalls, 1);
-      expect(preferences.getString(pushDeliveryReceiptStorageKey), '{corrupt');
-      expect(container.read(authProvider).requireValue.isAuthenticated, isTrue);
-      expect(authService.hasTokenValue, isTrue);
-      expect(authService.onboardingCompletedValue, isTrue);
-      expect(authService.didClearTokens, isFalse);
-      expect(authService.didClearOnboarding, isFalse);
-
-      pushManager.failClose = false;
-      await container.read(authProvider.notifier).logout();
-
-      expect(pushManager.closeCalls, 2);
-      expect(authService.hasTokenValue, isFalse);
-      expect(authService.onboardingCompletedValue, isFalse);
-      expect(authService.didClearTokens, isTrue);
-      expect(authService.didClearOnboarding, isTrue);
-      expect(
-        container.read(authProvider).requireValue.isAuthenticated,
-        isFalse,
-      );
-    },
-  );
-
-  test(
-    'startup interrupted transition preserves auth until push retry succeeds',
-    () async {
-      final authService = _LoginFakeAuthService(isNewUser: false)
-        ..hasTokenValue = true
-        ..onboardingCompletedValue = true
-        ..localCleanupTransition = LocalCleanupTransition.accountSwitch;
-      final messaging = MemoryPushMessagingGateway();
-      final pushManager = _BoundaryPushAccountManager(failClose: true);
-      final container = ProviderContainer(
-        overrides: [
-          authServiceProvider.overrideWithValue(authService),
-          apiClientProvider.overrideWithValue(Dio()),
-          travelPlanRepositoryProvider.overrideWithValue(
-            MemoryTravelPlanRepository(),
-          ),
-          travelNotificationGatewayProvider.overrideWithValue(
-            MemoryTravelNotificationGateway(),
-          ),
-          pushRuntimeEnabledProvider.overrideWithValue(true),
-          pushMessagingGatewayProvider.overrideWithValue(messaging),
-          pushAccountManagerProvider.overrideWithValue(pushManager),
-        ],
-      );
-      addTearDown(() async {
-        container.dispose();
-        await messaging.close();
-      });
-
-      final blocked = await container.read(authProvider.future);
-
-      expect(blocked.localCleanupScope, LocalCleanupScope.accountSwitch);
-      expect(authService.hasTokenValue, isTrue);
-      expect(authService.onboardingCompletedValue, isTrue);
-      expect(authService.didClearTokens, isFalse);
-      expect(authService.didClearOnboarding, isFalse);
-
-      pushManager.failClose = false;
-      expect(
-        await container.read(authProvider.notifier).retryLocalAccountCleanup(),
-        isTrue,
-      );
-
-      expect(authService.hasTokenValue, isFalse);
-      expect(authService.onboardingCompletedValue, isFalse);
-      expect(authService.didClearTokens, isTrue);
-      expect(authService.didClearOnboarding, isTrue);
-      expect(authService.localCleanupTransition, isNull);
-    },
-  );
-
-  test(
-    'login account switch preserves auth until push retry succeeds',
-    () async {
-      final authService = _LoginFakeAuthService(isNewUser: false)
-        ..hasTokenValue = true
-        ..onboardingCompletedValue = true;
-      final messaging = MemoryPushMessagingGateway();
-      final pushManager = _BoundaryPushAccountManager(failClose: true);
-      final container = ProviderContainer(
-        overrides: [
-          authServiceProvider.overrideWithValue(authService),
-          apiClientProvider.overrideWithValue(Dio()),
-          travelPlanRepositoryProvider.overrideWithValue(
-            MemoryTravelPlanRepository(),
-          ),
-          travelNotificationGatewayProvider.overrideWithValue(
-            MemoryTravelNotificationGateway(),
-          ),
-          pushRuntimeEnabledProvider.overrideWithValue(true),
-          pushMessagingGatewayProvider.overrideWithValue(messaging),
-          pushAccountManagerProvider.overrideWithValue(pushManager),
-        ],
-      );
-      addTearDown(() async {
-        container.dispose();
-        await messaging.close();
-      });
-
-      expect(
-        (await container.read(authProvider.future)).isAuthenticated,
-        isTrue,
-      );
-
-      await container
-          .read(authProvider.notifier)
-          .loginWithDevelopmentExistingUser();
-
-      final blocked = container.read(authProvider).requireValue;
-      expect(blocked.localCleanupScope, LocalCleanupScope.accountSwitch);
-      expect(authService.hasTokenValue, isTrue);
-      expect(authService.onboardingCompletedValue, isTrue);
-      expect(authService.didClearTokens, isFalse);
-      expect(authService.didClearOnboarding, isFalse);
-
-      pushManager.failClose = false;
-      expect(
-        await container.read(authProvider.notifier).retryLocalAccountCleanup(),
-        isTrue,
-      );
-
-      expect(authService.hasTokenValue, isFalse);
-      expect(authService.onboardingCompletedValue, isFalse);
-      expect(authService.didClearTokens, isTrue);
-      expect(authService.didClearOnboarding, isTrue);
-      expect(authService.localCleanupTransition, isNull);
-    },
-  );
-
-  test('cleanup retry preserves auth when its push close fails', () async {
-    final authService = _LoginFakeAuthService(isNewUser: false)
-      ..hasTokenValue = true
-      ..onboardingCompletedValue = true
-      ..localCleanupTransition = LocalCleanupTransition.accountSwitch;
-    final messaging = MemoryPushMessagingGateway();
-    final pushManager = _BoundaryPushAccountManager(failClose: true);
-    final container = ProviderContainer(
-      overrides: [
-        authServiceProvider.overrideWithValue(authService),
-        apiClientProvider.overrideWithValue(Dio()),
-        travelPlanRepositoryProvider.overrideWithValue(
-          MemoryTravelPlanRepository(),
-        ),
-        travelNotificationGatewayProvider.overrideWithValue(
-          MemoryTravelNotificationGateway(),
-        ),
-        pushRuntimeEnabledProvider.overrideWithValue(true),
-        pushMessagingGatewayProvider.overrideWithValue(messaging),
-        pushAccountManagerProvider.overrideWithValue(pushManager),
-      ],
-    );
-    addTearDown(() async {
-      container.dispose();
-      await messaging.close();
-    });
-
-    final blocked = await container.read(authProvider.future);
-    expect(blocked.localCleanupScope, LocalCleanupScope.accountSwitch);
-    expect(authService.hasTokenValue, isTrue);
-    expect(authService.onboardingCompletedValue, isTrue);
-
-    expect(
-      await container.read(authProvider.notifier).retryLocalAccountCleanup(),
-      isFalse,
-    );
-
-    expect(authService.hasTokenValue, isTrue);
-    expect(authService.onboardingCompletedValue, isTrue);
-    expect(authService.didClearTokens, isFalse);
-    expect(authService.didClearOnboarding, isFalse);
-
-    pushManager.failClose = false;
-    expect(
-      await container.read(authProvider.notifier).retryLocalAccountCleanup(),
-      isTrue,
-    );
-
-    expect(authService.hasTokenValue, isFalse);
-    expect(authService.onboardingCompletedValue, isFalse);
-    expect(authService.didClearTokens, isTrue);
-    expect(authService.didClearOnboarding, isTrue);
-    expect(authService.localCleanupTransition, isNull);
-  });
-
-  test('session expiry preserves auth until push retry succeeds', () async {
-    final authService = _LoginFakeAuthService(isNewUser: false)
-      ..hasTokenValue = true
-      ..onboardingCompletedValue = true;
-    final messaging = MemoryPushMessagingGateway();
-    final pushManager = _BoundaryPushAccountManager(failClose: true);
-    final container = ProviderContainer(
-      overrides: [
-        authServiceProvider.overrideWithValue(authService),
-        apiClientProvider.overrideWithValue(Dio()),
-        travelPlanRepositoryProvider.overrideWithValue(
-          MemoryTravelPlanRepository(),
-        ),
-        travelNotificationGatewayProvider.overrideWithValue(
-          MemoryTravelNotificationGateway(),
-        ),
-        pushRuntimeEnabledProvider.overrideWithValue(true),
-        pushMessagingGatewayProvider.overrideWithValue(messaging),
-        pushAccountManagerProvider.overrideWithValue(pushManager),
-      ],
-    );
-    addTearDown(() async {
-      container.dispose();
-      await messaging.close();
-    });
-
-    expect((await container.read(authProvider.future)).isAuthenticated, isTrue);
-
-    await container.read(authProvider.notifier).expireSession();
-
-    final blocked = container.read(authProvider).requireValue;
-    expect(blocked.localCleanupScope, LocalCleanupScope.accountSwitch);
-    expect(authService.hasTokenValue, isTrue);
-    expect(authService.onboardingCompletedValue, isTrue);
-    expect(authService.didClearTokens, isFalse);
-    expect(authService.didClearOnboarding, isFalse);
-
-    pushManager.failClose = false;
-    expect(
-      await container.read(authProvider.notifier).retryLocalAccountCleanup(),
-      isTrue,
-    );
-
-    expect(authService.hasTokenValue, isFalse);
-    expect(authService.onboardingCompletedValue, isFalse);
-    expect(authService.didClearTokens, isTrue);
-    expect(authService.didClearOnboarding, isTrue);
-    expect(authService.localCleanupTransition, isNull);
-  });
-
-  test(
     'account transition invalidates quota and reward but preserves UMP state',
     () async {
       final authService = _LoginFakeAuthService(isNewUser: false);
@@ -633,8 +307,6 @@ void main() {
       await container
           .read(authProvider.notifier)
           .loginWithDevelopmentExistingUser();
-      authService.didClearTokens = false;
-      authService.didClearOnboarding = false;
       await container
           .read(travelPlanProvider.notifier)
           .create(
@@ -656,10 +328,8 @@ void main() {
       expect(failed.isAuthenticated, isFalse);
       expect(failed.localCleanupRequired, isTrue);
       expect(failed.localCleanupScope, LocalCleanupScope.logout);
-      expect(authService.hasTokenValue, isTrue);
-      expect(authService.onboardingCompletedValue, isTrue);
-      expect(authService.didClearTokens, isFalse);
-      expect(authService.didClearOnboarding, isFalse);
+      expect(authService.didClearTokens, isTrue);
+      expect(authService.didClearOnboarding, isTrue);
       expect(await repository.listVisible(), hasLength(1));
       expect(authService.localCleanupTransition, LocalCleanupTransition.logout);
 
@@ -685,8 +355,6 @@ void main() {
         isTrue,
       );
       expect(await repository.listAll(), isEmpty);
-      expect(authService.didClearTokens, isTrue);
-      expect(authService.didClearOnboarding, isTrue);
       expect(
         container.read(authProvider).requireValue.localCleanupRequired,
         isFalse,
@@ -1768,7 +1436,6 @@ class _LoginFakeAuthService extends AuthService {
       throw StateError('local cleanup failed');
     }
     hasTokenValue = false;
-    onboardingCompletedValue = false;
     didClearLocalAccountData = true;
     didClearTokens = true;
     didClearOnboarding = true;
@@ -1794,7 +1461,6 @@ class _LoginFakeAuthService extends AuthService {
 
   @override
   Future<void> clearOnboardingCompleted() async {
-    onboardingCompletedValue = false;
     didClearOnboarding = true;
   }
 
@@ -1803,64 +1469,6 @@ class _LoginFakeAuthService extends AuthService {
     didClearPendingAdRewardOperation = true;
   }
 }
-
-class _BoundaryPushAccountManager extends PushAccountManager {
-  _BoundaryPushAccountManager({this.failClose = false})
-    : super(
-        store: PushInstallationStore(),
-        messaging: const DisabledPushMessagingGateway(),
-        api: _UnusedPushApi(),
-        platform: KisouPushPlatform.android,
-        appVersionFactory: _unusedAppVersion,
-      );
-
-  bool failClose;
-  int closeCalls = 0;
-
-  @override
-  Future<PushInstallationSnapshot> closeAccount({
-    bool suppressAuthRecovery = true,
-  }) async {
-    closeCalls++;
-    if (failClose) {
-      throw StateError('push close failed');
-    }
-    return PushInstallationSnapshot(
-      record: PushInstallationRecord.create(
-        '123e4567-e89b-42d3-a456-426614174000',
-      ),
-      accountGeneration: closeCalls,
-    );
-  }
-}
-
-class _UnusedPushApi implements PushApiGateway {
-  @override
-  Future<PushPreferences> getPreferences() async => PushPreferences.defaults;
-
-  @override
-  Future<void> registerDevice({
-    required String installationId,
-    required int clientRevision,
-    required KisouPushPlatform platform,
-    required String fcmToken,
-    required String appVersion,
-  }) async {}
-
-  @override
-  Future<void> unregisterDevice({
-    required String installationId,
-    required int clientRevision,
-    bool suppressAuthRecovery = false,
-  }) async {}
-
-  @override
-  Future<PushPreferences> updatePreferences(PushPreferences preferences) async {
-    return preferences;
-  }
-}
-
-Future<String> _unusedAppVersion() async => '1.0.0+1';
 
 class _AutoLoginFakeAuthService extends _LoginFakeAuthService {
   _AutoLoginFakeAuthService() : super(isNewUser: false);

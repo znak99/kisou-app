@@ -3,8 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
 import '../services/auth_service.dart';
-import '../services/push_installation_store.dart';
-import '../services/push_messaging_gateway.dart';
 import '../utils/api_error.dart';
 import 'ad_reward_provider.dart';
 import 'forecast_provider.dart';
@@ -12,7 +10,6 @@ import 'api_provider.dart';
 import 'feedback_provider.dart';
 import 'home_provider.dart';
 import 'outlook_quota_provider.dart';
-import 'push_provider.dart';
 import 'shell_provider.dart';
 import 'theme_provider.dart';
 import 'travel_plan_provider.dart';
@@ -89,7 +86,6 @@ class AuthController extends AsyncNotifier<AuthState> {
     final authService = ref.read(authServiceProvider);
     await authService.clearKeychainOnFirstLaunch();
     var interruptedTransition = await authService.readLocalCleanupTransition();
-    var pushAlreadyClosed = false;
     if (interruptedTransition ==
         LocalCleanupTransition.accountDeletionRequested) {
       final confirmed = await _resumeAccountDeletionRequest();
@@ -100,15 +96,11 @@ class AuthController extends AsyncNotifier<AuthState> {
           canDiscardUnconfirmedAccountData: _canDiscardUnconfirmedAccountData,
         );
       }
-      pushAlreadyClosed = true;
       interruptedTransition = LocalCleanupTransition.accountDeletion;
     }
     if (interruptedTransition != null) {
       final scope = _scopeFor(interruptedTransition);
-      final cleanupFailure = await _runScopedCleanup(
-        scope,
-        pushAlreadyClosed: pushAlreadyClosed,
-      );
+      final cleanupFailure = await _runScopedCleanup(scope);
       if (cleanupFailure != null) {
         return AuthState.unauthenticated(localCleanupScope: scope);
       }
@@ -126,9 +118,8 @@ class AuthController extends AsyncNotifier<AuthState> {
     await authService.markLocalCleanupTransition(
       LocalCleanupTransition.accountSwitch,
     );
-    final transitionFailure = await _runScopedCleanup(
-      LocalCleanupScope.accountSwitch,
-      clearTransitionOnSuccess: false,
+    final transitionFailure = await _runCleanupOperations(
+      _cleanupOperations(LocalCleanupScope.accountSwitch),
     );
     if (transitionFailure != null) {
       return const AuthState.unauthenticated(
@@ -212,8 +203,6 @@ class AuthController extends AsyncNotifier<AuthState> {
   Future<void> logout() async {
     final authService = ref.read(authServiceProvider);
     await authService.markLocalCleanupTransition(LocalCleanupTransition.logout);
-    // Unregister while the old refresh/access session is still usable.
-    await _closePushAccountForTransition();
     state = const AsyncLoading<AuthState>();
     try {
       await authService.logoutServer(dio: ref.read(apiClientProvider));
@@ -222,10 +211,7 @@ class AuthController extends AsyncNotifier<AuthState> {
       // shared/offline device so the next user cannot inherit local data.
     }
 
-    final cleanupFailure = await _runScopedCleanup(
-      LocalCleanupScope.logout,
-      pushAlreadyClosed: true,
-    );
+    final cleanupFailure = await _runScopedCleanup(LocalCleanupScope.logout);
     _invalidateUserScopedData();
     state = AsyncData(
       AuthState.unauthenticated(
@@ -299,13 +285,10 @@ class AuthController extends AsyncNotifier<AuthState> {
     await _completeAccountDeletion();
   }
 
-  Future<void> _completeAccountDeletion({
-    bool pushAlreadyClosed = false,
-  }) async {
+  Future<void> _completeAccountDeletion() async {
     state = const AsyncLoading<AuthState>();
     final cleanupFailure = await _runScopedCleanup(
       LocalCleanupScope.accountDeletion,
-      pushAlreadyClosed: pushAlreadyClosed,
     );
     _invalidateUserScopedData();
     state = AsyncData(
@@ -338,7 +321,6 @@ class AuthController extends AsyncNotifier<AuthState> {
       accountDeletionIdempotencyKeyFactoryProvider,
     )();
     await authService.markAccountDeletionRequested(idempotencyKey);
-    await _closePushAccountForTransition();
     final confirmed = await _requestDeletionAndConfirm(idempotencyKey);
     if (!confirmed) {
       _invalidateUserScopedData();
@@ -367,7 +349,7 @@ class AuthController extends AsyncNotifier<AuthState> {
         stackTrace,
       );
     }
-    await _completeAccountDeletion(pushAlreadyClosed: true);
+    await _completeAccountDeletion();
   }
 
   /// Re-attempts the exact local cleanup scope without creating an account.
@@ -378,7 +360,6 @@ class AuthController extends AsyncNotifier<AuthState> {
     }
     final authService = ref.read(authServiceProvider);
     var cleanupScope = scope;
-    var pushAlreadyClosed = false;
     if (scope == LocalCleanupScope.accountDeletionRequest) {
       final confirmed = await _resumeAccountDeletionRequest();
       if (!confirmed) {
@@ -391,7 +372,6 @@ class AuthController extends AsyncNotifier<AuthState> {
         );
         return false;
       }
-      pushAlreadyClosed = true;
       cleanupScope = LocalCleanupScope.accountDeletion;
     }
     try {
@@ -402,10 +382,7 @@ class AuthController extends AsyncNotifier<AuthState> {
       // If all cleanup operations succeed below, no recovery marker remains
       // necessary. A failed operation keeps the in-memory recovery screen.
     }
-    final cleanupFailure = await _runScopedCleanup(
-      cleanupScope,
-      pushAlreadyClosed: pushAlreadyClosed,
-    );
+    final cleanupFailure = await _runScopedCleanup(cleanupScope);
     _invalidateUserScopedData();
     state = AsyncData(
       AuthState.unauthenticated(
@@ -485,21 +462,20 @@ class AuthController extends AsyncNotifier<AuthState> {
     return _CleanupFailure(firstError, firstStackTrace!);
   }
 
-  List<Future<void> Function()> _preCredentialCleanupOperations(
-    LocalCleanupScope scope, {
-    bool includePush = true,
-  }) {
+  List<Future<void> Function()> _cleanupOperations(LocalCleanupScope scope) {
+    final authService = ref.read(authServiceProvider);
     return switch (scope) {
       LocalCleanupScope.logout || LocalCleanupScope.accountSwitch => [
-        if (includePush) _closePushAccountForTransition,
         () async {
           ref.invalidate(adRewardProvider);
         },
         () => ref.read(travelPlanProvider.notifier).clearAllLocalData(),
+        authService.clearPendingAdRewardOperation,
+        authService.clearTokens,
+        authService.clearOnboardingCompleted,
       ],
       LocalCleanupScope.accountDeletion ||
       LocalCleanupScope.unconfirmedAccountDiscard => [
-        if (includePush) _closePushAccountForTransition,
         () async {
           ref.invalidate(adRewardProvider);
         },
@@ -512,56 +488,27 @@ class AuthController extends AsyncNotifier<AuthState> {
     };
   }
 
-  Future<_CleanupFailure?> _runAuthOwnedCleanup(LocalCleanupScope scope) async {
-    final authService = ref.read(authServiceProvider);
-    try {
-      switch (scope) {
-        case LocalCleanupScope.logout:
-        case LocalCleanupScope.accountSwitch:
-          // The old session remains available for push unregister until every
-          // independent account-bound store has finished. Within this final
-          // phase, remove the access/refresh tokens last so an earlier local
-          // preference failure also remains retryable.
-          await authService.clearPendingAdRewardOperation();
-          await authService.clearOnboardingCompleted();
-          await authService.clearTokens();
-        case LocalCleanupScope.accountDeletion:
-        case LocalCleanupScope.unconfirmedAccountDiscard:
-          // The server account is already deleted, or the user explicitly
-          // chose irreversible local-only abandonment.
-          await authService.clearLocalAccountData();
-        case LocalCleanupScope.accountDeletionRequest:
-          break;
-      }
-      return null;
-    } catch (error, stackTrace) {
-      return _CleanupFailure(error, stackTrace);
-    }
-  }
-
-  Future<_CleanupFailure?> _runScopedCleanup(
-    LocalCleanupScope scope, {
-    bool pushAlreadyClosed = false,
-    bool clearTransitionOnSuccess = true,
-  }) async {
+  Future<_CleanupFailure?> _runScopedCleanup(LocalCleanupScope scope) async {
     final authService = ref.read(authServiceProvider);
     final cleanupFailure = await _runCleanupOperations(
-      _preCredentialCleanupOperations(scope, includePush: !pushAlreadyClosed),
+      _cleanupOperations(scope),
     );
     if (cleanupFailure != null) {
-      // The access/refresh session is the capability needed to retry server
-      // unregister. Keep all auth-owned data and the transition marker intact
-      // until push and every other independent account store are clean.
+      // Do not remove auth credentials/preferences after another scoped store
+      // failed. The secure transition marker and retry context must remain
+      // intact until every account-bound cleanup can complete.
       return cleanupFailure;
     }
-    final authCleanupFailure = await _runAuthOwnedCleanup(scope);
-    if (authCleanupFailure != null) {
-      return authCleanupFailure;
-    }
-    if (!clearTransitionOnSuccess) {
-      // Login and startup account replacement retain the crash marker until
-      // the replacement session and onboarding state are durably finalized.
-      return null;
+    if (scope == LocalCleanupScope.accountDeletion ||
+        scope == LocalCleanupScope.unconfirmedAccountDiscard) {
+      try {
+        // Clear auth-owned credentials and preferences only after the other
+        // stores succeed. AuthService deliberately preserves the secure
+        // transition marker until the explicit clear below.
+        await authService.clearLocalAccountData();
+      } catch (error, stackTrace) {
+        return _CleanupFailure(error, stackTrace);
+      }
     }
     try {
       await authService.clearLocalCleanupTransition();
@@ -575,13 +522,6 @@ class AuthController extends AsyncNotifier<AuthState> {
     _deletionAuthenticationRequired = false;
     _deletionReceiptNotFound = false;
     final authService = ref.read(authServiceProvider);
-    try {
-      await _closePushAccountForTransition();
-    } catch (_) {
-      // A durable installation revision is required before deletion can
-      // proceed; preserve the deletion marker and retry later.
-      return false;
-    }
     var idempotencyKey = await authService
         .readAccountDeletionRequestIdempotencyKey();
     if (idempotencyKey != null &&
@@ -702,73 +642,7 @@ class AuthController extends AsyncNotifier<AuthState> {
     ref.invalidate(userProvider);
     ref.invalidate(travelPlanProvider);
     ref.invalidate(travelNotificationNavigationProvider);
-    ref.invalidate(pushSettingsProvider);
-    ref.invalidate(pushNavigationQueueProvider);
-    ref.invalidate(pushForegroundNotificationProvider);
     ref.invalidate(shellTabProvider);
-  }
-
-  Future<void> _closePushAccountForTransition() async {
-    ref.invalidate(pushSettingsProvider);
-    ref.read(pushNavigationQueueProvider.notifier).clear();
-    final foreground = ref.read(pushForegroundNotificationProvider);
-    if (foreground != null) {
-      ref
-          .read(pushForegroundNotificationProvider.notifier)
-          .clear(foreground.deliveryId);
-    }
-    if (!ref.read(pushRuntimeEnabledProvider) &&
-        !ref.read(pushCleanupRuntimeAvailableProvider)) {
-      final inspectionComplete = ref.read(
-        pushInstallationStateInspectionCompleteProvider,
-      );
-      // Unit tests and unsupported desktop targets have no mobile Firebase
-      // identity. On Android/iOS, an unreadable secure store is not equivalent
-      // to an empty one and must block the account transition for retry.
-      if (!inspectionComplete && ref.read(pushPlatformProvider) != null) {
-        throw const PushInstallationReadException();
-      }
-      await ref
-          .read(pushDeliveryReceiptStoreProvider)
-          .discardUnfinishedAtAccountBoundary();
-      return;
-    }
-    final messaging = ref.read(pushMessagingGatewayProvider);
-    await _drainAndClearDisplayedPush(messaging);
-    try {
-      final closed = await ref
-          .read(pushAccountManagerProvider)
-          .closeAccount(suppressAuthRecovery: true);
-      if (closed.record?.platformCleanupRequired == true) {
-        throw PushAccountCloseIncompleteException(closed);
-      }
-      await ref
-          .read(pushDeliveryReceiptStoreProvider)
-          .discardUnfinishedAtAccountBoundary();
-    } finally {
-      // A notification can arrive while unregister/FID deletion is in flight.
-      // The client-revision check is authoritative; this second native pass
-      // removes already delivered push UI without touching travel reminders.
-      await _drainAndClearDisplayedPush(messaging);
-    }
-  }
-
-  Future<void> _drainAndClearDisplayedPush(
-    PushMessagingGateway messaging,
-  ) async {
-    try {
-      // Consume a terminated-launch message before it can reach another
-      // account's RootShell.
-      await messaging.getInitialMessage();
-    } catch (_) {
-      // Receipt discard and server revision still protect known deliveries.
-    }
-    try {
-      await messaging.clearDisplayedNotifications();
-    } catch (_) {
-      // Delivered content is generic and contains no account data. Native
-      // clearing is best effort; durable receipts still block known replays.
-    }
   }
 
   Future<void> completeOnboarding() async {
@@ -791,9 +665,8 @@ class AuthController extends AsyncNotifier<AuthState> {
     // Clear the previous account before the server can persist a new token.
     // The marker remains until the new session is fully finalized, covering
     // process death and partial secure-storage writes.
-    final priorCleanupFailure = await _runScopedCleanup(
-      LocalCleanupScope.accountSwitch,
-      clearTransitionOnSuccess: false,
+    final priorCleanupFailure = await _runCleanupOperations(
+      _cleanupOperations(LocalCleanupScope.accountSwitch),
     );
     if (priorCleanupFailure != null) {
       _invalidateUserScopedData();
